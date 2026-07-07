@@ -95,7 +95,7 @@ function StatsCard({ sessions, examSessions, language }: { sessions: PracticeSes
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
       <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
         <TrendingUp className="w-4 h-4 text-blue-500" />
-        {language === 'ja' ? '学習統計' : language === 'en' ? 'Learning stats' : 'Thong ke hoc tap'}
+        {language === 'ja' ? '学習統計' : language === 'en' ? 'Learning stats' : 'thống kê học tập '}
       </h3>
       <div className="grid grid-cols-3 gap-3">
         <div className="text-center">

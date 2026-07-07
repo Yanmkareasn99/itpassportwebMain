@@ -5,18 +5,12 @@ import { supabase } from '../lib/supabase';
 import { getChatReply, ChatMessage } from '../lib/aiChat';
 import { useAuth } from '../contexts/AuthContext';
 import { Page, Question, Subject } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface AIChatPageProps {
   currentPage: Page;
   onNavigate: (page: Page) => void;
 }
-
-const starterPrompts = [
-  '今日の学習計画を作って',
-  '基本情報の午後問題の勉強法を教えて',
-  'この問題を解く考え方を整理して',
-  '苦手科目を克服する方法を教えて',
-];
 
 function createId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -35,6 +29,30 @@ function ChatBubble({ message }: { message: ChatMessage }) {
 
 export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps) {
   const { profile } = useAuth();
+  const { language } = useLanguage();
+
+  const starterPrompts =
+    language === 'ja'
+      ? [
+          '今日の学習計画を作って',
+          '基本情報の午後問題の勉強法を教えて',
+          'この問題を解く考え方を整理して',
+          '苦手科目を克服する方法を教えて',
+        ]
+      : language === 'en'
+      ? [
+          'Create a study plan for today',
+          'How should I study the afternoon exam?',
+          'Explain how to solve this question',
+          'How can I overcome weak subjects?',
+        ]
+      : [
+          'Lập kế hoạch học hôm nay',
+          'Cách học phần thi buổi chiều',
+          'Giải thích cách làm câu này',
+          'Làm sao khắc phục môn yếu?',
+        ];
+
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: createId(),
@@ -108,7 +126,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
     setMessages(prev => [...prev, userMessage]);
     setPrompt('');
     setSending(true);
-    
+
     // persist user message for logged-in users
     try {
       if (profile?.id) {
@@ -163,7 +181,12 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
   }
 
   return (
-    <Layout currentPage={currentPage} onNavigate={onNavigate} title="AIチャット" subtitle="学習アシスタント">
+    <Layout
+      currentPage={currentPage}
+      onNavigate={onNavigate}
+      title={language === 'ja' ? 'AIチャット' : language === 'en' ? 'AI Chat' : 'AI Chat'}
+      subtitle={language === 'ja' ? '学習アシスタント' : language === 'en' ? 'Study Assistant' : 'Trợ lý học tập'}
+    >
       <div className="max-w-5xl mx-auto grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col min-h-[70vh] overflow-hidden">
           <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-violet-50">
@@ -181,7 +204,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
                 className="shrink-0 self-start inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition whitespace-nowrap"
               >
                 <RotateCcw className="w-4 h-4" />
-                リセット
+                {language === 'ja' ? 'リセット' : language === 'en' ? 'Reset' : 'Đặt lại'}
               </button>
             </div>
           </div>
@@ -216,7 +239,13 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
                     void sendMessage();
                   }
                 }}
-                placeholder="例: この問題の考え方を教えて / 勉強計画を作って"
+                placeholder={
+                  language === 'ja'
+                    ? '例: この問題の考え方を教えて / 勉強計画を作って'
+                    : language === 'en'
+                    ? 'Example: Explain this question / Create a study plan'
+                    : 'Ví dụ: Giải thích câu này / Lập kế hoạch học'
+                }
                 className="flex-1 resize-none min-h-[56px] max-h-40 px-4 py-3 rounded-2xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                 rows={2}
               />
@@ -226,7 +255,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
                 className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <Send className="w-4 h-4" />
-                送信
+                {language === 'ja' ? '送信' : language === 'en' ? 'Send' : 'Gửi'}
               </button>
             </form>
           </div>
@@ -251,29 +280,8 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <div className="flex items-center gap-2 mb-3 text-gray-700 font-semibold">
-              <BookOpen className="w-4 h-4 text-blue-500" />
-              直近の学習データ
-            </div>
-            <div className="space-y-3 text-sm">
-              <div>
-                <p className="text-xs text-gray-400 mb-1">科目</p>
-                <p className="font-medium text-gray-700">{selectedSubject?.name ?? '科目データなし'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-400 mb-1">最近の問題</p>
-                <p className="text-gray-600">{recentQuestions.length > 0 ? `${recentQuestions.length}問を参照できます` : 'まだ読み込みできていません'}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-violet-500 to-fuchsia-500 rounded-2xl p-5 text-white shadow-sm">
-            <p className="text-sm font-semibold mb-1">AIチャットの使い方</p>
-            <p className="text-sm text-violet-50 leading-6">
-              困っている問題文を貼ると、解く順番・見るべきポイント・復習方法を整理して返します。
-            </p>
-          </div>
+          
+         
         </div>
       </div>
     </Layout>
