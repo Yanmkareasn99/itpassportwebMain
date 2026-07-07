@@ -227,7 +227,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
           </div>
         </div>
 
-        <div className="flex gap-5">
+        <div className="flex flex-col lg:flex-row gap-5">
           {/* Question */}
           <div className="flex-1 space-y-4">
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
@@ -284,10 +284,10 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
           </div>
 
           {/* Side panel */}
-          <div className="w-52 shrink-0">
+          <div className="w-full lg:w-52 shrink-0">
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
               <p className="text-xs font-semibold text-gray-500 mb-3">{language === 'ja' ? '問題一覧' : language === 'en' ? 'Question list' : 'Danh sách câu'}</p>
-              <div className="grid grid-cols-4 gap-1.5">
+              <div className="grid grid-cols-8 sm:grid-cols-10 lg:grid-cols-4 gap-1.5">
                 {questions.map((q, i) => {
                   let cls = 'bg-gray-100 text-gray-500';
                   if (i === currentIndex) cls = 'bg-blue-600 text-white';

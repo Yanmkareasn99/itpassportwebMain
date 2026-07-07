@@ -46,11 +46,11 @@ function CalendarWidget({ daysLeft, language }: { daysLeft: number; language: st
 
       {/* Calendar nav */}
       <div className="flex items-center justify-between mb-3">
-        <button onClick={() => setViewDate(new Date(year, month - 1, 1))} className="p-1 hover:bg-gray-100 rounded-lg transition">
+        <button onClick={() => setViewDate(new Date(year, month - 1, 1))} className="p-2 -m-1 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition">
           <ChevronLeft className="w-4 h-4 text-gray-500" />
         </button>
         <span className="text-sm font-semibold text-gray-700">{year}年{month + 1}月</span>
-        <button onClick={() => setViewDate(new Date(year, month + 1, 1))} className="p-1 hover:bg-gray-100 rounded-lg transition">
+        <button onClick={() => setViewDate(new Date(year, month + 1, 1))} className="p-2 -m-1 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition">
           <ChevronRight className="w-4 h-4 text-gray-500" />
         </button>
       </div>
@@ -218,30 +218,27 @@ export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
   return (
     <Layout currentPage={currentPage} onNavigate={onNavigate} title={`${profile?.name ?? guest}${greeting}`}>
       <div className="max-w-6xl mx-auto">
-        <div className="flex flex-col lg:flex-row gap-6">
+        <div className="flex flex-col-reverse lg:flex-row gap-6">
           {/* Main content */}
           <div className="flex-1 space-y-5">
             {/* Feature cards */}
             {features.map(({ page, icon: Icon, title, description, cta, bgClass, iconBg, iconColor, ctaClass }) => (
               <div
                 key={page}
-                className={`bg-gradient-to-r ${bgClass} rounded-2xl border border-gray-100 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 group cursor-pointer hover:shadow-md transition-all`}
-                onClick={() => {
-                  console.debug('[Nav] Feature card click:', page);
-                  onNavigate(page);
-                }}
+                className={`bg-gradient-to-r ${bgClass} rounded-2xl border border-gray-100 p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 group cursor-pointer hover:shadow-md transition-all`}
+                onClick={() => onNavigate(page)}
               >
-                <div className="flex items-center gap-5">
-                  <div className={`w-14 h-14 ${iconBg} rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                    <Icon className={`w-7 h-7 ${iconColor}`} />
+                <div className="flex items-start sm:items-center gap-3 sm:gap-5">
+                  <div className={`w-11 h-11 sm:w-14 sm:h-14 shrink-0 ${iconBg} rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                    <Icon className={`w-5 h-5 sm:w-7 sm:h-7 ${iconColor}`} />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-gray-800">{title}</h2>
-                    <p className="text-sm text-gray-500 mt-0.5 max-w-md">{description}</p>
+                    <h2 className="text-lg sm:text-xl font-bold text-gray-800">{title}</h2>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-0.5 max-w-md">{description}</p>
                   </div>
                 </div>
                 <button
-                  onClick={e => { e.stopPropagation(); console.debug('[Nav] Feature CTA click:', page); onNavigate(page); }}
+                  onClick={e => { e.stopPropagation(); onNavigate(page); }}
                   className={`${ctaClass} text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 shrink-0 w-full sm:w-auto`}
                 >
                   {cta}

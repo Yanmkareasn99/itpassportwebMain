@@ -299,7 +299,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
         </div>
 
         {/* Choices */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {choices.map((choice, idx) => {
             let cls = 'border-gray-200 bg-white hover:border-amber-400 hover:bg-amber-50/30';
             if (answered) {

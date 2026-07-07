@@ -26,7 +26,7 @@ function ChatBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === 'user';
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm whitespace-pre-wrap text-sm leading-6 ${isUser ? 'bg-blue-600 text-white' : 'bg-white border border-gray-100 text-gray-700'}`}>
+      <div className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm whitespace-pre-wrap break-words text-sm leading-6 ${isUser ? 'bg-blue-600 text-white' : 'bg-white border border-gray-100 text-gray-700'}`}>
         {message.content}
       </div>
     </div>
@@ -95,7 +95,6 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
   async function sendMessage(text?: string) {
     const content = (text ?? prompt).trim();
     if (!content || sending) return;
-    console.debug('[AI] sendMessage invoked, content length=', content.length);
 
     const history = messages.map(message => ({ role: message.role, content: message.content }));
 

@@ -82,7 +82,7 @@ export default function AdminPage({ currentPage, onNavigate }: AdminPageProps) {
     <Layout currentPage={currentPage} onNavigate={onNavigate} title={language === 'ja' ? '管理画面' : language === 'en' ? 'Admin' : 'Quản trị'} subtitle="Admin">
       <div className="max-w-6xl mx-auto">
         {/* Tab bar */}
-        <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-2xl w-fit">
+        <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-2xl w-full sm:w-fit overflow-x-auto">
           {([
             { id: 'questions', label: language === 'ja' ? '問題管理' : language === 'en' ? 'Questions' : 'Câu hỏi', icon: BookOpen },
             { id: 'subjects', label: language === 'ja' ? '科目管理' : language === 'en' ? 'Subjects' : 'Môn học', icon: Layers },
@@ -92,7 +92,7 @@ export default function AdminPage({ currentPage, onNavigate }: AdminPageProps) {
             <button
               key={id}
               onClick={() => setTab(id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition shrink-0 whitespace-nowrap ${
                 tab === id ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -836,12 +836,12 @@ function StatsTab() {
   };
 
   return (
-    <div className="grid grid-cols-3 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
       {cards.map(c => (
-        <div key={c.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <div key={c.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
           <p className="text-xs font-semibold text-gray-400 mb-2">{c.label}</p>
-          <p className={`text-4xl font-bold ${colorMap[c.color]?.split(' ')[1]}`}>
-            {c.value.toLocaleString()}<span className="text-lg font-medium ml-1">{c.suffix}</span>
+          <p className={`text-2xl sm:text-4xl font-bold ${colorMap[c.color]?.split(' ')[1]}`}>
+            {c.value.toLocaleString()}<span className="text-sm sm:text-lg font-medium ml-1">{c.suffix}</span>
           </p>
         </div>
       ))}

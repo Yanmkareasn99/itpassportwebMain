@@ -614,7 +614,8 @@ export default function PracticeListPage({
                 ))}
               </div>
             ) : (
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto -mx-5 px-5">
+              <table className="w-full text-sm min-w-[480px]">
                 <thead>
                   <tr className="text-xs text-gray-400 border-b border-gray-100">
                     <th className="pb-2 text-left font-semibold">
@@ -705,6 +706,7 @@ export default function PracticeListPage({
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
 
@@ -718,7 +720,8 @@ export default function PracticeListPage({
                 : 'Hành động tiếp theo'}
             </h3>
 
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto -mx-5 px-5">
+            <table className="w-full text-sm min-w-[480px]">
               <thead>
                 <tr className="text-xs text-gray-400 border-b border-gray-100">
                   <th className="pb-2 text-left font-semibold">
@@ -858,6 +861,7 @@ export default function PracticeListPage({
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       </div>
