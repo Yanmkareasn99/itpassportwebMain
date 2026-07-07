@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import Sidebar from './Sidebar';
+import MobileTabBar from './MobileTabBar';
 import Header from './Header';
 import { Page } from '../types';
 
@@ -25,13 +26,18 @@ export default function Layout({
         onNavigate={onNavigate}
       />
 
-      <div className="ml-56 min-h-screen flex flex-col">
+      <div className="md:ml-56 min-h-screen flex flex-col">
         <Header title={title} subtitle={subtitle} />
 
-        <main className="flex-1 p-4 sm:p-5 lg:p-6 overflow-x-hidden">
+        <main className="flex-1 p-4 sm:p-5 lg:p-6 pb-24 md:pb-6 overflow-x-hidden">
           {children}
         </main>
       </div>
+
+      <MobileTabBar
+        currentPage={currentPage}
+        onNavigate={onNavigate}
+      />
     </div>
   );
 }

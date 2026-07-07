@@ -167,18 +167,18 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
       <div className="max-w-5xl mx-auto grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col min-h-[70vh] overflow-hidden">
           <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-violet-50">
-            <div className="flex items-start justify-between gap-4">
-              <div>
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              <div className="min-w-0">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/80 text-blue-600 text-xs font-semibold mb-3">
                   <Sparkles className="w-3.5 h-3.5" />
                   AI Study Assistant
                 </div>
-                <h2 className="text-2xl font-bold text-gray-800">わからないことを、そのまま質問してください</h2>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-800">わからないことを、そのまま質問してください</h2>
                 <p className="text-sm text-gray-500 mt-1">学習計画、用語の整理、問題の考え方を対話形式でサポートします。</p>
               </div>
               <button
                 onClick={resetChat}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition"
+                className="shrink-0 self-start inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition whitespace-nowrap"
               >
                 <RotateCcw className="w-4 h-4" />
                 リセット

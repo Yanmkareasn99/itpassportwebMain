@@ -16,9 +16,9 @@ function greeting(language: string) {
     return 'Good evening';
   }
   if (language === 'vi') {
-    if (h < 12) return 'Chao buoi sang';
-    if (h < 17) return 'Chao buoi chieu';
-    return 'Chao buoi toi';
+    if (h < 12) return 'Chào buổi sáng';
+    if (h < 17) return 'chiều buổi trưa';
+    return 'chào buổi tối';
   }
   if (h < 12) return 'おはようございます';
   if (h < 17) return 'こんにちは';
@@ -34,23 +34,23 @@ export default function Header({ title, subtitle }: HeaderProps) {
   const notifications = [
     {
       id: 1,
-      title: language === 'ja' ? '今日の学習リマインダー' : language === 'en' ? 'Today study reminder' : 'Nhac hoc hom nay',
-      body: language === 'ja' ? '模擬試験を1回解いて、苦手分野を確認しましょう。' : language === 'en' ? 'Take one mock exam and review weak areas.' : 'Lam mot bai thi thu va xem lai phan con yeu.',
-      time: language === 'ja' ? '5分前' : language === 'en' ? '5 min ago' : '5 phut truoc',
+      title: language === 'ja' ? '今日の学習リマインダー' : language === 'en' ? 'Today study reminder' : 'nhắc nhở học hôm nay',
+      body: language === 'ja' ? '模擬試験を1回解いて、苦手分野を確認しましょう。' : language === 'en' ? 'Take one mock exam and review weak areas.' : 'làm một bài thi thử và xem lại các lĩnh vực yếu.',
+      time: language === 'ja' ? '5分前' : language === 'en' ? '5 min ago' : '5 phút trước',
       unread: true,
     },
     {
       id: 2,
-      title: language === 'ja' ? '教材を確認できます' : language === 'en' ? 'Materials are available' : 'Co the xem tai lieu',
-      body: language === 'ja' ? '学生はいつでも教材を確認できるため、情報共有がスムーズになります。' : language === 'en' ? 'Students can check materials anytime, making information sharing smoother.' : 'Hoc sinh co the xem tai lieu bat cu luc nao, giup chia se thong tin muot hon.',
-      time: language === 'ja' ? '1時間前' : language === 'en' ? '1 hour ago' : '1 gio truoc',
+      title: language === 'ja' ? '教材を確認できます' : language === 'en' ? 'Materials are available' : 'có thể xem tài liệu',
+      body: language === 'ja' ? '学生はいつでも教材を確認できるため、情報共有がスムーズになります。' : language === 'en' ? 'Students can check materials anytime, making information sharing smoother.' : 'Học sinh có thể kiểm tra tài liệu bất cứ lúc nào, giúp chia sẻ thông tin dễ dàng hơn.',
+      time: language === 'ja' ? '1時間前' : language === 'en' ? '1 hour ago' : '1 giờ trước',
       unread: true,
     },
     {
       id: 3,
-      title: language === 'ja' ? '復習おすすめ' : language === 'en' ? 'Review recommended' : 'Nen on tap',
-      body: language === 'ja' ? '前回間違えた問題をもう一度確認しましょう。' : language === 'en' ? 'Review the questions you missed last time.' : 'Hay xem lai cau ban da sai lan truoc.',
-      time: language === 'ja' ? '昨日' : language === 'en' ? 'Yesterday' : 'Hom qua',
+      title: language === 'ja' ? '復習おすすめ' : language === 'en' ? 'Review recommended' : 'nên ôn tập',
+      body: language === 'ja' ? '前回間違えた問題をもう一度確認しましょう。' : language === 'en' ? 'Review the questions you missed last time.' : 'Hãy xem lại các câu hỏi bạn đã bỏ lỡ lần trước.',
+      time: language === 'ja' ? '昨日' : language === 'en' ? 'Yesterday' : 'Hôm qua',
       unread: false,
     },
   ];
@@ -77,7 +77,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
     };
   }, []);
 
-  const guest = language === 'ja' ? 'ゲスト' : language === 'en' ? 'Guest' : 'Khach';
+  const guest = language === 'ja' ? 'ゲスト' : language === 'en' ? 'Guest' : 'Khách';
 
   return (
     <header className="min-h-16 bg-white border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-3 sm:py-0 sticky top-0 z-10">

@@ -104,7 +104,7 @@ function CategoryCard({
     <button
       onClick={onStart}
       disabled={loading || stats.questionCount === 0}
-      className={`flex-1 min-w-0 ${category.bgColor} border-2 ${category.borderColor} rounded-2xl p-5 text-left hover:shadow-md transition-all group disabled:opacity-50 disabled:cursor-not-allowed`}
+      className={`w-full min-w-0 ${category.bgColor} border-2 ${category.borderColor} rounded-2xl p-4 sm:p-5 text-left hover:shadow-md transition-all group disabled:opacity-50 disabled:cursor-not-allowed`}
     >
       <div className="flex items-center gap-2.5 mb-3">
         <div className={`w-8 h-8 rounded-full ${category.dotColor} flex items-center justify-center`}>
@@ -157,7 +157,7 @@ function ReviewCard({
     <button
       onClick={onStart}
       disabled={count === 0}
-      className="flex-1 min-w-0 bg-purple-50 border-2 border-purple-300 rounded-2xl p-5 text-left hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+      className="w-full min-w-0 bg-purple-50 border-2 border-purple-300 rounded-2xl p-4 sm:p-5 text-left hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <div className="flex items-center gap-2.5 mb-3">
         <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center">
@@ -412,7 +412,7 @@ export default function PracticeListPage({
             : 'Chọn chủ đề và bộ lọc để bắt đầu luyện tập.'}
         </p>
 
-        <div className="flex gap-4 flex-wrap">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           {MAIN_CATEGORIES.map((cat) => (
             <CategoryCard
               key={cat.id}

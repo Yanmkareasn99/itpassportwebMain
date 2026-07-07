@@ -101,7 +101,7 @@ export default function Sidebar({
   ];
 
   return (
-    <aside className="fixed inset-y-0 left-0 w-56 bg-white border-r border-gray-200 flex flex-col z-50">
+    <aside className="hidden md:flex md:fixed md:inset-y-0 md:left-0 w-56 bg-white border-r border-gray-200 flex-col z-50">
 
       {/* Logo */}
 
