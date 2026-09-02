@@ -3,19 +3,25 @@ import { User, Session } from '@supabase/supabase-js';
 import { isSupabaseEnabled, supabase } from '../lib/supabase';
 import { Profile } from '../types';
 
-interface AuthContextValue {
+interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
   isAdmin: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, name: string, studentId?: string) => Promise<{ error: Error | null }>;
+
+  signIn: (email: string, password: string) => Promise<void>;
+
+  signInWithGoogle: () => Promise<void>;
+
+  signUp: (email: string, password: string, name: string, studentId?: string) => Promise<void>;
+
   signOut: () => Promise<void>;
+
   refreshProfile: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextValue | null>(null);
+const AuthContext = createContext<AuthContextType | null>(null);
 const LOCAL_AUTH_KEY = 'manabi-local-auth';
 
 function makeLocalProfile(email: string, name?: string, studentId?: string | null): Profile {
@@ -121,7 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signIn(email: string, password: string) {
     if (!isSupabaseEnabled) {
       if (!email.trim() || !password.trim()) {
-        return { error: new Error('Email and password are required.') };
+        throw new Error('Email and password are required.');
       }
       const existing = readLocalAuth();
       const profile = existing?.email === email ? existing.profile : makeLocalProfile(email);
@@ -129,24 +135,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(profile);
       setUser(makeLocalUser(profile, email));
       setSession(null);
-      return { error: null };
+      return;
     }
 
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error };
+    if (error) throw error;
   }
 
   async function signUp(email: string, password: string, name: string, studentId?: string) {
     if (!isSupabaseEnabled) {
       if (!email.trim() || !password.trim()) {
-        return { error: new Error('Email and password are required.') };
+        throw new Error('Email and password are required.');
       }
       const profile = makeLocalProfile(email, name, studentId ?? null);
       saveLocalAuth(email, profile);
       setProfile(profile);
       setUser(makeLocalUser(profile, email));
       setSession(null);
-      return { error: null };
+      return;
     }
 
     const { data, error } = await supabase.auth.signUp({
@@ -159,7 +165,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       },
     });
-    if (error || !data.user) return { error };
+    if (error) throw error;
+    if (!data.user) throw new Error('Failed to create user');
+
     const { error: profileError } = await supabase.from('profiles').insert({
       id: data.user.id,
       name,
@@ -169,9 +177,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (profileError) {
       console.warn('Signed up auth user, but failed to create profile. Run the Supabase schema SQL.', profileError.message);
+      throw profileError;
     }
-
-    return { error: profileError };
   }
 
   async function signOut() {
@@ -186,10 +193,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
   }
 
+  async function signInWithGoogle() {
+    if (!isSupabaseEnabled) {
+      throw new Error('OAuth is not available in local mode.');
+    }
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+
+    if (error) throw error;
+  }
+
   const isAdmin = profile?.is_admin === true;
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, isAdmin, signIn, signUp, signOut, refreshProfile }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        profile,
+        loading,
+        isAdmin,
+        signIn,
+        signInWithGoogle,
+        signUp,
+        signOut,
+        refreshProfile,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

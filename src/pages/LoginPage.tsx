@@ -4,7 +4,7 @@ import { BookOpen, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { Language, useLanguage } from '../contexts/LanguageContext';
 
 export default function LoginPage() {
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, signInWithGoogle } = useAuth();
   const { language, setLanguage } = useLanguage();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
@@ -36,15 +36,20 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    if (mode === 'login') {
-      const { error } = await signIn(email, password);
-      if (error) setError(text.loginError);
-    } else {
-      if (!name.trim()) { setError(text.nameError); setLoading(false); return; }
-      const { error } = await signUp(email, password, name, studentId || undefined);
-      if (error) setError(text.signupError + error.message);
+    try {
+      if (mode === 'login') {
+        await signIn(email, password);
+      } else {
+        if (!name.trim()) { setError(text.nameError); setLoading(false); return; }
+        await signUp(email, password, name, studentId || undefined);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (mode === 'login') setError(text.loginError);
+      else setError(text.signupError + msg);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   return (
@@ -160,6 +165,33 @@ export default function LoginPage() {
               {loading ? text.processing : mode === 'login' ? text.login : text.signup}
             </button>
           </form>
+
+          <div className="mt-4">
+            <div className="oauth-divider text-center my-3">
+              <span>または</span>
+            </div>
+
+            <button
+              type="button"
+              className={`google-login-button w-full py-2 px-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-sm font-medium flex items-center justify-center gap-2 shadow-sm`}
+              onClick={async () => {
+                setError('');
+                setLoading(true);
+                try {
+                  await signInWithGoogle();
+                } catch (err) {
+                  console.error(err);
+                  setError('Googleログインに失敗しました。');
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              disabled={loading}
+            >
+              <span className="google-icon mr-2">G</span>
+              Googleでログイン
+            </button>
+          </div>
 
           <div className="mt-5 text-center">
             <button
