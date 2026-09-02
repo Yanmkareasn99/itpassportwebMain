@@ -695,6 +695,7 @@ function UsersTab() {
   const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
+  const [error, setError] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -707,8 +708,16 @@ function UsersTab() {
 
   async function toggleAdmin(user: Profile) {
     setSaving(user.id);
-    await supabase.from('profiles').update({ is_admin: !user.is_admin }).eq('id', user.id);
+    setError('');
+    const { error: updateError } = await supabase.rpc('set_profile_admin', {
+      target_user_id: user.id,
+      new_is_admin: !user.is_admin,
+    });
     setSaving(null);
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
     await load();
   }
 
@@ -718,6 +727,7 @@ function UsersTab() {
         <span className="text-sm font-semibold text-gray-700">{loading ? '読み込み中...' : `${users.length} ユーザー`}</span>
         <button onClick={load} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition"><RefreshCw className="w-4 h-4" /></button>
       </div>
+      {error && <p className="px-5 py-3 text-sm text-red-600 bg-red-50">{error}</p>}
       {loading ? (
         <div className="flex items-center justify-center py-16"><RefreshCw className="w-6 h-6 animate-spin text-gray-400" /></div>
       ) : users.length === 0 ? (

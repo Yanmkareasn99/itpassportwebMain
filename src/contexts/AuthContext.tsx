@@ -14,7 +14,7 @@ interface AuthContextType {
 
   signInWithGoogle: () => Promise<void>;
 
-  signUp: (email: string, password: string, name: string, studentId?: string) => Promise<void>;
+  signUp: (email: string, password: string, name: string, studentId?: string) => Promise<boolean>;
 
   signOut: () => Promise<void>;
 
@@ -152,7 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(profile);
       setUser(makeLocalUser(profile, email));
       setSession(null);
-      return;
+      return false;
     }
 
     const { data, error } = await supabase.auth.signUp({
@@ -168,17 +168,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
     if (!data.user) throw new Error('Failed to create user');
 
-    const { error: profileError } = await supabase.from('profiles').insert({
-      id: data.user.id,
-      name,
-      student_id: studentId ?? null,
-      role: 'student',
-    });
-
-    if (profileError) {
-      console.warn('Signed up auth user, but failed to create profile. Run the Supabase schema SQL.', profileError.message);
-      throw profileError;
-    }
+    // A database trigger creates the profile for email/password and OAuth users.
+    // A null session means email confirmation is required before sign-in.
+    return data.session === null;
   }
 
   async function signOut() {
@@ -206,16 +198,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     });
 
-    console.log('Google OAuth:', {
-      hasUrl: Boolean((data as any)?.url),
-      url: (data as any)?.url,
-      error,
-    });
-
     if (error) throw error;
 
     // If Supabase returned a redirect URL, navigate there to start the OAuth flow.
-    const redirectUrl = (data as any)?.url;
+    const redirectUrl = data.url;
     if (redirectUrl) {
       window.location.href = redirectUrl;
     }
@@ -243,6 +229,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// Hooks intentionally share this module with their provider component.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');

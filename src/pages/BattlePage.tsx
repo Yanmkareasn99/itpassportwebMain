@@ -59,7 +59,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     if (stage !== 'battle' || answered) return;
     if (timeLeft <= 0) {
       setAnswered(true);
-      // AI answers
+      if (Math.random() < 0.65) setAiScore(score => score + 1);
       const t = setTimeout(() => goToNextQuestion(), 1500);
       setAiDelay(t);
       return;
@@ -109,7 +109,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   }
 
   const q = questions[currentIndex];
-  const choices: AnswerChoice[] = (q?.answer_choices ?? [] as AnswerChoice[]).sort((a, b) => a.sort_order - b.sort_order);
+  const choices: AnswerChoice[] = [...(q?.answer_choices ?? [])].sort((a, b) => a.sort_order - b.sort_order);
   const timePct = (timeLeft / TIME_PER_QUESTION) * 100;
 
   if (stage === 'lobby') {

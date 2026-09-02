@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [studentId, setStudentId] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
   const text = {
     subtitle: language === 'ja' ? '大阪電子専門学校 学習支援システム' : language === 'en' ? 'Osaka Denshi learning support system' : 'Hệ thống hỗ trợ học tập Osaka Denshi',
@@ -30,18 +31,24 @@ export default function LoginPage() {
     loginError: language === 'ja' ? 'メールアドレスまたはパスワードが正しくありません。' : language === 'en' ? 'Email or password is incorrect.' : 'Email hoặc mật khẩu không chính xác.',
     nameError: language === 'ja' ? '名前を入力してください。' : language === 'en' ? 'Please enter your name.' : 'Vui lòng nhập tên của bạn.',
     signupError: language === 'ja' ? 'アカウント作成に失敗しました: ' : language === 'en' ? 'Failed to create account: ' : 'Tạo tài khoản thất bại: ',
+    confirmationSent: language === 'ja' ? '確認メールを送信しました。メールを確認してからログインしてください。' : language === 'en' ? 'Confirmation email sent. Confirm your email, then sign in.' : 'Đã gửi email xác nhận. Hãy xác nhận email rồi đăng nhập.',
   };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    setNotice('');
     setLoading(true);
     try {
       if (mode === 'login') {
         await signIn(email, password);
       } else {
         if (!name.trim()) { setError(text.nameError); setLoading(false); return; }
-        await signUp(email, password, name, studentId || undefined);
+        const requiresConfirmation = await signUp(email, password, name, studentId || undefined);
+        if (requiresConfirmation) {
+          setMode('login');
+          setNotice(text.confirmationSent);
+        }
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -86,6 +93,12 @@ export default function LoginPage() {
           <p className="text-sm text-gray-500 mb-6">
             {mode === 'login' ? text.loginHelp : text.signupHelp}
           </p>
+
+          {notice && (
+            <div className="mb-4 rounded-lg border border-emerald-100 bg-emerald-50 p-3 text-sm text-emerald-700">
+              {notice}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === 'signup' && (

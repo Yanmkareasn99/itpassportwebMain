@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Clock, ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertCircle, BarChart2 } from 'lucide-react';
 import Layout from '../components/Layout';
 import { supabase } from '../lib/supabase';
@@ -24,21 +24,15 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    if (stage === 'exam') {
-      timerRef.current = setInterval(() => {
-        setTimeLeft(t => {
-          if (t <= 1) { finishExam(); return 0; }
-          return t - 1;
-        });
-      }, 1000);
-    }
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [stage]);
+  const finishingRef = useRef(false);
 
   async function startExam() {
     setLoading(true);
+    finishingRef.current = false;
+    setUserAnswers({});
+    setCurrentIndex(0);
+    setTimeLeft(EXAM_DURATION);
+    setSessionId(null);
     const { data } = await supabase
       .from('questions')
       .select('*, answer_choices(*)')
@@ -59,7 +53,9 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
     setLoading(false);
   }
 
-  async function finishExam() {
+  const finishExam = useCallback(async () => {
+    if (finishingRef.current) return;
+    finishingRef.current = true;
     if (timerRef.current) clearInterval(timerRef.current);
     const timeTaken = EXAM_DURATION - timeLeft;
     let correct = 0;
@@ -88,7 +84,21 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
       }
     }
     setStage('result');
-  }
+  }, [questions, sessionId, timeLeft, userAnswers]);
+
+  useEffect(() => {
+    if (stage !== 'exam') return;
+    timerRef.current = setInterval(() => {
+      setTimeLeft(value => Math.max(0, value - 1));
+    }, 1000);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [stage]);
+
+  useEffect(() => {
+    if (stage === 'exam' && timeLeft === 0) void finishExam();
+  }, [finishExam, stage, timeLeft]);
 
   function formatTime(s: number) {
     const m = Math.floor(s / 60);
@@ -97,7 +107,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
   }
 
   const question = questions[currentIndex];
-  const choices: AnswerChoice[] = (question?.answer_choices ?? [] as AnswerChoice[]).sort((a, b) => a.sort_order - b.sort_order);
+  const choices: AnswerChoice[] = [...(question?.answer_choices ?? [])].sort((a, b) => a.sort_order - b.sort_order);
   const answeredCount = Object.keys(userAnswers).length;
   const timeWarning = timeLeft < 600;
 
@@ -197,7 +207,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
           </div>
 
           <div className="flex gap-3 justify-center">
-            <button onClick={() => { setStage('intro'); setUserAnswers({}); setCurrentIndex(0); setTimeLeft(EXAM_DURATION); }} className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition">
+            <button onClick={() => { finishingRef.current = false; setStage('intro'); setUserAnswers({}); setCurrentIndex(0); setTimeLeft(EXAM_DURATION); setSessionId(null); }} className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition">
               {language === 'ja' ? 'もう一度受ける' : language === 'en' ? 'Retake' : 'Làm lại'}
             </button>
             <button onClick={() => onNavigate('home')} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition">

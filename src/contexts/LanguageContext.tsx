@@ -97,6 +97,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Hooks intentionally share this module with their provider component.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useLanguage() {
   const context = useContext(LanguageContext);
 

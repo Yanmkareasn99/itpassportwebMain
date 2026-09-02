@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Sparkles, Send, RotateCcw, Lightbulb, BookOpen, MessageCircle } from 'lucide-react';
+import { Sparkles, Send, RotateCcw, Lightbulb, MessageCircle } from 'lucide-react';
 import Layout from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { getChatReply, ChatMessage } from '../lib/aiChat';
@@ -16,6 +16,18 @@ function createId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function welcomeMessage(language: 'ja' | 'en' | 'vi') {
+  if (language === 'en') return 'Ask me about solving questions, study plans, or organizing key terms.';
+  if (language === 'vi') return 'Hãy hỏi tôi về cách giải bài, kế hoạch học tập hoặc cách hệ thống thuật ngữ.';
+  return '学習の相談窓口です。問題の解き方、勉強計画、用語の整理をそのまま聞いてください。';
+}
+
+interface StoredChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  created_at: string;
+}
+
 function ChatBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === 'user';
   return (
@@ -30,6 +42,7 @@ function ChatBubble({ message }: { message: ChatMessage }) {
 export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps) {
   const { profile } = useAuth();
   const { language } = useLanguage();
+  const profileId = profile?.id;
 
   const starterPrompts =
     language === 'ja'
@@ -57,7 +70,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
     {
       id: createId(),
       role: 'assistant',
-      content: '学習の相談窓口です。問題の解き方、勉強計画、用語の整理をそのまま聞いてください。',
+      content: welcomeMessage(language),
       createdAt: Date.now(),
     },
   ]);
@@ -77,17 +90,17 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
       if (questionData) setRecentQuestions(questionData as Question[]);
 
       // load persisted chat messages for logged-in user
-      if (profile?.id) {
+      if (profileId) {
         try {
           const { data: msgs } = await supabase
             .from('ai_chat_messages')
             .select('role, content, created_at')
-            .eq('user_id', profile.id)
+            .eq('user_id', profileId)
             .order('created_at', { ascending: true })
             .limit(500);
 
           if (msgs && msgs.length > 0) {
-            const loaded = msgs.map((m: any) => ({
+            const loaded = (msgs as StoredChatMessage[]).map(m => ({
               id: `${new Date(m.created_at).getTime()}-${Math.random().toString(36).slice(2,6)}`,
               role: m.role as 'user' | 'assistant',
               content: m.content as string,
@@ -102,7 +115,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
     }
 
     loadData();
-  }, []);
+  }, [profileId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -169,12 +182,19 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
     setSending(false);
   }
 
-  function resetChat() {
+  async function resetChat() {
+    if (profileId) {
+      const { error } = await supabase
+        .from('ai_chat_messages')
+        .delete()
+        .eq('user_id', profileId);
+      if (error) console.warn('Failed to clear persisted chat messages', error);
+    }
     setMessages([
       {
         id: createId(),
         role: 'assistant',
-        content: '学習の相談窓口です。問題の解き方、勉強計画、用語の整理をそのまま聞いてください。',
+        content: welcomeMessage(language),
         createdAt: Date.now(),
       },
     ]);
@@ -200,7 +220,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
                 <p className="text-sm text-gray-500 mt-1">学習計画、用語の整理、問題の考え方を対話形式でサポートします。</p>
               </div>
               <button
-                onClick={resetChat}
+                onClick={() => void resetChat()}
                 className="shrink-0 self-start inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition whitespace-nowrap"
               >
                 <RotateCcw className="w-4 h-4" />
