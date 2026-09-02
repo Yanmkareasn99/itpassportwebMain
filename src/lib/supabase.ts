@@ -5,6 +5,20 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const isSupabaseEnabled = import.meta.env.VITE_USE_SUPABASE === 'true';
 
+// Runtime debug: confirm whether Supabase is enabled and which URL is configured.
+// This intentionally does not log the anon key.
+try {
+  console.info('[supabase] enabled=%s url=%s', String(isSupabaseEnabled), String(supabaseUrl));
+} catch (_) {
+  // ignore logging errors in non-browser environments
+}
+
+console.log('Supabase configuration:', {
+  enabled: isSupabaseEnabled,
+  hasUrl: Boolean(supabaseUrl),
+  hasAnonKey: Boolean(supabaseAnonKey),
+});
+
 type QueryResult = {
   data: unknown;
   error: null;
@@ -115,6 +129,12 @@ const localSupabase = {
     },
     async signInWithPassword() {
       return { data: { user: null, session: null }, error: null };
+    },
+    async signInWithOAuth() {
+      return {
+        data: { provider: null, url: null },
+        error: new Error('Google login requires Supabase to be enabled.'),
+      };
     },
     async signUp() {
       return { data: { user: null, session: null }, error: null };

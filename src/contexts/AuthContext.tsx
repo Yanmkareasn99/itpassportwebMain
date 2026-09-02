@@ -195,14 +195,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function signInWithGoogle() {
     if (!isSupabaseEnabled) {
-      throw new Error('OAuth is not available in local mode.');
+      throw new Error('Supabase is not enabled.');
     }
 
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: window.location.origin,
       },
+    });
+
+    console.log('Google OAuth:', {
+      hasUrl: Boolean((data as any)?.url),
+      error,
     });
 
     if (error) throw error;
