@@ -37,7 +37,8 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     const openAiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!supabaseUrl || !supabaseAnonKey || !openAiKey) {
+    const geminiKey = Deno.env.get('GEMINI_API_KEY');
+    if (!supabaseUrl || !supabaseAnonKey || !geminiKey) {
       return json({ error: 'Server configuration is incomplete.' }, 500);
     }
 
@@ -67,36 +68,78 @@ Deno.serve(async (req) => {
     const systemPrompt = typeof body.systemPrompt === 'string'
       ? body.systemPrompt.slice(0, 8000)
       : 'You are a helpful AI tutor. Answer concisely in Japanese.';
-    const model = Deno.env.get('OPENAI_MODEL') ?? 'gpt-4o-mini';
+    const model = Deno.env.get('GEMINI_MODEL') ?? 'gemini-3.5-flash-lite';
 
-    const upstream = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${openAiKey}`,
+const contents = [
+  ...messages.map(message => ({
+    // Gemini calls assistant messages "model"
+    role: message.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: message.content }],
+  })),
+  {
+    role: 'user',
+    parts: [{ text: prompt }],
+  },
+];
+
+const upstream = await fetch(
+  `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': geminiKey,
+    },
+    body: JSON.stringify({
+      systemInstruction: {
+        parts: [{ text: systemPrompt }],
       },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          ...messages,
-          { role: 'user', content: prompt },
-        ],
+      contents,
+      generationConfig: {
         temperature: 0.4,
-      }),
-    });
+        maxOutputTokens: 1000,
+      },
+    }),
+  },
+);
 
-    const data = await upstream.json() as {
-      choices?: Array<{ message?: { content?: string } }>;
-      error?: { message?: string };
+const data = await upstream.json() as {
+  candidates?: Array<{
+    content?: {
+      parts?: Array<{ text?: string }>;
     };
-    if (!upstream.ok) {
-      console.error('OpenAI request failed', upstream.status, data.error?.message);
-      return json({ error: 'The AI service is currently unavailable.' }, 502);
-    }
+    finishReason?: string;
+  }>;
+  promptFeedback?: {
+    blockReason?: string;
+  };
+  error?: {
+    message?: string;
+  };
+};
 
-    const reply = data.choices?.[0]?.message?.content?.trim();
-    if (!reply) return json({ error: 'The AI service returned an empty response.' }, 502);
+if (!upstream.ok) {
+  console.error(
+    'Gemini request failed',
+    upstream.status,
+    data.error?.message,
+  );
+  return json({ error: 'The AI service is currently unavailable.' }, 502);
+}
+
+const reply = data.candidates?.[0]?.content?.parts
+  ?.map(part => part.text ?? '')
+  .join('')
+  .trim();
+
+if (!reply) {
+  console.error(
+    'Gemini returned no text',
+    data.promptFeedback?.blockReason,
+    data.candidates?.[0]?.finishReason,
+  );
+  return json({ error: 'The AI service returned an empty response.' }, 502);
+}
     return json({ reply });
   } catch (error) {
     console.error('AI chat function failed', error);

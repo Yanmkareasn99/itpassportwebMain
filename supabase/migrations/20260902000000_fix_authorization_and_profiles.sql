@@ -129,9 +129,6 @@ GRANT EXECUTE ON FUNCTION public.set_profile_admin(uuid, boolean) TO authenticat
 
 -- The one-time import RPC bypassed RLS and was executable anonymously. Imports
 -- now use a server-side service-role client instead.
-REVOKE ALL ON FUNCTION public.import_questions_batch(jsonb) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.import_questions_batch(jsonb) FROM anon;
-REVOKE ALL ON FUNCTION public.import_questions_batch(jsonb) FROM authenticated;
 DROP FUNCTION IF EXISTS public.import_questions_batch(jsonb);
 
 -- Admin statistics need aggregate read access across users.
