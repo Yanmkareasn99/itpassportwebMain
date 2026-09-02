@@ -202,7 +202,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       provider: 'google',
       options: {
         redirectTo: window.location.origin,
-        scopes: 'email profile openid',
+        scopes: 'https://www.googleapis.com/auth/userinfo.email',
       },
     });
 
