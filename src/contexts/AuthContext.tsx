@@ -202,15 +202,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       provider: 'google',
       options: {
         redirectTo: window.location.origin,
+        scopes: 'email profile openid',
       },
     });
 
     console.log('Google OAuth:', {
       hasUrl: Boolean((data as any)?.url),
+      url: (data as any)?.url,
       error,
     });
 
     if (error) throw error;
+
+    // If Supabase returned a redirect URL, navigate there to start the OAuth flow.
+    const redirectUrl = (data as any)?.url;
+    if (redirectUrl) {
+      window.location.href = redirectUrl;
+    }
   }
 
   const isAdmin = profile?.is_admin === true;
