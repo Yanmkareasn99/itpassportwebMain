@@ -1,12 +1,19 @@
 import { readFileSync } from 'fs';
-import { createClient } from '../node_modules/@supabase/supabase-js/dist/main/index.js';
+import { dirname, resolve } from 'path';
+import { fileURLToPath } from 'url';
+import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 
-const SUPABASE_URL = 'https://nkrvteqorpikkhtggbll.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5rcnZ0ZXFvcnBpa2todGdnYmxsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2Mzk1NTMsImV4cCI6MjA5NzIxNTU1M30.YpUFYDCTsp_gI_BecnB4ZMpLg2_8C7a9pWM9uxV41pY';
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  throw new Error('Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY before importing questions.');
+}
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
 
-const BASE = '/tmp/cc-agent/67952924/project/src/data';
+const BASE = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'data');
 
 const SUBJECT_IDS = {
   // category_questions.json categories → real subject IDs

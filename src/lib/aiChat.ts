@@ -1,4 +1,5 @@
 import { Question, Subject } from '../types';
+import { isSupabaseEnabled, supabase } from './supabase';
 
 export interface ChatMessage {
   id: string;
@@ -21,10 +22,6 @@ interface ChatContext {
 
 const DEFAULT_REPLY =
   '学習内容について質問できます。たとえば「基本情報の午後問題をどう勉強すればいい？」や「この問題の考え方を教えて」と聞いてください。';
-
-function getEnv(key: keyof ImportMetaEnv) {
-  return import.meta.env[key] as string | undefined;
-}
 
 function summarizeQuestions(questions: Question[]) {
   if (questions.length === 0) return '直近の問題データはありません。';
@@ -83,111 +80,28 @@ function buildSystemPrompt(context: ChatContext) {
 }
 
 async function tryRemoteAnswer(prompt: string, context: ChatContext) {
-  const endpoint = getEnv('VITE_AI_CHAT_ENDPOINT');
-  const apiKey = getEnv('VITE_AI_CHAT_API_KEY') ?? getEnv('VITE_OPENAI_API_KEY');
-  const model = getEnv('VITE_AI_CHAT_MODEL') ?? getEnv('VITE_OPENAI_MODEL') ?? 'gpt-4o-mini';
-  const geminiApiKey = getEnv('VITE_GEMINI_API_KEY');
-  const geminiModel = getEnv('VITE_GEMINI_MODEL') ?? 'gemini-2.0-flash-lite';
-
-  const usingGemini = Boolean(geminiApiKey && !endpoint && !apiKey);
-  const usingOpenAI = Boolean(apiKey && !endpoint);
-
-  const effectiveEndpoint = endpoint
-    ?? (apiKey ? 'https://api.openai.com/v1/chat/completions' : null)
-    ?? (geminiApiKey ? `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(geminiModel)}:generateContent?key=${encodeURIComponent(geminiApiKey)}` : null);
-
-  if (!effectiveEndpoint) {
-    console.log('[AI] No API configured');
-    return null;
-  }
-
-  console.log('[AI] Using:', { usingGemini, usingOpenAI, endpoint: !!endpoint });
+  if (!isSupabaseEnabled) return null;
 
   const systemPrompt = buildSystemPrompt(context);
   const userMessages = context.history.slice(-12).map(turn => ({ role: turn.role, content: turn.content }));
 
-  const body = usingGemini
-    ? {
-        systemInstruction: {
-          parts: [{ text: systemPrompt }],
-        },
-        contents: [
-          ...userMessages
-            .map(message => ({
-              role: message.role === 'assistant' ? 'model' : 'user',
-              parts: [{ text: message.content }],
-            })),
-          {
-            role: 'user',
-            parts: [{ text: prompt }],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.4,
-        },
-      }
-    : usingOpenAI
-      ? {
-          model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            ...userMessages,
-            { role: 'user', content: prompt },
-          ],
-          temperature: 0.4,
-        }
-      : {
-          model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            ...userMessages,
-            { role: 'user', content: prompt },
-          ],
-          temperature: 0.4,
-        };
-
-  console.log('[AI] Request body keys:', Object.keys(body));
-
-  const response = await fetch(effectiveEndpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-    },
-    body: JSON.stringify(body),
+  const { data, error } = await supabase.functions.invoke('ai-chat', {
+    body: { prompt, messages: userMessages, systemPrompt },
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('[AI] API error:', response.status, errorText);
-    throw new Error(`AI endpoint error: ${response.status} - ${errorText}`);
-  }
-
-  const data = await response.json();
-  console.log('[AI] Response received');
-
-  const text = usingGemini
-    ? (data?.candidates?.[0]?.content?.parts ?? [])
-        .map((part: { text?: string }) => part.text ?? '')
-        .join('')
-        .trim()
-    : (data?.choices?.[0]?.message?.content ?? data.output_text ?? data.reply ?? '').toString().trim();
-
-  console.log('[AI] Extracted text length:', text?.length ?? 0);
-  return text || null;
+  if (error) throw error;
+  if (!data || typeof data !== 'object' || !('reply' in data)) return null;
+  const reply = (data as { reply?: unknown }).reply;
+  return typeof reply === 'string' && reply.trim() ? reply.trim() : null;
 }
 
 export async function getChatReply(prompt: string, context: ChatContext) {
   try {
     const remote = await tryRemoteAnswer(prompt, context);
-    if (remote) {
-      console.log('[AI] Using real API');
-      return remote;
-    }
+    if (remote) return remote;
   } catch (err) {
     console.error('[AI] Remote call failed, falling back:', err);
   }
 
-  console.log('[AI] Using local fallback');
   return buildLocalAnswer(prompt, context);
 }

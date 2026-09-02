@@ -84,6 +84,24 @@ interface CategoryStats {
   accuracy: number;
 }
 
+interface AnswerStatusRow {
+  question_id: string;
+  is_correct: boolean;
+  answered_at: string;
+}
+
+async function loadLatestAnswerStatus() {
+  const { data } = await supabase
+    .from('session_answers')
+    .select('question_id, is_correct, answered_at')
+    .order('answered_at', { ascending: true });
+  const latest = new Map<string, boolean>();
+  for (const answer of (data ?? []) as AnswerStatusRow[]) {
+    latest.set(answer.question_id, answer.is_correct);
+  }
+  return latest;
+}
+
 function CategoryCard({
   category,
   stats,
@@ -234,14 +252,15 @@ export default function PracticeListPage({
 
       const allIds = MAIN_CATEGORIES.flatMap((c) => c.subjectIds);
 
-      const [{ data: questions }, { data: sessions }] = await Promise.all([
+      const [{ data: questions }, { data: sessions }, latestAnswers] = await Promise.all([
         supabase.from('questions').select('id, subject_id').in('subject_id', allIds),
         user
           ? supabase
               .from('practice_sessions')
-              .select('subject_id, correct_answers, total_questions')
+              .select('subject_id, correct_answers, total_questions, completed_at')
               .eq('user_id', user.id)
           : Promise.resolve({ data: [] }),
+        user ? loadLatestAnswerStatus() : Promise.resolve(new Map<string, boolean>()),
       ]);
 
       const counts: Record<string, number> = {};
@@ -259,6 +278,7 @@ export default function PracticeListPage({
 
       if (sessions) {
         for (const s of sessions) {
+          if (!s.completed_at) continue;
           const sid = s.subject_id ?? 'all';
 
           if (!stats[sid]) {
@@ -272,16 +292,7 @@ export default function PracticeListPage({
 
       setSessionStats(stats);
 
-      if (user) {
-        const { data: incorrect } = await supabase
-          .from('session_answers')
-          .select('id')
-          .eq('is_correct', false);
-
-        setIncorrectCount(incorrect?.length ?? 0);
-      } else {
-        setIncorrectCount(0);
-      }
+      setIncorrectCount([...latestAnswers.values()].filter(isCorrect => !isCorrect).length);
 
       setLoading(false);
     }
@@ -343,9 +354,17 @@ export default function PracticeListPage({
     query = query.order('question_number');
 
     const { data } = await query;
+    let selectedQuestions = (data ?? []) as Question[];
 
-    if (data && data.length > 0) {
-      onStartPractice(subjectIds[0], data as Question[]);
+    if (modeFilter !== 'all') {
+      const latestAnswers = await loadLatestAnswerStatus();
+      selectedQuestions = selectedQuestions.filter(question => modeFilter === 'new'
+        ? !latestAnswers.has(question.id)
+        : latestAnswers.get(question.id) === false);
+    }
+
+    if (selectedQuestions.length > 0) {
+      onStartPractice(subjectIds.length > 1 ? 'all' : subjectIds[0], selectedQuestions);
     }
 
     setStarting(null);
@@ -354,18 +373,16 @@ export default function PracticeListPage({
   async function startReview() {
     setStarting('review');
 
-    const { data: wrongAnswers } = await supabase
-      .from('session_answers')
-      .select('question_id')
-      .eq('is_correct', false)
-      .limit(20);
+    const latestAnswers = await loadLatestAnswerStatus();
+    const qIds = [...latestAnswers.entries()]
+      .filter(([, isCorrect]) => !isCorrect)
+      .map(([questionId]) => questionId)
+      .slice(0, 20);
 
-    if (!wrongAnswers || wrongAnswers.length === 0) {
+    if (qIds.length === 0) {
       setStarting(null);
       return;
     }
-
-    const qIds = [...new Set(wrongAnswers.map((a) => a.question_id))];
 
     const { data } = await supabase
       .from('questions')

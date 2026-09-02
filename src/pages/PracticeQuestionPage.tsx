@@ -15,6 +15,12 @@ interface PracticeQuestionPageProps {
   subjectId: string;
 }
 
+interface PracticeAnswer {
+  questionId: string;
+  choiceId: string;
+  isCorrect: boolean;
+}
+
 function TreeDiagram() {
   return (
     <svg viewBox="0 0 260 160" className="w-full max-w-xs mx-auto my-4" fill="none">
@@ -48,17 +54,21 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
   const [answered, setAnswered] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
-  const [answers, setAnswers] = useState<{ questionId: string; choiceId: string | null; isCorrect: boolean }[]>([]);
+  const [answers, setAnswers] = useState<PracticeAnswer[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [finished, setFinished] = useState(false);
   const sessionCreatedRef = useRef(false);
+  const sessionIdRef = useRef<string | null>(null);
+  const sessionPromiseRef = useRef<Promise<string | null> | null>(null);
+  const pendingAnswersRef = useRef<PracticeAnswer[]>([]);
   
 
   const question = questions[currentIndex];
-  const choices: AnswerChoice[] = question?.answer_choices?.sort((a, b) => a.sort_order - b.sort_order) ?? [];
+  const choices: AnswerChoice[] = [...(question?.answer_choices ?? [])].sort((a, b) => a.sort_order - b.sort_order);
   const totalQuestions = questions.length;
-  const progressPct = Math.round(((currentIndex + (answered ? 1 : 0)) / totalQuestions) * 100);
+  const progressPct = totalQuestions > 0 ? Math.round((answers.length / totalQuestions) * 100) : 0;
   const correctSoFar = answers.filter(a => a.isCorrect).length;
+  const accuracyPct = answers.length > 0 ? Math.round((correctSoFar / answers.length) * 100) : 0;
   const explanation = getLocalizedExplanation(question, language);
   const label = {
     completed: language === 'ja' ? '演習完了' : language === 'en' ? 'Practice complete' : 'Hoàn thành luyện tập',
@@ -87,18 +97,36 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
   
 
   useEffect(() => {
+    if (!user || sessionCreatedRef.current) return;
+    const currentUser = user;
+
     async function createSession() {
-      if (!user || sessionCreatedRef.current) return;
       sessionCreatedRef.current = true;
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('practice_sessions')
-        .insert({ user_id: user.id, subject_id: subjectId === 'all' ? null : subjectId, total_questions: totalQuestions })
+        .insert({
+          user_id: currentUser.id,
+          subject_id: subjectId === 'all' || subjectId === 'review' ? null : subjectId,
+          total_questions: totalQuestions,
+        })
         .select()
         .single();
-      if (data) setSessionId(data.id);
+      if (error || !data?.id) return null;
+
+      const createdId = data.id as string;
+      sessionIdRef.current = createdId;
+      setSessionId(createdId);
+      const pending = pendingAnswersRef.current.splice(0);
+      await Promise.all(pending.map(answer => supabase.from('session_answers').insert({
+        session_id: createdId,
+        question_id: answer.questionId,
+        selected_choice_id: answer.choiceId,
+        is_correct: answer.isCorrect,
+      })));
+      return createdId;
     }
-    createSession();
-  }, []);
+    sessionPromiseRef.current = createSession();
+  }, [subjectId, totalQuestions, user]);
   
 
   
@@ -109,34 +137,52 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
     setAnswered(true);
     setShowExplanation(false);
     const correct = choices.find(c => c.id === choiceId)?.is_correct ?? false;
-    setAnswers(prev => [...prev, { questionId: question.id, choiceId, isCorrect: correct }]);
-    if (sessionId) {
-      supabase.from('session_answers').insert({
-        session_id: sessionId,
+    const answer = { questionId: question.id, choiceId, isCorrect: correct };
+    setAnswers(prev => [...prev.filter(item => item.questionId !== question.id), answer]);
+    const activeSessionId = sessionIdRef.current ?? sessionId;
+    if (activeSessionId) {
+      void supabase.from('session_answers').insert({
+        session_id: activeSessionId,
         question_id: question.id,
         selected_choice_id: choiceId,
         is_correct: correct,
-      }).then(() => {});
+      });
+    } else {
+      pendingAnswersRef.current = [
+        ...pendingAnswersRef.current.filter(item => item.questionId !== question.id),
+        answer,
+      ];
     }
+  }
+
+  function goToQuestion(index: number) {
+    const priorAnswer = answers.find(answer => answer.questionId === questions[index]?.id);
+    setCurrentIndex(index);
+    setSelectedChoiceId(priorAnswer?.choiceId ?? null);
+    setAnswered(Boolean(priorAnswer));
+    setShowExplanation(false);
   }
 
   async function handleNext() {
     if (currentIndex + 1 >= totalQuestions) {
+      const firstUnanswered = questions.findIndex(candidate =>
+        !answers.some(answer => answer.questionId === candidate.id));
+      if (firstUnanswered >= 0) {
+        goToQuestion(firstUnanswered);
+        return;
+      }
       const actualCorrect = answers.filter(a => a.isCorrect).length;
-      if (sessionId) {
+      const activeSessionId = sessionIdRef.current ?? await sessionPromiseRef.current;
+      if (activeSessionId) {
         await supabase.from('practice_sessions').update({
           correct_answers: actualCorrect,
           completed_at: new Date().toISOString(),
-        }).eq('id', sessionId);
+        }).eq('id', activeSessionId);
       }
       setFinished(true);
     }else {
-  setCurrentIndex(i => i + 1);
-  setSelectedChoiceId(null);
-  setAnswered(false);
-  setShowExplanation(false);
-  
-}
+      goToQuestion(currentIndex + 1);
+    }
   }
 
   if (finished) {
@@ -210,7 +256,7 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
             <div className="flex items-center gap-4">
               <span className="text-xs text-gray-400">
                 {label.accuracy}: <span className="font-bold text-emerald-600">
-                  {answers.length > 0 ? Math.round((correctSoFar / answers.length) * 100) : 0}%
+                  {accuracyPct}%
                 </span>
               </span>
               <button className="p-1.5 text-gray-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition">
@@ -255,7 +301,7 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
                 return (
                   <button
                     key={choice.id}
-                    onClick={() => handleAnswer(choice.id)}
+                    onClick={() => setSelectedChoiceId(choice.id)}
                     disabled={answered}
                     className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-center gap-3 ${stateClass} disabled:cursor-default`}
                   >
@@ -293,13 +339,7 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
             {/* Navigation */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
               <button
-                onClick={() => { 
-  setCurrentIndex(i => Math.max(0, i - 1)); 
-  setSelectedChoiceId(null); 
-  setAnswered(false); 
-  setShowExplanation(false);
-
-}}
+                onClick={() => goToQuestion(Math.max(0, currentIndex - 1))}
                 disabled={currentIndex === 0}
                 className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
               >
@@ -353,8 +393,8 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
               <p className="text-xs font-semibold text-gray-500 mb-3">{label.questionList}</p>
               <div className="grid grid-cols-5 sm:grid-cols-8 lg:grid-cols-4 gap-1.5">
-                {questions.map((_, i) => {
-                  const ans = answers[i];
+                {questions.map((mappedQuestion, i) => {
+                  const ans = answers.find(answer => answer.questionId === mappedQuestion.id);
                   let cls = 'bg-gray-100 text-gray-500';
                   if (i === currentIndex) cls = 'bg-blue-600 text-white';
                   else if (ans?.isCorrect) cls = 'bg-emerald-100 text-emerald-600';
@@ -362,7 +402,7 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
                   return (
                     <button
                       key={i}
-                      onClick={() => { setCurrentIndex(i); setSelectedChoiceId(null); setAnswered(false); setShowExplanation(false); }}
+                      onClick={() => goToQuestion(i)}
                       className={`h-8 rounded-lg text-xs font-bold transition ${cls}`}
                     >
                       {i + 1}
@@ -375,8 +415,8 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
             {/* Score */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-center">
               <p className="text-xs text-gray-400 mb-1">{label.currentAccuracy}</p>
-              <p className={`text-3xl font-bold ${progressPct >= 70 ? 'text-emerald-600' : progressPct >= 50 ? 'text-amber-500' : 'text-gray-700'}`}>
-                {answers.length > 0 ? Math.round((correctSoFar / answers.length) * 100) : 0}%
+              <p className={`text-3xl font-bold ${accuracyPct >= 70 ? 'text-emerald-600' : accuracyPct >= 50 ? 'text-amber-500' : 'text-gray-700'}`}>
+                {accuracyPct}%
               </p>
               <p className="text-xs text-gray-400 mt-1">
                 {language === 'ja' ? `${correctSoFar} / ${answers.length} 問正解` : `${correctSoFar} / ${answers.length} ${label.correctShort.toLowerCase()}`}
