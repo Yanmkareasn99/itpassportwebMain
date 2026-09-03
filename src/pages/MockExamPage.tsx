@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Question, AnswerChoice, Page } from '../types';
+import { AnswerChoiceContent, QuestionImage } from '../components/QuestionMedia';
 
 interface MockExamPageProps {
   currentPage: Page;
@@ -245,7 +246,8 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
               <p className="text-xs text-blue-600 font-bold bg-blue-50 px-2.5 py-1 rounded-full inline-block mb-4">
                 {translate(language, 'mockExamPage.questionNumber', { number: currentIndex + 1 })}
               </p>
-              <p className="text-gray-800 leading-relaxed text-sm">{question?.question_text}</p>
+              <p className="text-gray-800 leading-relaxed text-sm whitespace-pre-line">{question?.question_text}</p>
+              <QuestionImage question={question} />
             </div>
 
             <div className="space-y-3">
@@ -262,7 +264,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
                     <span className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold shrink-0 ${selected ? 'border-blue-500 text-blue-600' : 'border-gray-300 text-gray-400'}`}>
                       {String.fromCharCode(65 + idx)}
                     </span>
-                    <span className="text-sm text-gray-700">{choice.choice_text}</span>
+                    <AnswerChoiceContent question={question} choice={choice} displayIndex={idx} />
                   </button>
                 );
               })}
