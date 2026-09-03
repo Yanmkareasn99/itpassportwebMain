@@ -1,13 +1,14 @@
 import { languageLocales, translate } from '../i18n';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  ShieldCheck, Plus, Edit2, Trash2, X, Save, ChevronDown, ChevronUp,
-  Users, BookOpen, Layers, BarChart2, CheckCircle, XCircle, Search, RefreshCw,
+  ShieldCheck, Plus, Edit2, Trash2, X, Save, ChevronDown, ChevronUp, Copy,
+  Users, BookOpen, Layers, BarChart2, CheckCircle, XCircle, Search, RefreshCw, Upload,
 } from 'lucide-react';
 import Layout from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { getLocalizedExplanation } from '../lib/localizedQuestion';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
 import { Page, Question, Subject, AnswerChoice, Profile } from '../types';
 
 interface AdminPageProps {
@@ -37,6 +38,56 @@ interface QuestionForm {
   points: number;
   image_url: string;
   choices: ChoiceForm[];
+}
+
+interface CsvImportData {
+  questions: Record<string, string>[];
+  choices: Record<string, string>[];
+}
+
+function parseCsv(text: string): Record<string, string>[] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = '';
+  let quoted = false;
+
+  for (let i = 0; i < text.length; i += 1) {
+    const character = text[i];
+    const next = text[i + 1];
+    if (character === '"' && quoted && next === '"') {
+      cell += '"';
+      i += 1;
+    } else if (character === '"') {
+      quoted = !quoted;
+    } else if (character === ',' && !quoted) {
+      row.push(cell);
+      cell = '';
+    } else if ((character === '\n' || character === '\r') && !quoted) {
+      if (character === '\r' && next === '\n') i += 1;
+      row.push(cell);
+      if (row.some(value => value.trim())) rows.push(row);
+      row = [];
+      cell = '';
+    } else {
+      cell += character;
+    }
+  }
+  if (cell || row.length) {
+    row.push(cell);
+    if (row.some(value => value.trim())) rows.push(row);
+  }
+  if (quoted) throw new Error('CSV contains an unclosed quoted value.');
+  if (rows.length < 2) throw new Error('CSV must include a header row and at least one data row.');
+
+  const headers = rows[0].map(header => header.replace(/^\uFEFF/, '').trim());
+  if (headers.some(header => !header)) throw new Error('CSV contains an empty column name.');
+  return rows.slice(1).map(values => Object.fromEntries(
+    headers.map((header, index) => [header, (values[index] ?? '').trim()]),
+  ));
+}
+
+async function readCsvFile(file: File) {
+  return parseCsv(await file.text());
 }
 
 const emptyForm = (): QuestionForm => ({
@@ -86,10 +137,17 @@ function DiffBadge({ d }: { d: number }) {
 export default function AdminPage({ currentPage, onNavigate }: AdminPageProps) {
   const [tab, setTab] = useState<Tab>('questions');
   const { language } = useLanguage();
+  const { isAdmin } = useAuth();
 
   return (
     <Layout currentPage={currentPage} onNavigate={onNavigate} title={translate(language, 'adminPage.admin')} subtitle={translate(language, 'adminPage.admin')}>
       <div className="max-w-6xl mx-auto">
+        {!isAdmin ? (
+          <div className="bg-white rounded-2xl border border-red-100 shadow-sm p-6 text-sm text-red-600">
+            {translate(language, 'adminPage.adminAccessRequired')}
+          </div>
+        ) : (
+          <>
         {/* Tab bar */}
         <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-2xl w-full sm:w-fit overflow-x-auto">
           {([
@@ -115,6 +173,8 @@ export default function AdminPage({ currentPage, onNavigate }: AdminPageProps) {
         {tab === 'subjects' && <SubjectsTab />}
         {tab === 'users' && <UsersTab />}
         {tab === 'stats' && <StatsTab />}
+          </>
+        )}
       </div>
     </Layout>
   );
@@ -135,6 +195,10 @@ function QuestionsTab() {
   const [saving, setSaving] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [importData, setImportData] = useState<CsvImportData | null>(null);
+  const [importing, setImporting] = useState(false);
+  const questionCsvInput = useRef<HTMLInputElement>(null);
+  const choiceCsvInput = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -157,9 +221,20 @@ function QuestionsTab() {
 
   function startNew() {
     const defaultSubject = subjects[0]?.id ?? '';
-    setForm({ ...emptyForm(), subject_id: defaultSubject });
+    setForm({
+      ...emptyForm(),
+      subject_id: defaultSubject,
+      question_number: String(getNextQuestionNumber(defaultSubject)),
+    });
     setEditingId('new');
     setError('');
+  }
+
+  function getNextQuestionNumber(subjectId: string) {
+    if (!subjectId) return 1;
+    return questions
+      .filter(q => q.subject_id === subjectId)
+      .reduce((highest, q) => Math.max(highest, q.question_number), 0) + 1;
   }
 
   function startEdit(q: Question) {
@@ -180,6 +255,31 @@ function QuestionsTab() {
       choices,
     });
     setEditingId(q.id);
+    setError('');
+  }
+
+  function startDuplicate(q: Question) {
+    const choices: ChoiceForm[] = ((q.answer_choices ?? []) as AnswerChoice[])
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .map(c => ({
+        choice_text: c.choice_text,
+        is_correct: c.is_correct,
+        sort_order: c.sort_order,
+      }));
+    setForm({
+      subject_id: q.subject_id,
+      question_number: String(getNextQuestionNumber(q.subject_id)),
+      question_text: q.question_text,
+      question_type: q.question_type as QuestionForm['question_type'],
+      explanation: q.explanation ?? '',
+      explanation_en: q.explanation_en ?? '',
+      explanation_vi: q.explanation_vi ?? '',
+      difficulty: q.difficulty ?? 3,
+      points: q.points ?? 1,
+      image_url: q.image_url ?? '',
+      choices,
+    });
+    setEditingId('new');
     setError('');
   }
 
@@ -245,6 +345,106 @@ function QuestionsTab() {
     await load();
   }
 
+  async function handleCsvFileChange(type: 'questions' | 'choices', file: File | undefined) {
+    if (!file) return;
+    setError('');
+    try {
+      const rows = await readCsvFile(file);
+      setImportData(current => ({
+        questions: type === 'questions' ? rows : current?.questions ?? [],
+        choices: type === 'choices' ? rows : current?.choices ?? [],
+      }));
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : translate(language, 'adminPage.csvReadFailed'));
+    }
+  }
+
+  function validateCsvImport(data: CsvImportData) {
+    const requiredQuestionColumns = ['id', 'subject_id', 'question_number', 'question_text'];
+    const requiredChoiceColumns = ['id', 'question_id', 'choice_text', 'is_correct', 'sort_order'];
+    for (const column of requiredQuestionColumns) {
+      if (!(column in (data.questions[0] ?? {}))) throw new Error(`questions.csv is missing the "${column}" column.`);
+    }
+    for (const column of requiredChoiceColumns) {
+      if (!(column in (data.choices[0] ?? {}))) throw new Error(`answer_choices.csv is missing the "${column}" column.`);
+    }
+    const subjectIds = new Set(subjects.map(subject => subject.id));
+    const questionIds = new Set<string>();
+    for (const question of data.questions) {
+      if (!question.id || questionIds.has(question.id)) throw new Error('questions.csv contains a missing or duplicate question id.');
+      if (!subjectIds.has(question.subject_id)) throw new Error(`Unknown subject_id in questions.csv: ${question.subject_id}`);
+      if (!question.question_text) throw new Error(`Question ${question.id} has no question_text.`);
+      if (!Number.isInteger(Number(question.question_number))) throw new Error(`Question ${question.id} has an invalid question_number.`);
+      questionIds.add(question.id);
+    }
+
+    const choicesByQuestion = new Map<string, Record<string, string>[]>();
+    const choiceIds = new Set<string>();
+    for (const choice of data.choices) {
+      if (!choice.id || choiceIds.has(choice.id)) throw new Error('answer_choices.csv contains a missing or duplicate choice id.');
+      if (!questionIds.has(choice.question_id)) throw new Error(`Choice ${choice.id} refers to a question not included in questions.csv.`);
+      if (!choice.choice_text) throw new Error(`Choice ${choice.id} has no choice_text.`);
+      if (!['true', 'false'].includes(choice.is_correct.toLowerCase())) throw new Error(`Choice ${choice.id} must use true or false for is_correct.`);
+      if (!Number.isInteger(Number(choice.sort_order))) throw new Error(`Choice ${choice.id} has an invalid sort_order.`);
+      choiceIds.add(choice.id);
+      const choices = choicesByQuestion.get(choice.question_id) ?? [];
+      choices.push(choice);
+      choicesByQuestion.set(choice.question_id, choices);
+    }
+    for (const question of data.questions) {
+      const questionChoices = choicesByQuestion.get(question.id) ?? [];
+      if (questionChoices.length < 2 || questionChoices.filter(choice => choice.is_correct.toLowerCase() === 'true').length !== 1) {
+        throw new Error(`Question ${question.id} must have at least two choices and exactly one correct answer.`);
+      }
+    }
+  }
+
+  async function importCsv() {
+    if (!importData) return;
+    setError('');
+    try {
+      validateCsvImport(importData);
+      setImporting(true);
+      const questionPayloads = importData.questions.map(question => ({
+        id: question.id,
+        subject_id: question.subject_id,
+        question_number: Number(question.question_number),
+        question_text: question.question_text,
+        question_type: question.question_type || 'multiple_choice',
+        image_url: question.image_url || null,
+        explanation: question.explanation || null,
+        explanation_ja: question.explanation_ja || question.explanation || null,
+        explanation_en: question.explanation_en || null,
+        explanation_vi: question.explanation_vi || null,
+        difficulty: Number(question.difficulty) || 2,
+        points: Number(question.points) || 1,
+      }));
+      const { error: questionError } = await supabase.from('questions').insert(questionPayloads);
+      if (questionError) throw questionError;
+
+      const choicePayloads = importData.choices.map(choice => ({
+        id: choice.id,
+        question_id: choice.question_id,
+        choice_text: choice.choice_text,
+        is_correct: choice.is_correct.toLowerCase() === 'true',
+        sort_order: Number(choice.sort_order),
+      }));
+      const { error: choiceError } = await supabase.from('answer_choices').insert(choicePayloads);
+      if (choiceError) {
+        await supabase.from('questions').delete().in('id', questionPayloads.map(question => question.id));
+        throw choiceError;
+      }
+      setImportData(null);
+      if (questionCsvInput.current) questionCsvInput.current.value = '';
+      if (choiceCsvInput.current) choiceCsvInput.current.value = '';
+      await load();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : translate(language, 'adminPage.csvImportFailed'));
+    } finally {
+      setImporting(false);
+    }
+  }
+
   function setChoice(idx: number, patch: Partial<ChoiceForm>) {
     setForm(f => ({
       ...f,
@@ -287,7 +487,13 @@ function QuestionsTab() {
             <label className="block text-xs font-semibold text-gray-500 mb-1">{translate(language, 'adminPage.subject')}</label>
             <select
               value={form.subject_id}
-              onChange={e => setForm(f => ({ ...f, subject_id: e.target.value }))}
+              onChange={e => setForm(f => ({
+                ...f,
+                subject_id: e.target.value,
+                question_number: editingId === 'new'
+                  ? String(getNextQuestionNumber(e.target.value))
+                  : f.question_number,
+              }))}
               className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
             >
               {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -485,6 +691,34 @@ function QuestionsTab() {
         <button onClick={load} className="p-2 hover:bg-gray-100 rounded-xl transition text-gray-500">
           <RefreshCw className="w-4 h-4" />
         </button>
+        <input
+          ref={questionCsvInput}
+          type="file"
+          accept=".csv,text/csv"
+          className="hidden"
+          onChange={e => handleCsvFileChange('questions', e.target.files?.[0])}
+        />
+        <input
+          ref={choiceCsvInput}
+          type="file"
+          accept=".csv,text/csv"
+          className="hidden"
+          onChange={e => handleCsvFileChange('choices', e.target.files?.[0])}
+        />
+        <button
+          onClick={() => questionCsvInput.current?.click()}
+          className="flex items-center gap-2 px-3 py-2 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-xl transition"
+        >
+          <Upload className="w-4 h-4" />
+          {translate(language, 'adminPage.questionsCsv')}
+        </button>
+        <button
+          onClick={() => choiceCsvInput.current?.click()}
+          className="flex items-center gap-2 px-3 py-2 border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-xl transition"
+        >
+          <Upload className="w-4 h-4" />
+          {translate(language, 'adminPage.answersCsv')}
+        </button>
         <button
           onClick={startNew}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition"
@@ -493,6 +727,33 @@ function QuestionsTab() {
           {translate(language, 'adminPage.addQuestion')}
         </button>
       </div>
+
+      {importData && (
+        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="text-sm text-blue-800">
+              <p className="font-semibold">{translate(language, 'adminPage.csvReadyToImport')}</p>
+              <p className="mt-1 text-xs text-blue-700">
+                {importData.questions.length} {translate(language, 'adminPage.questions')} / {importData.choices.length} {translate(language, 'adminPage.choices')}
+              </p>
+              <p className="mt-1 text-xs text-blue-700">{translate(language, 'adminPage.csvImportFormat')}</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={() => setImportData(null)} className="px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-100 rounded-lg">
+                {translate(language, 'adminPage.cancel')}
+              </button>
+              <button
+                onClick={importCsv}
+                disabled={importing || !importData.questions.length || !importData.choices.length}
+                className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg disabled:opacity-60"
+              >
+                {importing && <RefreshCw className="w-4 h-4 animate-spin" />}
+                {translate(language, 'adminPage.importCsv')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
@@ -553,12 +814,21 @@ function QuestionsTab() {
                       </button>
                       <button
                         onClick={() => startEdit(q)}
+                        title={translate(language, 'adminPage.editQuestion')}
                         className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
+                        onClick={() => startDuplicate(q)}
+                        title={translate(language, 'adminPage.duplicateQuestion')}
+                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                      <button
                         onClick={() => handleDelete(q.id)}
+                        title={translate(language, 'adminPage.deleteQuestion')}
                         className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                       >
                         <Trash2 className="w-4 h-4" />
