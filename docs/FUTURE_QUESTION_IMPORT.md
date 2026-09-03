@@ -14,6 +14,11 @@ questions and choices. Reusing the same exam key updates the existing exam.
 
 No terminal command or CSV upload is needed for this Admin-panel workflow.
 
+Image-only scanned PDFs are handled automatically with Japanese OCR in the
+browser. They take longer to read than text-based PDFs. The review screen is
+still required because unclear scans can need a corrected question number or
+answer selection.
+
 ## Optional command-line workflow
 
 The command-line workflow turns a question PDF plus its answer key into:

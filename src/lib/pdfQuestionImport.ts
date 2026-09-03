@@ -299,7 +299,15 @@ export async function processExamPdfs(
     onProgress?.('Reading question text…');
     const questionPages = await extractPages(questionDocument);
     const starts = findQuestionStarts(questionPages);
-    if (!starts.length) throw new Error('No question headings such as “問1” were found in the PDF.');
+    if (!starts.length) {
+      const { processScannedExamPdfs } = await import('./scannedPdfQuestionImport');
+      return await processScannedExamPdfs(
+        questionDocument,
+        answerDocument,
+        examKey,
+        onProgress,
+      );
+    }
 
     let answers = new Map<number, string>();
     if (answerDocument) {
