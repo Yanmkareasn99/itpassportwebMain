@@ -67,6 +67,14 @@ const MAIN_CATEGORIES = [
 
 const QUESTION_FETCH_PAGE_SIZE = 1000;
 
+const KNOWN_ADDITIONAL_SUBJECTS = [
+  {
+    id: 'aa000000-0000-0000-0000-000000000001',
+    name: '基本情報技術者 科目A',
+    color: '#3B82F6',
+  },
+];
+
 type MainCategoryLabelKey = (typeof MAIN_CATEGORIES)[number]['labelKey'];
 
 interface PracticeCategory {
@@ -81,31 +89,6 @@ interface PracticeCategory {
   labelColor: string;
   dotColor: string;
   subjectIds: string[];
-}
-
-interface QuestionSummary {
-  id: string;
-  subject_id: string;
-}
-
-async function fetchAllQuestionSummaries(): Promise<QuestionSummary[]> {
-  const questions: QuestionSummary[] = [];
-
-  for (let from = 0; ; from += QUESTION_FETCH_PAGE_SIZE) {
-    const { data, error } = await supabase
-      .from('questions')
-      .select('id, subject_id')
-      .order('id')
-      .range(from, from + QUESTION_FETCH_PAGE_SIZE - 1);
-
-    if (error) throw error;
-
-    const page = (data ?? []) as QuestionSummary[];
-    questions.push(...page);
-    if (page.length < QUESTION_FETCH_PAGE_SIZE) break;
-  }
-
-  return questions;
 }
 
 async function fetchPracticeQuestions(
@@ -342,69 +325,126 @@ export default function PracticeListPage({
   const [modeFilter, setModeFilter] = useState<ModeFilter>('all');
 
   useEffect(() => {
-    async function load() {
+    let cancelled = false;
+
+    async function loadQuestionCounts() {
       setLoading(true);
 
-      const [{ data: subjects }, { data: sessions }, latestAnswers, questions] = await Promise.all([
-        supabase.from('subjects').select('id, name, color').order('name'),
-        user
-          ? supabase
-              .from('practice_sessions')
-              .select('subject_id, correct_answers, total_questions, completed_at')
-              .eq('user_id', user.id)
-          : Promise.resolve({ data: [] }),
-        user ? loadLatestAnswerStatus() : Promise.resolve(new Map<string, boolean>()),
-        fetchAllQuestionSummaries(),
-      ]);
+      try {
+        const { data: subjects, error: subjectError } = await supabase
+          .from('subjects')
+          .select('id, name, color')
+          .order('name');
 
-      const counts: Record<string, number> = {};
-      for (const q of questions) {
-        counts[q.subject_id] = (counts[q.subject_id] ?? 0) + 1;
-      }
-
-      setQuestionCounts(counts);
-      setTotalQuestionCount(questions.length);
-
-      const mainSubjectIds = new Set(MAIN_CATEGORIES.flatMap(category => category.subjectIds));
-      setAdditionalCategories((subjects ?? [])
-        .filter(subject => !mainSubjectIds.has(subject.id) && (counts[subject.id] ?? 0) > 0)
-        .map(subject => ({
-          id: `subject-${subject.id}`,
-          name: subject.name,
-          icon: BookOpen,
-          color: subject.color || '#8B5CF6',
-          borderColor: 'border-violet-400',
-          bgColor: 'bg-violet-50',
-          iconColor: 'text-violet-500',
-          labelColor: 'text-violet-600',
-          dotColor: 'bg-violet-500',
-          subjectIds: [subject.id],
-        })));
-
-      const stats: Record<string, { answered: number; correct: number }> = {};
-
-      if (sessions) {
-        for (const s of sessions) {
-          if (!s.completed_at) continue;
-          const sid = s.subject_id ?? 'all';
-
-          if (!stats[sid]) {
-            stats[sid] = { answered: 0, correct: 0 };
-          }
-
-          stats[sid].answered += s.total_questions ?? 0;
-          stats[sid].correct += s.correct_answers ?? 0;
+        if (subjectError) {
+          console.error('Unable to load subjects:', subjectError);
         }
+
+        const subjectMap = new Map(
+          KNOWN_ADDITIONAL_SUBJECTS.map(subject => [subject.id, subject]),
+        );
+        for (const subject of subjects ?? []) {
+          subjectMap.set(subject.id, subject);
+        }
+
+        const subjectIds = [
+          ...new Set([
+            ...MAIN_CATEGORIES.flatMap(category => category.subjectIds),
+            ...subjectMap.keys(),
+          ]),
+        ];
+
+        const [totalResult, ...countResults] = await Promise.all([
+          supabase.from('questions').select('id', { count: 'exact', head: true }),
+          ...subjectIds.map(subjectId =>
+            supabase
+              .from('questions')
+              .select('id', { count: 'exact', head: true })
+              .eq('subject_id', subjectId),
+          ),
+        ]);
+
+        const counts: Record<string, number> = {};
+        countResults.forEach((result, index) => {
+          if (result.error) {
+            console.error(`Unable to count questions for ${subjectIds[index]}:`, result.error);
+          }
+          counts[subjectIds[index]] = result.count ?? 0;
+        });
+
+        if (cancelled) return;
+
+        setQuestionCounts(counts);
+        setTotalQuestionCount(
+          totalResult.count ?? Object.values(counts).reduce((sum, count) => sum + count, 0),
+        );
+
+        const mainSubjectIds = new Set(MAIN_CATEGORIES.flatMap(category => category.subjectIds));
+        setAdditionalCategories([...subjectMap.values()]
+          .filter(subject => !mainSubjectIds.has(subject.id) && (counts[subject.id] ?? 0) > 0)
+          .map(subject => ({
+            id: `subject-${subject.id}`,
+            name: subject.name,
+            icon: BookOpen,
+            color: subject.color || '#8B5CF6',
+            borderColor: 'border-violet-400',
+            bgColor: 'bg-violet-50',
+            iconColor: 'text-violet-500',
+            labelColor: 'text-violet-600',
+            dotColor: 'bg-violet-500',
+            subjectIds: [subject.id],
+          })));
+      } catch (error) {
+        console.error('Unable to load practice subjects:', error);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-
-      setSessionStats(stats);
-
-      setIncorrectCount([...latestAnswers.values()].filter(isCorrect => !isCorrect).length);
-
-      setLoading(false);
     }
 
-    load();
+    async function loadUserStats() {
+      if (!user) {
+        if (!cancelled) {
+          setSessionStats({});
+          setIncorrectCount(0);
+        }
+        return;
+      }
+
+      try {
+        const [{ data: sessions, error: sessionError }, latestAnswers] = await Promise.all([
+          supabase
+            .from('practice_sessions')
+            .select('subject_id, correct_answers, total_questions, completed_at')
+            .eq('user_id', user.id),
+          loadLatestAnswerStatus(),
+        ]);
+
+        if (sessionError) throw sessionError;
+
+        const stats: Record<string, { answered: number; correct: number }> = {};
+        for (const session of sessions ?? []) {
+          if (!session.completed_at) continue;
+          const subjectId = session.subject_id ?? 'all';
+          stats[subjectId] ??= { answered: 0, correct: 0 };
+          stats[subjectId].answered += session.total_questions ?? 0;
+          stats[subjectId].correct += session.correct_answers ?? 0;
+        }
+
+        if (cancelled) return;
+
+        setSessionStats(stats);
+        setIncorrectCount([...latestAnswers.values()].filter(isCorrect => !isCorrect).length);
+      } catch (error) {
+        console.error('Unable to load practice progress:', error);
+      }
+    }
+
+    void loadQuestionCounts();
+    void loadUserStats();
+
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   function getCategoryStats(subjectIds: string[]): CategoryStats {
@@ -441,20 +481,24 @@ export default function PracticeListPage({
   async function startCategory(subjectIds: string[] | null, key: string) {
     setStarting(key);
 
-    let selectedQuestions = await fetchPracticeQuestions(subjectIds, diffFilter, formatFilter);
+    try {
+      let selectedQuestions = await fetchPracticeQuestions(subjectIds, diffFilter, formatFilter);
 
-    if (modeFilter !== 'all') {
-      const latestAnswers = await loadLatestAnswerStatus();
-      selectedQuestions = selectedQuestions.filter(question => modeFilter === 'new'
-        ? !latestAnswers.has(question.id)
-        : latestAnswers.get(question.id) === false);
+      if (modeFilter !== 'all') {
+        const latestAnswers = await loadLatestAnswerStatus();
+        selectedQuestions = selectedQuestions.filter(question => modeFilter === 'new'
+          ? !latestAnswers.has(question.id)
+          : latestAnswers.get(question.id) === false);
+      }
+
+      if (selectedQuestions.length > 0) {
+        onStartPractice(!subjectIds || subjectIds.length > 1 ? 'all' : subjectIds[0], selectedQuestions);
+      }
+    } catch (error) {
+      console.error('Unable to start practice:', error);
+    } finally {
+      setStarting(null);
     }
-
-    if (selectedQuestions.length > 0) {
-      onStartPractice(!subjectIds || subjectIds.length > 1 ? 'all' : subjectIds[0], selectedQuestions);
-    }
-
-    setStarting(null);
   }
 
   async function startReview() {
