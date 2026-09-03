@@ -21,3 +21,7 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Generated files for one-time Supabase dashboard imports
+supabase/import/*.csv
+supabase/import/*.sql
