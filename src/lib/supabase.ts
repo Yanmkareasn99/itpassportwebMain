@@ -135,6 +135,7 @@ class LocalQuery {
   private conflictColumn: string | null = null;
   private orderBy: { column: string; ascending: boolean } | null = null;
   private rowLimit: number | null = null;
+  private rowRange: { from: number; to: number } | null = null;
 
   constructor(private table: string) {}
 
@@ -184,6 +185,11 @@ class LocalQuery {
 
   limit(count: number) {
     this.rowLimit = count;
+    return this;
+  }
+
+  range(from: number, to: number) {
+    this.rowRange = { from, to };
     return this;
   }
 
@@ -253,6 +259,9 @@ class LocalQuery {
             : String(left ?? '').localeCompare(String(right ?? ''));
           return ascending ? comparison : -comparison;
         });
+      }
+      if (this.rowRange !== null) {
+        result = result.slice(this.rowRange.from, this.rowRange.to + 1);
       }
       if (this.rowLimit !== null) result = result.slice(0, this.rowLimit);
     }

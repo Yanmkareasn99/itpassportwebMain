@@ -45,6 +45,30 @@ interface CsvImportData {
   choices: Record<string, string>[];
 }
 
+const QUESTION_FETCH_PAGE_SIZE = 1000;
+
+async function fetchAllQuestions(): Promise<Question[]> {
+  const questions: Question[] = [];
+
+  for (let from = 0; ; from += QUESTION_FETCH_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from('questions')
+      .select('*, answer_choices(*)')
+      .order('id')
+      .range(from, from + QUESTION_FETCH_PAGE_SIZE - 1);
+
+    if (error) throw error;
+
+    const page = (data ?? []) as Question[];
+    questions.push(...page);
+    if (page.length < QUESTION_FETCH_PAGE_SIZE) break;
+  }
+
+  return questions.sort((left, right) =>
+    left.question_number - right.question_number || left.id.localeCompare(right.id),
+  );
+}
+
 function parseCsv(text: string): Record<string, string>[] {
   const rows: string[][] = [];
   let row: string[] = [];
@@ -202,13 +226,20 @@ function QuestionsTab() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data: qs }, { data: ss }] = await Promise.all([
-      supabase.from('questions').select('*, answer_choices(*)').order('question_number'),
-      supabase.from('subjects').select('*').order('name'),
-    ]);
-    if (qs) setQuestions(qs as Question[]);
-    if (ss) setSubjects(ss as Subject[]);
-    setLoading(false);
+    setError('');
+    try {
+      const [qs, { data: ss, error: subjectError }] = await Promise.all([
+        fetchAllQuestions(),
+        supabase.from('subjects').select('*').order('name'),
+      ]);
+      if (subjectError) throw subjectError;
+      setQuestions(qs);
+      setSubjects((ss ?? []) as Subject[]);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Unable to load questions.');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);
