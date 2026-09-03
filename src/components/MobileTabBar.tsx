@@ -27,24 +27,21 @@ export default function MobileTabBar({
   onNavigate,
 }: MobileTabBarProps) {
   const { isAdmin, signOut } = useAuth();
-  const { language } = useLanguage();
+  const { t } = useLanguage();
   const [moreOpen, setMoreOpen] = useState(false);
 
-  const t = (ja: string, en: string, vi: string) =>
-    language === "ja" ? ja : language === "en" ? en : vi;
-
   const tabItems = [
-    { icon: Home, label: t("ホーム", "Home", "Trang chủ"), page: "home" as Page },
-    { icon: Layers, label: t("演習", "Practice", "Luyện tập"), page: "practice-list" as Page },
-    { icon: BarChart2, label: t("模試", "Mock", "Thi thử"), page: "mock-exam" as Page },
-    { icon: MessageCircle, label: t("AI", "AI", "AI"), page: "ai-chat" as Page },
+    { icon: Home, label: t('mobileTabBar.home'), page: "home" as Page },
+    { icon: Layers, label: t('mobileTabBar.practice'), page: "practice-list" as Page },
+    { icon: BarChart2, label: t('mobileTabBar.mock'), page: "mock-exam" as Page },
+    { icon: MessageCircle, label: t('mobileTabBar.ai'), page: "ai-chat" as Page },
   ];
 
   const moreItems = [
-    { icon: Trophy, label: t("対戦", "Battle", "Đối kháng"), page: "battle" as Page },
-    { icon: FileText, label: t("教材", "Materials", "Tài liệu"), page: "materials" as Page },
-    { icon: Settings, label: t("設定", "Settings", "Cài đặt"), page: "settings" as Page },
-    ...(isAdmin ? [{ icon: ShieldCheck, label: "Admin", page: "admin" as Page }] : []),
+    { icon: Trophy, label: t('mobileTabBar.battle'), page: "battle" as Page },
+    { icon: FileText, label: t('mobileTabBar.materials'), page: "materials" as Page },
+    { icon: Settings, label: t('mobileTabBar.settings'), page: "settings" as Page },
+    ...(isAdmin ? [{ icon: ShieldCheck, label: t('adminPage.admin'), page: "admin" as Page }] : []),
   ];
 
   function go(page: Page) {
@@ -68,7 +65,7 @@ export default function MobileTabBar({
           <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-xl">
             <div className="flex items-center justify-between mb-3">
               <span className="font-semibold text-gray-700">
-                {t("メニュー", "Menu", "Menu")}
+                {t('mobileTabBar.menu')}
               </span>
               <button
                 onClick={() => setMoreOpen(false)}
@@ -103,7 +100,7 @@ export default function MobileTabBar({
             >
               <LogOut size={18} />
               <span className="text-sm font-medium">
-                {t("ログアウト", "Sign out", "Đăng xuất")}
+                {t('mobileTabBar.signOut')}
               </span>
             </button>
           </div>
@@ -139,7 +136,7 @@ export default function MobileTabBar({
           >
             <MoreHorizontal size={20} />
             <span className="text-[11px] leading-tight">
-              {t("その他", "More", "Thêm")}
+              {t('mobileTabBar.more')}
             </span>
           </button>
         </div>

@@ -1,3 +1,4 @@
+import { translate } from '../i18n';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Sparkles, Send, RotateCcw, Lightbulb, MessageCircle } from 'lucide-react';
 import Layout from '../components/Layout';
@@ -14,12 +15,6 @@ interface AIChatPageProps {
 
 function createId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function welcomeMessage(language: 'ja' | 'en' | 'vi') {
-  if (language === 'en') return 'Ask me about solving questions, study plans, or organizing key terms.';
-  if (language === 'vi') return 'Hãy hỏi tôi về cách giải bài, kế hoạch học tập hoặc cách hệ thống thuật ngữ.';
-  return '学習の相談窓口です。問題の解き方、勉強計画、用語の整理をそのまま聞いてください。';
 }
 
 interface StoredChatMessage {
@@ -44,33 +39,18 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
   const { language } = useLanguage();
   const profileId = profile?.id;
 
-  const starterPrompts =
-    language === 'ja'
-      ? [
-          '今日の学習計画を作って',
-          '基本情報の午後問題の勉強法を教えて',
-          'この問題を解く考え方を整理して',
-          '苦手科目を克服する方法を教えて',
-        ]
-      : language === 'en'
-      ? [
-          'Create a study plan for today',
-          'How should I study the afternoon exam?',
-          'Explain how to solve this question',
-          'How can I overcome weak subjects?',
-        ]
-      : [
-          'Lập kế hoạch học hôm nay',
-          'Cách học phần thi buổi chiều',
-          'Giải thích cách làm câu này',
-          'Làm sao khắc phục môn yếu?',
-        ];
+  const starterPrompts = [
+    translate(language, 'aiChatPage.starterPlan'),
+    translate(language, 'aiChatPage.starterAfternoon'),
+    translate(language, 'aiChatPage.starterThinking'),
+    translate(language, 'aiChatPage.starterWeakSubject'),
+  ];
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: createId(),
       role: 'assistant',
-      content: welcomeMessage(language),
+      content: translate(language, 'aiChatPage.welcome'),
       createdAt: Date.now(),
     },
   ]);
@@ -153,7 +133,8 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
       console.warn('Failed to persist user message', err);
     }
     const reply = await getChatReply(content, {
-      profileName: profile?.name ?? 'あなた',
+      language,
+      profileName: profile?.name ?? translate(language, 'common.you'),
       subject: selectedSubject,
       recentQuestions,
       history,
@@ -194,7 +175,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
       {
         id: createId(),
         role: 'assistant',
-        content: welcomeMessage(language),
+        content: translate(language, 'aiChatPage.welcome'),
         createdAt: Date.now(),
       },
     ]);
@@ -204,8 +185,8 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
     <Layout
       currentPage={currentPage}
       onNavigate={onNavigate}
-      title={language === 'ja' ? 'AIチャット' : language === 'en' ? 'AI Chat' : 'AI Chat'}
-      subtitle={language === 'ja' ? '学習アシスタント' : language === 'en' ? 'Study Assistant' : 'Trợ lý học tập'}
+      title={translate(language, 'aiChatPage.aiChat')}
+      subtitle={translate(language, 'aiChatPage.studyAssistant')}
     >
       <div className="max-w-5xl mx-auto grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col min-h-[70vh] overflow-hidden">
@@ -214,17 +195,17 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
               <div className="min-w-0">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/80 text-blue-600 text-xs font-semibold mb-3">
                   <Sparkles className="w-3.5 h-3.5" />
-                  AI Study Assistant
+                  {translate(language, 'aiChatPage.studyAssistant')}
                 </div>
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-800">わからないことを、そのまま質問してください</h2>
-                <p className="text-sm text-gray-500 mt-1">学習計画、用語の整理、問題の考え方を対話形式でサポートします。</p>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{translate(language, 'aiChatPage.heroTitle')}</h2>
+                <p className="text-sm text-gray-500 mt-1">{translate(language, 'aiChatPage.heroDescription')}</p>
               </div>
               <button
                 onClick={() => void resetChat()}
                 className="shrink-0 self-start inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition whitespace-nowrap"
               >
                 <RotateCcw className="w-4 h-4" />
-                {language === 'ja' ? 'リセット' : language === 'en' ? 'Reset' : 'Đặt lại'}
+                {translate(language, 'aiChatPage.reset')}
               </button>
             </div>
           </div>
@@ -235,7 +216,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
               <div className="flex justify-start">
                 <div className="bg-white border border-gray-100 rounded-2xl px-4 py-3 text-sm text-gray-400 flex items-center gap-2 shadow-sm">
                   <MessageCircle className="w-4 h-4 animate-pulse" />
-                  AIが考えています...
+                  {translate(language, 'aiChatPage.thinking')}
                 </div>
               </div>
             )}
@@ -260,11 +241,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
                   }
                 }}
                 placeholder={
-                  language === 'ja'
-                    ? '例: この問題の考え方を教えて / 勉強計画を作って'
-                    : language === 'en'
-                    ? 'Example: Explain this question / Create a study plan'
-                    : 'Ví dụ: Giải thích câu này / Lập kế hoạch học'
+                  translate(language, 'aiChatPage.exampleExplainThisQuestionCreateAStudyPlan')
                 }
                 className="flex-1 resize-none min-h-[56px] max-h-40 px-4 py-3 rounded-2xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                 rows={2}
@@ -275,7 +252,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
                 className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <Send className="w-4 h-4" />
-                {language === 'ja' ? '送信' : language === 'en' ? 'Send' : 'Gửi'}
+                {translate(language, 'aiChatPage.send')}
               </button>
             </form>
           </div>
@@ -285,7 +262,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <div className="flex items-center gap-2 mb-3 text-gray-700 font-semibold">
               <Lightbulb className="w-4 h-4 text-amber-500" />
-              すぐ聞ける質問
+              {translate(language, 'aiChatPage.quickQuestions')}
             </div>
             <div className="space-y-2">
               {starterPrompts.map(item => (

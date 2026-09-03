@@ -1,3 +1,4 @@
+import { languageLocales, translate } from '../i18n';
 import { useState, useEffect, useCallback } from 'react';
 import { Trophy, Users, Clock, Zap, CheckCircle, XCircle, ChevronRight, Plus, RefreshCw } from 'lucide-react';
 import Layout from '../components/Layout';
@@ -114,29 +115,29 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
 
   if (stage === 'lobby') {
     return (
-      <Layout currentPage={currentPage} onNavigate={onNavigate} title={language === 'ja' ? '対戦' : language === 'en' ? 'Battle' : 'Đối kháng'} subtitle={language === 'ja' ? '学習メニュー' : language === 'en' ? 'Study menu' : 'Thực đơn học tập'}>
+      <Layout currentPage={currentPage} onNavigate={onNavigate} title={translate(language, 'battlePage.battle')} subtitle={translate(language, 'battlePage.studyMenu')}>
         <div className="max-w-3xl mx-auto space-y-5">
           {/* Hero */}
           <div className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl p-6 text-white flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold mb-1">{language === 'ja' ? 'AIチャレンジ' : language === 'en' ? 'AI challenge' : 'Thử thách AI'}</h2>
-              <p className="text-amber-100 text-sm">{language === 'ja' ? 'AIライバルと問題を解き合って腕試し！' : language === 'en' ? 'Test yourself by solving questions against an AI rival!' : 'Đấu với AI để kiểm tra kỹ năng của bạn!'}</p>
+              <h2 className="text-2xl font-bold mb-1">{translate(language, 'battlePage.aiChallenge')}</h2>
+              <p className="text-amber-100 text-sm">{translate(language, 'battlePage.testYourselfBySolvingQuestionsAgainstAnAi')}</p>
             </div>
             <button
               onClick={startBattle}
               className="flex items-center gap-2 px-6 py-3 bg-white text-amber-600 rounded-xl font-bold hover:bg-amber-50 transition shadow-lg"
             >
               <Zap className="w-5 h-5" />
-              {language === 'ja' ? 'バトル開始' : language === 'en' ? 'Start battle' : 'Bắt đầu'}
+              {translate(language, 'battlePage.startBattle')}
             </button>
           </div>
 
           {/* Battle rules */}
           <div className="grid grid-cols-3 gap-4">
             {[
-              { icon: Trophy, label: language === 'ja' ? '出題数' : language === 'en' ? 'Questions' : 'Số câu', value: `${BATTLE_QUESTIONS}${language === 'ja' ? '問' : ''}` },
-              { icon: Clock, label: language === 'ja' ? '1問あたり' : language === 'en' ? 'Per question' : 'Mỗi câu', value: `${TIME_PER_QUESTION}${language === 'ja' ? '秒' : 's'}` },
-              { icon: Zap, label: language === 'ja' ? '形式' : language === 'en' ? 'Mode' : 'Chế độ', value: language === 'ja' ? 'AI対戦' : language === 'en' ? 'AI battle' : 'Đấu AI' },
+              { icon: Trophy, label: translate(language, 'battlePage.questions'), value: translate(language, 'battlePage.questionCountValue', { count: BATTLE_QUESTIONS }) },
+              { icon: Clock, label: translate(language, 'battlePage.perQuestion'), value: translate(language, 'battlePage.secondsValue', { count: TIME_PER_QUESTION }) },
+              { icon: Zap, label: translate(language, 'battlePage.mode'), value: translate(language, 'battlePage.aiBattle') },
             ].map(({ icon: Icon, label, value }) => (
               <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-center">
                 <Icon className="w-6 h-6 text-amber-500 mx-auto mb-2" />
@@ -151,7 +152,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-gray-700 flex items-center gap-2">
                 <Users className="w-4 h-4 text-gray-400" />
-                {language === 'ja' ? 'マッチング待ちのルーム' : language === 'en' ? 'Rooms waiting for match' : 'Phòng đang chờ ghép'}
+                {translate(language, 'battlePage.roomsWaitingForMatch')}
               </h3>
               <button onClick={loadRooms} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition">
                 <RefreshCw className="w-4 h-4" />
@@ -160,21 +161,21 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
             {rooms.length === 0 ? (
               <div className="text-center py-8 text-gray-400">
                 <Users className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                <p className="text-sm">{language === 'ja' ? '現在待機中のルームはありません' : language === 'en' ? 'No rooms are waiting right now' : 'Hiện không có phòng chờ nào'}</p>
+                <p className="text-sm">{translate(language, 'battlePage.noRoomsAreWaitingRightNow')}</p>
               </div>
             ) : (
               <div className="space-y-2">
                 {rooms.map(room => (
                   <div key={room.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
                     <div>
-                      <p className="text-sm font-medium text-gray-700">{language === 'ja' ? 'ルーム' : language === 'en' ? 'Room' : 'Phòng'} #{room.id.slice(0, 8)}</p>
-                      <p className="text-xs text-gray-400">{new Date(room.created_at).toLocaleTimeString('ja-JP')}</p>
+                      <p className="text-sm font-medium text-gray-700">{translate(language, 'battlePage.room')} #{room.id.slice(0, 8)}</p>
+                      <p className="text-xs text-gray-400">{new Date(room.created_at).toLocaleTimeString(languageLocales[language])}</p>
                     </div>
                     <button
                       onClick={startBattle}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white rounded-lg text-xs font-semibold hover:bg-amber-600 transition"
                     >
-                      {language === 'ja' ? '参加' : language === 'en' ? 'Join' : 'Tham gia'} <ChevronRight className="w-3 h-3" />
+                      {translate(language, 'battlePage.join')} <ChevronRight className="w-3 h-3" />
                     </button>
                   </div>
                 ))}
@@ -185,7 +186,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
               className="w-full mt-4 flex items-center justify-center gap-2 py-3 border-2 border-dashed border-gray-200 rounded-xl text-sm text-gray-500 hover:border-amber-400 hover:text-amber-500 transition"
             >
               <Plus className="w-4 h-4" />
-              {language === 'ja' ? '新しいルームを作成' : language === 'en' ? 'Create a new room' : 'Tạo phòng mới'}
+              {translate(language, 'battlePage.createANewRoom')}
             </button>
           </div>
         </div>
@@ -197,14 +198,14 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     const won = playerScore > aiScore;
     const draw = playerScore === aiScore;
     return (
-      <Layout currentPage={currentPage} onNavigate={onNavigate} title={language === 'ja' ? 'バトル結果' : language === 'en' ? 'Battle result' : 'Kết quả đối kháng'} subtitle={language === 'ja' ? '対戦' : language === 'en' ? 'Battle' : 'Đối kháng'}>
+      <Layout currentPage={currentPage} onNavigate={onNavigate} title={translate(language, 'battlePage.battleResult')} subtitle={translate(language, 'battlePage.battle')}>
         <div className="max-w-md mx-auto">
           <div className={`rounded-2xl p-8 text-center mb-5 ${won ? 'bg-amber-50 border border-amber-200' : draw ? 'bg-gray-50 border border-gray-200' : 'bg-blue-50 border border-blue-200'}`}>
             <div className="text-5xl mb-4">{won ? '🏆' : draw ? '🤝' : '😤'}</div>
             <h2 className={`text-2xl font-bold mb-2 ${won ? 'text-amber-600' : draw ? 'text-gray-600' : 'text-blue-600'}`}>
-              {won ? (language === 'ja' ? '勝利！' : language === 'en' ? 'Victory!' : 'Chiến thắng!') : draw ? (language === 'ja' ? '引き分け' : language === 'en' ? 'Draw' : 'Hòa') : (language === 'ja' ? '敗北...' : language === 'en' ? 'Defeat...' : 'Thua cuộc...')}
+              {won ? (translate(language, 'battlePage.victory')) : draw ? (translate(language, 'battlePage.draw')) : (translate(language, 'battlePage.defeat'))}
             </h2>
-            <p className="text-gray-500">{won ? (language === 'ja' ? 'AIライバルに勝利しました！' : language === 'en' ? 'You beat the AI rival!' : 'Bạn đã thắng AI!') : draw ? (language === 'ja' ? '引き分けでした！' : language === 'en' ? 'It was a draw!' : 'Hòa!') : (language === 'ja' ? 'もう一度チャレンジ！' : language === 'en' ? 'Try again!' : 'Thử lại!')}</p>
+            <p className="text-gray-500">{won ? (translate(language, 'battlePage.youBeatTheAiRival')) : draw ? (translate(language, 'battlePage.itWasADraw')) : (translate(language, 'battlePage.tryAgain'))}</p>
           </div>
 
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-5">
@@ -213,7 +214,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                 <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-2">
                   <span className="text-xl font-bold text-blue-600">{profile?.name?.charAt(0) ?? 'U'}</span>
                 </div>
-                <p className="text-sm font-semibold text-gray-700">{profile?.name ?? (language === 'ja' ? 'あなた' : language === 'en' ? 'You' : 'Bạn')}</p>
+                <p className="text-sm font-semibold text-gray-700">{profile?.name ?? (translate(language, 'battlePage.you'))}</p>
                 <p className="text-3xl font-bold text-blue-600 mt-1">{playerScore}</p>
               </div>
               <div className="text-2xl font-bold text-gray-300">vs</div>
@@ -221,19 +222,19 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                 <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center mx-auto mb-2">
                   <Zap className="w-6 h-6 text-white" />
                 </div>
-                <p className="text-sm font-semibold text-gray-700">{language === 'ja' ? 'AIライバル' : language === 'en' ? 'AI rival' : 'Đối thủ AI'}</p>
+                <p className="text-sm font-semibold text-gray-700">{translate(language, 'battlePage.aiRival')}</p>
                 <p className="text-3xl font-bold text-purple-500 mt-1">{aiScore}</p>
               </div>
             </div>
-              <p className="text-center text-xs text-gray-400 mt-4">{language === 'ja' ? `${BATTLE_QUESTIONS}問中` : language === 'en' ? `Out of ${BATTLE_QUESTIONS}` : `Trong ${BATTLE_QUESTIONS} câu`}</p>
+              <p className="text-center text-xs text-gray-400 mt-4">{translate(language, 'battlePage.outOfQuestions', { count: BATTLE_QUESTIONS })}</p>
           </div>
 
           <div className="flex gap-3">
             <button onClick={() => setStage('lobby')} className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition">
-              {language === 'ja' ? 'ロビーへ' : language === 'en' ? 'Back to lobby' : 'Về sảnh'}
+              {translate(language, 'battlePage.backToLobby')}
             </button>
             <button onClick={startBattle} className="flex-1 py-3 bg-amber-500 text-white rounded-xl font-semibold hover:bg-amber-600 transition">
-              {language === 'ja' ? '再挑戦' : language === 'en' ? 'Retry' : 'Thử lại'}
+              {translate(language, 'battlePage.retry')}
             </button>
           </div>
         </div>
@@ -245,7 +246,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   const selectedCorrect = answered && choices.find(c => c.id === selectedChoice)?.is_correct;
 
   return (
-    <Layout currentPage={currentPage} onNavigate={onNavigate} title={language === 'ja' ? 'バトル中' : language === 'en' ? 'Battle in progress' : 'Đang đối kháng'} subtitle={language === 'ja' ? '対戦' : language === 'en' ? 'Battle' : 'Đối kháng'}>
+    <Layout currentPage={currentPage} onNavigate={onNavigate} title={translate(language, 'battlePage.battleInProgress')} subtitle={translate(language, 'battlePage.battle')}>
       <div className="max-w-2xl mx-auto space-y-4">
         {/* Score board */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
@@ -255,7 +256,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                 {profile?.name?.charAt(0) ?? 'U'}
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-700">{profile?.name ?? (language === 'ja' ? 'あなた' : language === 'en' ? 'You' : 'Bạn')}</p>
+                <p className="text-sm font-semibold text-gray-700">{profile?.name ?? (translate(language, 'battlePage.you'))}</p>
                 <p className="text-xl font-bold text-blue-600">{playerScore}</p>
               </div>
             </div>
@@ -276,14 +277,14 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                   {timeLeft}
                 </span>
               </div>
-              <p className="text-xs text-gray-400 mt-1">{language === 'ja' ? `問${currentIndex + 1}/${questions.length}` : language === 'en' ? `Q${currentIndex + 1}/${questions.length}` : `Câu ${currentIndex + 1}/${questions.length}`}</p>
+              <p className="text-xs text-gray-400 mt-1">{translate(language, 'battlePage.questionProgress', { current: currentIndex + 1, total: questions.length })}</p>
             </div>
             <div className="flex items-center gap-3 flex-row-reverse">
               <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center">
                 <Zap style={{ width: 16, height: 16 }} className="text-white" />
               </div>
               <div className="text-right">
-                <p className="text-sm font-semibold text-gray-700">{language === 'ja' ? 'AIライバル' : language === 'en' ? 'AI rival' : 'Đối thủ AI'}</p>
+                <p className="text-sm font-semibold text-gray-700">{translate(language, 'battlePage.aiRival')}</p>
                 <p className="text-xl font-bold text-purple-500">{aiScore}</p>
               </div>
             </div>
@@ -293,7 +294,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
         {/* Question */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <p className="text-xs text-amber-600 font-bold bg-amber-50 px-2.5 py-1 rounded-full inline-block mb-4">
-            {language === 'ja' ? `問題 ${currentIndex + 1}` : language === 'en' ? `Question ${currentIndex + 1}` : `Câu ${currentIndex + 1}`}
+            {translate(language, 'battlePage.questionNumber', { number: currentIndex + 1 })}
           </p>
           <p className="text-gray-800 leading-relaxed">{q?.question_text}</p>
         </div>
@@ -327,7 +328,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
 
         {answered && (
           <div className={`rounded-xl p-3 text-center text-sm font-semibold ${selectedCorrect ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
-            {selectedCorrect ? (language === 'ja' ? '正解！ +1ポイント' : language === 'en' ? 'Correct! +1 point' : 'Đúng! +1 điểm') : `${language === 'ja' ? '不正解。正解' : language === 'en' ? 'Incorrect. Correct' : 'Sai. Đáp án đúng'}: ${choices.find(c => c.is_correct)?.choice_text}`}
+            {selectedCorrect ? (translate(language, 'battlePage.correct1Point')) : `${translate(language, 'battlePage.incorrectCorrect')}: ${choices.find(c => c.is_correct)?.choice_text}`}
           </div>
         )}
       </div>

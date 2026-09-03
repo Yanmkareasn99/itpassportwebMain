@@ -36,7 +36,6 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
-    const openAiKey = Deno.env.get('OPENAI_API_KEY');
     const geminiKey = Deno.env.get('GEMINI_API_KEY');
     if (!supabaseUrl || !supabaseAnonKey || !geminiKey) {
       return json({ error: 'Server configuration is incomplete.' }, 500);

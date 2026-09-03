@@ -1,3 +1,4 @@
+import { translate, type Language } from '../i18n';
 import { useEffect, useRef, useState } from 'react';
 import { Bell, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,21 +9,11 @@ interface HeaderProps {
   subtitle?: string;
 }
 
-function greeting(language: string) {
+function greeting(language: Language) {
   const h = new Date().getHours();
-  if (language === 'en') {
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
-  }
-  if (language === 'vi') {
-    if (h < 12) return 'Chao buoi sang';
-    if (h < 17) return 'Chao buoi chieu';
-    return 'Chao buoi toi';
-  }
-  if (h < 12) return 'おはようございます';
-  if (h < 17) return 'こんにちは';
-  return 'こんばんは';
+  if (h < 12) return translate(language, 'header.goodMorning');
+  if (h < 17) return translate(language, 'header.goodAfternoon');
+  return translate(language, 'header.goodEvening');
 }
 
 export default function Header({ title, subtitle }: HeaderProps) {
@@ -34,23 +25,23 @@ export default function Header({ title, subtitle }: HeaderProps) {
   const notifications = [
     {
       id: 1,
-      title: language === 'ja' ? '今日の学習リマインダー' : language === 'en' ? 'Today study reminder' : 'Nhac hoc hom nay',
-      body: language === 'ja' ? '模擬試験を1回解いて、苦手分野を確認しましょう。' : language === 'en' ? 'Take one mock exam and review weak areas.' : 'Lam mot bai thi thu va xem lai phan con yeu.',
-      time: language === 'ja' ? '5分前' : language === 'en' ? '5 min ago' : '5 phut truoc',
+      title: translate(language, 'header.todayStudyReminder'),
+      body: translate(language, 'header.takeOneMockExamAndReviewWeakAreas'),
+      time: translate(language, 'header.5MinAgo'),
       unread: true,
     },
     {
       id: 2,
-      title: language === 'ja' ? '教材を確認できます' : language === 'en' ? 'Materials are available' : 'Co the xem tai lieu',
-      body: language === 'ja' ? '学生はいつでも教材を確認できるため、情報共有がスムーズになります。' : language === 'en' ? 'Students can check materials anytime, making information sharing smoother.' : 'Hoc sinh co the xem tai lieu bat cu luc nao, giup chia se thong tin muot hon.',
-      time: language === 'ja' ? '1時間前' : language === 'en' ? '1 hour ago' : '1 gio truoc',
+      title: translate(language, 'header.materialsAreAvailable'),
+      body: translate(language, 'header.studentsCanCheckMaterialsAnytimeMakingInformationSharing'),
+      time: translate(language, 'header.1HourAgo'),
       unread: true,
     },
     {
       id: 3,
-      title: language === 'ja' ? '復習おすすめ' : language === 'en' ? 'Review recommended' : 'Nen on tap',
-      body: language === 'ja' ? '前回間違えた問題をもう一度確認しましょう。' : language === 'en' ? 'Review the questions you missed last time.' : 'Hay xem lai cau ban da sai lan truoc.',
-      time: language === 'ja' ? '昨日' : language === 'en' ? 'Yesterday' : 'Hom qua',
+      title: translate(language, 'header.reviewRecommended'),
+      body: translate(language, 'header.reviewTheQuestionsYouMissedLastTime'),
+      time: translate(language, 'header.yesterday'),
       unread: false,
     },
   ];
@@ -77,7 +68,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
     };
   }, []);
 
-  const guest = language === 'ja' ? 'ゲスト' : language === 'en' ? 'Guest' : 'Khach';
+  const guest = translate(language, 'header.guest');
 
   return (
     <header className="min-h-16 bg-white border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-3 sm:py-0 sticky top-0 z-10">
@@ -91,14 +82,14 @@ export default function Header({ title, subtitle }: HeaderProps) {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" style={{ width: 15, height: 15 }} />
           <input
             type="text"
-            placeholder={language === 'ja' ? '検索...' : language === 'en' ? 'Search...' : 'Tim kiem...'}
+            placeholder={translate(language, 'header.search')}
             className="pl-8 pr-4 py-2 text-xs bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition w-48"
           />
         </div>
         <div ref={notificationRef} className="relative">
           <button
             type="button"
-            aria-label={language === 'ja' ? '通知を開く' : language === 'en' ? 'Open notifications' : 'Mo thong bao'}
+            aria-label={translate(language, 'header.openNotifications')}
             aria-expanded={isNotificationsOpen}
             onClick={() => setIsNotificationsOpen(open => !open)}
             className="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-lg transition"
@@ -115,12 +106,12 @@ export default function Header({ title, subtitle }: HeaderProps) {
             <div className="absolute right-0 mt-3 w-80 max-w-[calc(100vw-2rem)] bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden z-50">
               <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-bold text-gray-800">{language === 'ja' ? '通知' : language === 'en' ? 'Notifications' : 'Thong bao'}</p>
+                  <p className="text-sm font-bold text-gray-800">{translate(language, 'header.notifications')}</p>
                   <p className="text-xs text-gray-400">
-                    {language === 'ja' ? `${unreadCount}件の未読があります` : language === 'en' ? `${unreadCount} unread` : `${unreadCount} chua doc`}
+                    {translate(language, 'header.unreadCount', { count: unreadCount })}
                   </p>
                 </div>
-                <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">New</span>
+                <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">{translate(language, 'header.new')}</span>
               </div>
 
               <div className="max-h-80 overflow-y-auto">

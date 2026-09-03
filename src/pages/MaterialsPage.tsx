@@ -1,3 +1,4 @@
+import { languageLocales, translate } from '../i18n';
 import { BookOpen, Download, FileText, Link as LinkIcon, PlayCircle } from 'lucide-react';
 import Layout from '../components/Layout';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -8,44 +9,39 @@ interface MaterialsPageProps {
   onNavigate: (page: Page) => void;
 }
 
-const materials = [
-  {
-    type: 'pdf',
-    title: 'ITパスポート 重要用語まとめ',
-    description: 'ストラテジ、マネジメント、テクノロジの基礎用語を確認できます。',
-    icon: FileText,
-    color: 'blue',
-  },
-  {
-    type: 'video',
-    title: '過去問の解き方ガイド',
-    description: '選択肢の読み方と時間配分のコツを短い動画で確認できます。',
-    icon: PlayCircle,
-    color: 'emerald',
-  },
-  {
-    type: 'link',
-    title: '授業スライド一覧',
-    description: '授業で使ったスライドや補足資料をいつでも見返せます。',
-    icon: LinkIcon,
-    color: 'amber',
-  },
-];
-
 export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPageProps) {
   const { language } = useLanguage();
+  const materials = [
+    {
+      type: 'pdf',
+      title: translate(language, 'materialsPage.termsTitle'),
+      description: translate(language, 'materialsPage.termsDescription'),
+      icon: FileText,
+      color: 'blue',
+    },
+    {
+      type: 'video',
+      title: translate(language, 'materialsPage.pastQuestionsTitle'),
+      description: translate(language, 'materialsPage.pastQuestionsDescription'),
+      icon: PlayCircle,
+      color: 'emerald',
+    },
+    {
+      type: 'link',
+      title: translate(language, 'materialsPage.slidesTitle'),
+      description: translate(language, 'materialsPage.slidesDescription'),
+      icon: LinkIcon,
+      color: 'amber',
+    },
+  ];
   const text = {
-    title: language === 'ja' ? '教材' : language === 'en' ? 'Materials' : 'Tai lieu',
-    subtitle: language === 'ja' ? '学習メニュー' : language === 'en' ? 'Study menu' : 'Menu học tập',
-    lead: language === 'ja'
-      ? '学生はいつでも教材を確認できるため、情報共有がスムーズになります。'
-      : language === 'en'
-      ? 'Students can check materials anytime, making information sharing smoother.'
-      : 'Sinh viên có thể xem tài liệu bất cứ lúc nào, giúp việc chia sẻ thông tin trở nên thuận tiện hơn.',
-    open: language === 'ja' ? '確認する' : language === 'en' ? 'Open' : 'Mở',
-    download: language === 'ja' ? 'ダウンロード' : language === 'en' ? 'Download' : 'Tải xuống',
-    practice: language === 'ja' ? '問題演習へ' : language === 'en' ? 'Go to practice' : 'rèn luyện',
-    updated: language === 'ja' ? '最終更新' : language === 'en' ? 'Updated' : 'Cập nhật',
+    title: translate(language, 'materialsPage.materials'),
+    subtitle: translate(language, 'materialsPage.studyMenu'),
+    lead: translate(language, 'materialsPage.studentsCanCheckMaterialsAnytimeMakingInformationSharing'),
+    open: translate(language, 'materialsPage.open'),
+    download: translate(language, 'materialsPage.download'),
+    practice: translate(language, 'materialsPage.goToPractice'),
+    updated: translate(language, 'materialsPage.updated'),
   };
 
   return (
@@ -88,7 +84,9 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
                 </div>
                 <h3 className="font-bold text-gray-800 mb-2">{item.title}</h3>
                 <p className="text-sm text-gray-500 leading-6 flex-1">{item.description}</p>
-                <p className="text-xs text-gray-400 mt-4">{text.updated}: 2026/07/06</p>
+                <p className="text-xs text-gray-400 mt-4">
+                  {text.updated}: {new Date('2026-07-06T00:00:00').toLocaleDateString(languageLocales[language])}
+                </p>
                 <div className="grid grid-cols-2 gap-2 mt-4">
                   <button className="px-3 py-2 rounded-xl bg-gray-100 text-gray-700 text-xs font-semibold hover:bg-gray-200 transition">
                     {text.open}

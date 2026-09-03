@@ -1,3 +1,4 @@
+import { languageLocales, translate, type Language } from '../i18n';
 import { useState, useEffect } from 'react';
 import { ChevronRight, ArrowRight, ChevronLeft, Target, Layers, BarChart2, Trophy, MessageCircle, TrendingUp, CheckCircle, Clock, FileText } from 'lucide-react';
 import Layout from '../components/Layout';
@@ -11,7 +12,7 @@ interface HomePageProps {
   onNavigate: (page: Page) => void;
 }
 
-function CalendarWidget({ daysLeft, language }: { daysLeft: number; language: string }) {
+function CalendarWidget({ daysLeft, language }: { daysLeft: number; language: Language }) {
   const today = new Date();
   const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
 
@@ -22,7 +23,10 @@ function CalendarWidget({ daysLeft, language }: { daysLeft: number; language: st
   const cells: (number | null)[] = Array(firstDay).fill(null);
   for (let i = 1; i <= daysInMonth; i++) cells.push(i);
 
-  const weekDays = ['日', '月', '火', '水', '木', '金', '土'];
+  const locale = languageLocales[language];
+  const weekDays = Array.from({ length: 7 }, (_, day) =>
+    new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(new Date(2024, 0, 7 + day)),
+  );
   const isToday = (d: number | null) =>
     d !== null &&
     today.getFullYear() === year &&
@@ -34,9 +38,9 @@ function CalendarWidget({ daysLeft, language }: { daysLeft: number; language: st
       {/* Countdown */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="text-xs text-gray-500">{language === 'ja' ? '試験まで' : language === 'en' ? 'Until exam' : 'còn'}</p>
+          <p className="text-xs text-gray-500">{translate(language, 'homePage.untilExam')}</p>
           <p className="text-3xl font-bold text-blue-600">
-            {language === 'ja' ? 'あと' : ''}<span className="text-4xl">{daysLeft}</span>{language === 'ja' ? '日' : language === 'en' ? ' days' : ' ngày'}
+            {translate(language, 'homePage.daysRemaining', { count: daysLeft })}
           </p>
         </div>
         <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center">
@@ -49,7 +53,9 @@ function CalendarWidget({ daysLeft, language }: { daysLeft: number; language: st
         <button onClick={() => setViewDate(new Date(year, month - 1, 1))} className="p-2 -m-1 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition">
           <ChevronLeft className="w-4 h-4 text-gray-500" />
         </button>
-        <span className="text-sm font-semibold text-gray-700">{year}年{month + 1}月</span>
+        <span className="text-sm font-semibold text-gray-700">
+          {new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'long' }).format(viewDate)}
+        </span>
         <button onClick={() => setViewDate(new Date(year, month + 1, 1))} className="p-2 -m-1 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition">
           <ChevronRight className="w-4 h-4 text-gray-500" />
         </button>
@@ -57,8 +63,8 @@ function CalendarWidget({ daysLeft, language }: { daysLeft: number; language: st
 
       {/* Calendar grid */}
       <div className="grid grid-cols-7 gap-0.5">
-        {weekDays.map(d => (
-          <div key={d} className={`text-center text-[10px] font-semibold py-1 ${d === '日' ? 'text-red-400' : d === '土' ? 'text-blue-400' : 'text-gray-400'}`}>
+        {weekDays.map((d, index) => (
+          <div key={d} className={`text-center text-[10px] font-semibold py-1 ${index === 0 ? 'text-red-400' : index === 6 ? 'text-blue-400' : 'text-gray-400'}`}>
             {d}
           </div>
         ))}
@@ -81,7 +87,7 @@ function CalendarWidget({ daysLeft, language }: { daysLeft: number; language: st
   );
 }
 
-function StatsCard({ sessions, examSessions, language }: { sessions: PracticeSession[]; examSessions: ExamSession[]; language: string }) {
+function StatsCard({ sessions, examSessions, language }: { sessions: PracticeSession[]; examSessions: ExamSession[]; language: Language }) {
   const totalPractice = sessions.length;
   const totalCorrect = sessions.reduce((a, s) => a + s.correct_answers, 0);
   const totalQuestions = sessions.reduce((a, s) => a + s.total_questions, 0);
@@ -95,35 +101,35 @@ function StatsCard({ sessions, examSessions, language }: { sessions: PracticeSes
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
       <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
         <TrendingUp className="w-4 h-4 text-blue-500" />
-        {language === 'ja' ? '学習統計' : language === 'en' ? 'Learning stats' : 'thống kê học tập '}
+        {translate(language, 'homePage.learningStats')}
       </h3>
       <div className="grid grid-cols-3 gap-3">
         <div className="text-center">
           <p className="text-2xl font-bold text-blue-600">{totalPractice}</p>
-          <p className="text-[10px] text-gray-400 mt-0.5">{language === 'ja' ? '演習回数' : language === 'en' ? 'Practice' : 'Lần luyện '}</p>
+          <p className="text-[10px] text-gray-400 mt-0.5">{translate(language, 'homePage.practice')}</p>
         </div>
         <div className="text-center border-x border-gray-100">
           <p className="text-2xl font-bold text-emerald-500">{accuracy}%</p>
-          <p className="text-[10px] text-gray-400 mt-0.5">{language === 'ja' ? '正答率' : language === 'en' ? 'Accuracy' : 'Tỷ lệ đúng'}</p>
+          <p className="text-[10px] text-gray-400 mt-0.5">{translate(language, 'homePage.accuracy')}</p>
         </div>
         <div className="text-center">
           <p className="text-2xl font-bold text-amber-500">{examCount > 0 ? `${avgExamScore}%` : '—'}</p>
-          <p className="text-[10px] text-gray-400 mt-0.5">{language === 'ja' ? '模試平均' : language === 'en' ? 'Exam avg' : 'tb thi thử'}</p>
+          <p className="text-[10px] text-gray-400 mt-0.5">{translate(language, 'homePage.examAvg')}</p>
         </div>
       </div>
     </div>
   );
 }
 
-function getFeatures(language: string) {
+function getFeatures(language: Language) {
   return [
   {
     page: 'practice-list' as Page,
     icon: Layers,
     color: 'blue',
-    title: language === 'ja' ? '問題演習' : language === 'en' ? 'Practice' : 'Luyện tập',
-    description: language === 'ja' ? '分野別の問題を繰り返し練習して、着実に実力をアップしましょう。' : language === 'en' ? 'Practice by subject and steadily improve your skills.' : 'Luyện câu hỏi theo chủ đề để cải thiện từng bước.',
-    cta: language === 'ja' ? '問題を解く' : language === 'en' ? 'Start practice' : 'Làm bài',
+    title: translate(language, 'homePage.practice2'),
+    description: translate(language, 'homePage.practiceBySubjectAndSteadilyImproveYourSkills'),
+    cta: translate(language, 'homePage.startPractice'),
     bgClass: 'from-blue-50 to-blue-100/50',
     iconBg: 'bg-blue-100',
     iconColor: 'text-blue-600',
@@ -134,9 +140,9 @@ function getFeatures(language: string) {
     page: 'mock-exam' as Page,
     icon: BarChart2,
     color: 'emerald',
-    title: language === 'ja' ? '模擬試験' : language === 'en' ? 'Mock exam' : 'Thi thử',
-    description: language === 'ja' ? '本番と同じ形式で時間を計りながら実力を確認しましょう。' : language === 'en' ? 'Check your level with a timed exam format.' : 'Kiểm tra năng lực với định dạng có thời gian.',
-    cta: language === 'ja' ? '模擬試験を受ける' : language === 'en' ? 'Take exam' : 'Thi thử',
+    title: translate(language, 'homePage.mockExam'),
+    description: translate(language, 'homePage.checkYourLevelWithATimedExamFormat'),
+    cta: translate(language, 'homePage.takeExam'),
     bgClass: 'from-emerald-50 to-emerald-100/50',
     iconBg: 'bg-emerald-100',
     iconColor: 'text-emerald-600',
@@ -147,9 +153,9 @@ function getFeatures(language: string) {
     page: 'battle' as Page,
     icon: Trophy,
     color: 'amber',
-    title: language === 'ja' ? '対戦' : language === 'en' ? 'Battle' : 'Đối kháng',
-    description: language === 'ja' ? '他の学生と問題を解き合い、ライバルと切磋琢磨しましょう！' : language === 'en' ? 'Challenge others and sharpen your skills.' : 'Đấu với bạn học để rèn luyện kỹ năng.',
-    cta: language === 'ja' ? 'バトル開始' : language === 'en' ? 'Start battle' : 'Bắt đầu',
+    title: translate(language, 'homePage.battle'),
+    description: translate(language, 'homePage.challengeOthersAndSharpenYourSkills'),
+    cta: translate(language, 'homePage.startBattle'),
     bgClass: 'from-amber-50 to-amber-100/50',
     iconBg: 'bg-amber-100',
     iconColor: 'text-amber-600',
@@ -160,9 +166,9 @@ function getFeatures(language: string) {
     page: 'ai-chat' as Page,
     icon: MessageCircle,
     color: 'violet',
-    title: language === 'ja' ? 'AIチャット' : language === 'en' ? 'AI chat' : 'AI chat',
-    description: language === 'ja' ? 'わからない問題や学習計画をAIに相談して、その場で答えを整理できます。' : language === 'en' ? 'Ask AI about unclear problems or study plans.' : 'Hỏi AI về các vấn đề chưa rõ ràng hoặc kế hoạch học tập.',
-    cta: language === 'ja' ? '相談する' : language === 'en' ? 'Ask AI' : 'Hỏi AI',
+    title: translate(language, 'homePage.aiChat'),
+    description: translate(language, 'homePage.askAiAboutUnclearProblemsOrStudyPlans'),
+    cta: translate(language, 'homePage.askAi'),
     bgClass: 'from-violet-50 to-fuchsia-100/50',
     iconBg: 'bg-violet-100',
     iconColor: 'text-violet-600',
@@ -173,9 +179,9 @@ function getFeatures(language: string) {
     page: 'materials' as Page,
     icon: FileText,
     color: 'sky',
-    title: language === 'ja' ? '教材' : language === 'en' ? 'Materials' : 'Tài liệu',
-    description: language === 'ja' ? '学生はいつでも教材を確認できるため、情報共有がスムーズになります。' : language === 'en' ? 'Students can check materials anytime, making information sharing smoother.' : 'Sinh viên có thể xem tài liệu bất cứ lúc nào, giúp việc chia sẻ thông tin trở nên thuận tiện hơn.',
-    cta: language === 'ja' ? '教材を見る' : language === 'en' ? 'View materials' : 'Xem tài liệu',
+    title: translate(language, 'homePage.materials'),
+    description: translate(language, 'homePage.studentsCanCheckMaterialsAnytimeMakingInformationSharing'),
+    cta: translate(language, 'homePage.viewMaterials'),
     bgClass: 'from-sky-50 to-cyan-100/50',
     iconBg: 'bg-sky-100',
     iconColor: 'text-sky-600',
@@ -211,8 +217,8 @@ export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
   }, []);
 
   const recentSessions = practiceSessions.slice(0, 3);
-  const guest = language === 'ja' ? 'ゲスト' : language === 'en' ? 'Guest' : 'Khách';
-  const greeting = language === 'ja' ? 'さん、おはようございます！' : language === 'en' ? ', good morning!' : ', Chào buổi sáng';
+  const guest = translate(language, 'homePage.guest');
+  const greeting = translate(language, 'homePage.goodMorning');
   const features = getFeatures(language);
 
   return (
@@ -251,16 +257,16 @@ export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
               <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
                 <Clock className="w-4 h-4 text-gray-400" />
-                {language === 'ja' ? '最近の学習履歴' : language === 'en' ? 'Recent activity' : 'Lich su gan day'}
+                {translate(language, 'homePage.recentActivity')}
               </h3>
               {recentSessions.length === 0 ? (
                 <div className="text-center py-8">
                   <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
                     <Layers className="w-6 h-6 text-gray-400" />
                   </div>
-                  <p className="text-sm text-gray-400">{language === 'ja' ? 'まだ学習履歴がありません' : language === 'en' ? 'No study history yet' : 'Chưa có lịch sử học tập'}</p>
+                  <p className="text-sm text-gray-400">{translate(language, 'homePage.noStudyHistoryYet')}</p>
                   <button onClick={() => onNavigate('practice-list')} className="mt-3 text-blue-600 text-xs font-medium hover:underline">
-                    {language === 'ja' ? '問題演習を始める' : language === 'en' ? 'Start practice' : 'Bắt đầu luyện tập'} →
+                    {translate(language, 'homePage.startPractice2')} →
                   </button>
                 </div>
               ) : (
@@ -272,10 +278,10 @@ export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
                         <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-700">
-                            {language === 'ja' ? '問題演習' : language === 'en' ? 'Practice' : 'Luyện tập'} — {s.total_questions}{language === 'ja' ? '問' : ''}
+                            {translate(language, 'homePage.practiceQuestionCount', { count: s.total_questions })}
                           </p>
                           <p className="text-xs text-gray-400">
-                            {new Date(s.created_at).toLocaleDateString('ja-JP')}
+                            {new Date(s.created_at).toLocaleDateString(languageLocales[language])}
                           </p>
                         </div>
                         <span className={`text-sm font-bold ${pct >= 70 ? 'text-emerald-600' : pct >= 50 ? 'text-amber-500' : 'text-red-500'}`}>

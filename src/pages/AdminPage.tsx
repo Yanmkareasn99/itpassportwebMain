@@ -1,3 +1,4 @@
+import { languageLocales, translate } from '../i18n';
 import { useState, useEffect, useCallback } from 'react';
 import {
   ShieldCheck, Plus, Edit2, Trash2, X, Save, ChevronDown, ChevronUp,
@@ -68,8 +69,16 @@ const emptySubjectForm = (): SubjectForm => ({ name: '', description: '', color:
 
 /* ── Difficulty badge ────────────────────────────────── */
 function DiffBadge({ d }: { d: number }) {
+  const { language } = useLanguage();
   const map = ['', 'bg-emerald-100 text-emerald-700', 'bg-blue-100 text-blue-700', 'bg-amber-100 text-amber-700', 'bg-orange-100 text-orange-700', 'bg-red-100 text-red-700'];
-  const label = ['', 'Easy', 'Starter', 'Mid', 'Hard', 'Expert'];
+  const label = [
+    '',
+    translate(language, 'adminPage.easy'),
+    translate(language, 'adminPage.starter'),
+    translate(language, 'adminPage.mid'),
+    translate(language, 'adminPage.hard'),
+    translate(language, 'adminPage.expert'),
+  ];
   return <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${map[d] ?? map[3]}`}>{label[d] ?? d}</span>;
 }
 
@@ -79,15 +88,15 @@ export default function AdminPage({ currentPage, onNavigate }: AdminPageProps) {
   const { language } = useLanguage();
 
   return (
-    <Layout currentPage={currentPage} onNavigate={onNavigate} title={language === 'ja' ? '管理画面' : language === 'en' ? 'Admin' : 'Quản trị'} subtitle="Admin">
+    <Layout currentPage={currentPage} onNavigate={onNavigate} title={translate(language, 'adminPage.admin')} subtitle={translate(language, 'adminPage.admin')}>
       <div className="max-w-6xl mx-auto">
         {/* Tab bar */}
         <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-2xl w-full sm:w-fit overflow-x-auto">
           {([
-            { id: 'questions', label: language === 'ja' ? '問題管理' : language === 'en' ? 'Questions' : 'Câu hỏi', icon: BookOpen },
-            { id: 'subjects', label: language === 'ja' ? '科目管理' : language === 'en' ? 'Subjects' : 'Môn học', icon: Layers },
-            { id: 'users', label: language === 'ja' ? 'ユーザー管理' : language === 'en' ? 'Users' : 'Người dùng', icon: Users },
-            { id: 'stats', label: language === 'ja' ? '統計' : language === 'en' ? 'Stats' : 'Thống kê', icon: BarChart2 },
+            { id: 'questions', label: translate(language, 'adminPage.questions'), icon: BookOpen },
+            { id: 'subjects', label: translate(language, 'adminPage.subjects'), icon: Layers },
+            { id: 'users', label: translate(language, 'adminPage.users'), icon: Users },
+            { id: 'stats', label: translate(language, 'adminPage.stats'), icon: BarChart2 },
           ] as { id: Tab; label: string; icon: React.ElementType }[]).map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -176,12 +185,12 @@ function QuestionsTab() {
 
   async function handleSave() {
     setError('');
-    if (!form.question_text.trim()) { setError(language === 'ja' ? '問題文を入力してください。' : language === 'en' ? 'Please enter the question text.' : 'Vui lòng nhập nội dung câu hỏi.'); return; }
-    if (!form.subject_id) { setError(language === 'ja' ? '科目を選択してください。' : language === 'en' ? 'Please select a subject.' : 'Vui lòng chọn môn học.'); return; }
+    if (!form.question_text.trim()) { setError(translate(language, 'adminPage.pleaseEnterTheQuestionText')); return; }
+    if (!form.subject_id) { setError(translate(language, 'adminPage.pleaseSelectASubject')); return; }
     const correctCount = form.choices.filter(c => c.is_correct).length;
-    if (correctCount === 0) { setError(language === 'ja' ? '正解の選択肢を1つ以上選んでください。' : language === 'en' ? 'Select at least one correct choice.' : 'Chọn ít nhất một đáp án đúng.'); return; }
+    if (correctCount === 0) { setError(translate(language, 'adminPage.selectAtLeastOneCorrectChoice')); return; }
     const filledChoices = form.choices.filter(c => c.choice_text.trim());
-    if (filledChoices.length < 2) { setError(language === 'ja' ? '選択肢を2つ以上入力してください。' : language === 'en' ? 'Enter at least two choices.' : 'Nhập ít nhất hai lựa chọn.'); return; }
+    if (filledChoices.length < 2) { setError(translate(language, 'adminPage.enterAtLeastTwoChoices')); return; }
 
     setSaving(true);
     try {
@@ -223,14 +232,14 @@ function QuestionsTab() {
       setEditingId(null);
       await load();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : language === 'ja' ? '保存に失敗しました。' : language === 'en' ? 'Failed to save.' : 'Lưu thất bại.');
+      setError(e instanceof Error ? e.message : translate(language, 'adminPage.failedToSave'));
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm(language === 'ja' ? 'この問題を削除しますか？' : language === 'en' ? 'Delete this question?' : 'Xóa câu hỏi này?')) return;
+    if (!confirm(translate(language, 'adminPage.deleteThisQuestion'))) return;
     await supabase.from('answer_choices').delete().eq('question_id', id);
     await supabase.from('questions').delete().eq('id', id);
     await load();
@@ -259,7 +268,7 @@ function QuestionsTab() {
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-bold text-gray-800">
-            {editingId === 'new' ? (language === 'ja' ? '問題を追加' : language === 'en' ? 'Add question' : 'Thêm câu hỏi') : (language === 'ja' ? '問題を編集' : language === 'en' ? 'Edit question' : 'Sửa câu hỏi')}
+            {editingId === 'new' ? (translate(language, 'adminPage.addQuestion')) : (translate(language, 'adminPage.editQuestion'))}
           </h2>
           <button onClick={() => setEditingId(null)} className="p-2 hover:bg-gray-100 rounded-xl transition">
             <X className="w-5 h-5 text-gray-500" />
@@ -275,7 +284,7 @@ function QuestionsTab() {
 
         <div className="grid grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">{language === 'ja' ? '科目' : language === 'en' ? 'Subject' : 'Môn học'}</label>
+            <label className="block text-xs font-semibold text-gray-500 mb-1">{translate(language, 'adminPage.subject')}</label>
             <select
               value={form.subject_id}
               onChange={e => setForm(f => ({ ...f, subject_id: e.target.value }))}
@@ -285,29 +294,29 @@ function QuestionsTab() {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">{language === 'ja' ? '問題番号' : language === 'en' ? 'Question number' : 'Số câu'}</label>
+            <label className="block text-xs font-semibold text-gray-500 mb-1">{translate(language, 'adminPage.questionNumber')}</label>
             <input
               type="number"
               value={form.question_number}
               onChange={e => setForm(f => ({ ...f, question_number: e.target.value }))}
-              placeholder={language === 'ja' ? '例: 1' : language === 'en' ? 'e.g. 1' : 'ví dụ: 1'}
+              placeholder={translate(language, 'adminPage.eG1')}
               className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">{language === 'ja' ? '問題形式' : language === 'en' ? 'Question type' : 'Dạng câu hỏi'}</label>
+            <label className="block text-xs font-semibold text-gray-500 mb-1">{translate(language, 'adminPage.questionType')}</label>
             <select
               value={form.question_type}
               onChange={e => setForm(f => ({ ...f, question_type: e.target.value as QuestionForm['question_type'] }))}
               className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
             >
-              <option value="multiple_choice">{language === 'ja' ? '選択式' : language === 'en' ? 'Multiple choice' : 'Trắc nghiệm'}</option>
-              <option value="true_false">{language === 'ja' ? '正誤問題' : language === 'en' ? 'True/false' : 'Đúng/Sai'}</option>
-              <option value="tree">{language === 'ja' ? 'ツリー' : language === 'en' ? 'Tree' : 'Cây'}</option>
+              <option value="multiple_choice">{translate(language, 'adminPage.multipleChoice')}</option>
+              <option value="true_false">{translate(language, 'adminPage.trueFalse')}</option>
+              <option value="tree">{translate(language, 'adminPage.tree')}</option>
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">{language === 'ja' ? '難易度' : language === 'en' ? 'Difficulty' : 'Độ khó'} ({form.difficulty})</label>
+            <label className="block text-xs font-semibold text-gray-500 mb-1">{translate(language, 'adminPage.difficulty')} ({form.difficulty})</label>
             <input
               type="range" min={1} max={5}
               value={form.difficulty}
@@ -316,7 +325,7 @@ function QuestionsTab() {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">{language === 'ja' ? '配点' : language === 'en' ? 'Points' : 'Điểm'}</label>
+            <label className="block text-xs font-semibold text-gray-500 mb-1">{translate(language, 'adminPage.points')}</label>
             <input
               type="number" min={1}
               value={form.points}
@@ -325,7 +334,7 @@ function QuestionsTab() {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">{language === 'ja' ? '画像URL（任意）' : language === 'en' ? 'Image URL (optional)' : 'URL ảnh (không bắt buộc)'}</label>
+            <label className="block text-xs font-semibold text-gray-500 mb-1">{translate(language, 'adminPage.imageUrlOptional')}</label>
             <input
               type="url"
               value={form.image_url}
@@ -337,23 +346,23 @@ function QuestionsTab() {
         </div>
 
         <div className="mb-4">
-            <label className="block text-xs font-semibold text-gray-500 mb-1">{language === 'ja' ? '問題文' : language === 'en' ? 'Question text' : 'Nội dung câu hỏi'}</label>
+            <label className="block text-xs font-semibold text-gray-500 mb-1">{translate(language, 'adminPage.questionText')}</label>
           <textarea
             value={form.question_text}
             onChange={e => setForm(f => ({ ...f, question_text: e.target.value }))}
             rows={4}
-            placeholder={language === 'ja' ? '問題文を入力してください...' : language === 'en' ? 'Enter the question text...' : 'Nhập nội dung câu hỏi...'}
+            placeholder={translate(language, 'adminPage.enterTheQuestionText')}
             className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
           />
         </div>
 
         <div className="mb-4">
-          <label className="block text-xs font-semibold text-gray-500 mb-1">{language === 'ja' ? '解説（日本語）' : language === 'en' ? 'Explanation (Japanese)' : 'Giai thich (tieng Nhat)'}</label>
+          <label className="block text-xs font-semibold text-gray-500 mb-1">{translate(language, 'adminPage.explanationJapanese')}</label>
           <textarea
             value={form.explanation}
             onChange={e => setForm(f => ({ ...f, explanation: e.target.value }))}
             rows={3}
-            placeholder={language === 'ja' ? '解説を入力してください...' : language === 'en' ? 'Enter an explanation...' : 'Nhập phần giải thích...'}
+            placeholder={translate(language, 'adminPage.enterAnExplanation')}
             className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
           />
         </div>
@@ -361,44 +370,40 @@ function QuestionsTab() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1">
-              {language === 'ja' ? '解説（英語）' : language === 'en' ? 'Explanation (English)' : 'Giai thich (tieng Anh)'}
+              {translate(language, 'adminPage.explanationEnglish')}
             </label>
             <textarea
               value={form.explanation_en}
               onChange={e => setForm(f => ({ ...f, explanation_en: e.target.value }))}
               rows={3}
-              placeholder="Enter the English explanation..."
+              placeholder={translate(language, 'adminPage.englishExplanationPlaceholder')}
               className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
             />
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1">
-              {language === 'ja' ? '解説（ベトナム語）' : language === 'en' ? 'Explanation (Vietnamese)' : 'Giai thich (tieng Viet)'}
+              {translate(language, 'adminPage.explanationVietnamese')}
             </label>
             <textarea
               value={form.explanation_vi}
               onChange={e => setForm(f => ({ ...f, explanation_vi: e.target.value }))}
               rows={3}
-              placeholder="Nhap giai thich tieng Viet..."
+              placeholder={translate(language, 'adminPage.vietnameseExplanationPlaceholder')}
               className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
             />
           </div>
         </div>
 
         <p className="mb-4 text-xs text-gray-400">
-          {language === 'ja'
-            ? '問題文と選択肢は日本語のまま保持し、解説だけ表示言語に合わせて切り替えます。'
-            : language === 'en'
-            ? 'Questions and choices stay in Japanese; only explanations switch by display language.'
-            : 'Cau hoi va lua chon giu tieng Nhat; chi phan giai thich doi theo ngon ngu hien thi.'}
+          {translate(language, 'adminPage.questionsAndChoicesStayInJapaneseOnlyExplanations')}
         </p>
 
         {/* Choices */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <label className="text-xs font-semibold text-gray-500">{language === 'ja' ? '選択肢' : language === 'en' ? 'Choices' : 'Lựa chọn'}</label>
+            <label className="text-xs font-semibold text-gray-500">{translate(language, 'adminPage.choices')}</label>
             <button onClick={addChoice} className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium">
-              <Plus className="w-3.5 h-3.5" /> {language === 'ja' ? '追加' : language === 'en' ? 'Add' : 'Thêm'}
+              <Plus className="w-3.5 h-3.5" /> {translate(language, 'adminPage.add')}
             </button>
           </div>
           <div className="space-y-2">
@@ -425,7 +430,7 @@ function QuestionsTab() {
                   type="text"
                   value={c.choice_text}
                   onChange={e => setChoice(i, { choice_text: e.target.value })}
-                  placeholder={language === 'ja' ? `選択肢 ${i + 1}` : language === 'en' ? `Choice ${i + 1}` : `Lựa chọn ${i + 1}`}
+                  placeholder={translate(language, 'adminPage.choicePlaceholder', { number: i + 1 })}
                   className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
                 />
                 {form.choices.length > 2 && (
@@ -436,12 +441,12 @@ function QuestionsTab() {
               </div>
             ))}
           </div>
-          <p className="text-xs text-gray-400 mt-2">{language === 'ja' ? '丸いボタンをクリックして正解を選択してください。' : language === 'en' ? 'Click the round button to select the correct answer.' : 'Nhấn nút tròn để chọn đáp án đúng.'}</p>
+          <p className="text-xs text-gray-400 mt-2">{translate(language, 'adminPage.clickTheRoundButtonToSelectTheCorrect')}</p>
         </div>
 
         <div className="flex justify-end gap-3">
           <button onClick={() => setEditingId(null)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl transition">
-            {language === 'ja' ? 'キャンセル' : language === 'en' ? 'Cancel' : 'Hủy'}
+            {translate(language, 'adminPage.cancel')}
           </button>
           <button
             onClick={handleSave}
@@ -449,7 +454,7 @@ function QuestionsTab() {
             className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition disabled:opacity-60"
           >
             {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {language === 'ja' ? '保存' : language === 'en' ? 'Save' : 'Lưu'}
+            {translate(language, 'adminPage.save')}
           </button>
         </div>
       </div>
@@ -465,7 +470,7 @@ function QuestionsTab() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder={language === 'ja' ? '問題を検索...' : language === 'en' ? 'Search questions...' : 'Tìm câu hỏi...'}
+            placeholder={translate(language, 'adminPage.searchQuestions')}
             className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
           />
         </div>
@@ -474,7 +479,7 @@ function QuestionsTab() {
           onChange={e => setFilterSubject(e.target.value)}
           className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
         >
-          <option value="all">{language === 'ja' ? '全科目' : language === 'en' ? 'All subjects' : 'Tất cả môn'}</option>
+          <option value="all">{translate(language, 'adminPage.allSubjects')}</option>
           {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
         <button onClick={load} className="p-2 hover:bg-gray-100 rounded-xl transition text-gray-500">
@@ -485,14 +490,14 @@ function QuestionsTab() {
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition"
         >
           <Plus className="w-4 h-4" />
-          {language === 'ja' ? '問題を追加' : language === 'en' ? 'Add question' : 'Thêm câu hỏi'}
+          {translate(language, 'adminPage.addQuestion')}
         </button>
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
           <span className="text-sm font-semibold text-gray-700">
-            {loading ? (language === 'ja' ? '読み込み中...' : language === 'en' ? 'Loading...' : 'Đang tải...') : `${filtered.length}${language === 'ja' ? ' 問' : language === 'en' ? ' items' : ' mục'}`}
+            {loading ? (translate(language, 'adminPage.loading')) : `${filtered.length}${translate(language, 'adminPage.items')}`}
           </span>
         </div>
 
@@ -501,7 +506,7 @@ function QuestionsTab() {
             <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-16 text-gray-400 text-sm">{language === 'ja' ? '問題がありません。「問題を追加」から始めましょう。' : language === 'en' ? 'No questions yet. Start by adding one.' : 'Chưa có câu hỏi. Hãy thêm câu hỏi mới.'}</div>
+          <div className="text-center py-16 text-gray-400 text-sm">{translate(language, 'adminPage.noQuestionsYetStartByAddingOne')}</div>
         ) : (
           <div className="divide-y divide-gray-50">
             {filtered.map(q => {
@@ -533,7 +538,7 @@ function QuestionsTab() {
                           ))}
                           {explanation && (
                             <div className="mt-2 p-3 bg-blue-50 rounded-lg text-xs text-blue-700">
-                              <strong>{language === 'ja' ? '解説:' : language === 'en' ? 'Explanation:' : 'Giải thích:'}</strong> {explanation}
+                              <strong>{translate(language, 'adminPage.explanation')}</strong> {explanation}
                             </div>
                           )}
                         </div>
@@ -574,6 +579,7 @@ function QuestionsTab() {
    SUBJECTS TAB
 ══════════════════════════════════════════════════════ */
 function SubjectsTab() {
+  const { language } = useLanguage();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | 'new' | null>(null);
@@ -594,7 +600,7 @@ function SubjectsTab() {
   function startEdit(s: Subject) { setForm({ name: s.name, description: s.description ?? '', color: s.color ?? '#3B82F6' }); setEditingId(s.id); setError(''); }
 
   async function handleSave() {
-    if (!form.name.trim()) { setError('科目名を入力してください。'); return; }
+    if (!form.name.trim()) { setError(translate(language, 'adminPage.subjectNameRequired')); return; }
     setSaving(true);
     try {
       const payload = { name: form.name.trim(), description: form.description.trim() || null, color: form.color };
@@ -608,14 +614,14 @@ function SubjectsTab() {
       setEditingId(null);
       await load();
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : '保存に失敗しました。');
+      setError(e instanceof Error ? e.message : translate(language, 'adminPage.failedToSave'));
     } finally {
       setSaving(false);
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('この科目を削除しますか？関連する問題も影響を受ける可能性があります。')) return;
+    if (!confirm(translate(language, 'adminPage.deleteSubjectConfirmation'))) return;
     await supabase.from('subjects').delete().eq('id', id);
     await load();
   }
@@ -624,28 +630,28 @@ function SubjectsTab() {
     <div className="space-y-4">
       <div className="flex justify-end">
         <button onClick={startNew} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition">
-          <Plus className="w-4 h-4" />科目を追加
+          <Plus className="w-4 h-4" />{translate(language, 'adminPage.addSubject')}
         </button>
       </div>
 
       {editingId !== null && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-gray-800">{editingId === 'new' ? '科目を追加' : '科目を編集'}</h3>
+            <h3 className="font-bold text-gray-800">{editingId === 'new' ? translate(language, 'adminPage.addSubject') : translate(language, 'adminPage.editSubject')}</h3>
             <button onClick={() => setEditingId(null)} className="p-1 hover:bg-gray-100 rounded-lg"><X className="w-4 h-4 text-gray-500" /></button>
           </div>
           {error && <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">{error}</div>}
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">科目名</label>
-              <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" placeholder="例: ストラテジ系" />
+              <label className="block text-xs font-semibold text-gray-500 mb-1">{translate(language, 'adminPage.subjectName')}</label>
+              <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" placeholder={translate(language, 'adminPage.subjectNamePlaceholder')} />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">説明</label>
-              <input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" placeholder="説明（任意）" />
+              <label className="block text-xs font-semibold text-gray-500 mb-1">{translate(language, 'adminPage.description')}</label>
+              <input value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" placeholder={translate(language, 'adminPage.descriptionOptional')} />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1">カラー</label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">{translate(language, 'adminPage.color')}</label>
               <div className="flex items-center gap-3">
                 <input type="color" value={form.color} onChange={e => setForm(f => ({ ...f, color: e.target.value }))} className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-1" />
                 <span className="text-sm text-gray-600 font-mono">{form.color}</span>
@@ -653,9 +659,9 @@ function SubjectsTab() {
             </div>
           </div>
           <div className="flex justify-end gap-3 mt-4">
-            <button onClick={() => setEditingId(null)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl transition">キャンセル</button>
+            <button onClick={() => setEditingId(null)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl transition">{translate(language, 'adminPage.cancel')}</button>
             <button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition disabled:opacity-60">
-              {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}保存
+              {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}{translate(language, 'adminPage.save')}
             </button>
           </div>
         </div>
@@ -665,7 +671,7 @@ function SubjectsTab() {
         {loading ? (
           <div className="flex items-center justify-center py-16"><RefreshCw className="w-6 h-6 animate-spin text-gray-400" /></div>
         ) : subjects.length === 0 ? (
-          <div className="text-center py-16 text-gray-400 text-sm">科目がありません。</div>
+          <div className="text-center py-16 text-gray-400 text-sm">{translate(language, 'adminPage.noSubjects')}</div>
         ) : (
           <div className="divide-y divide-gray-50">
             {subjects.map(s => (
@@ -692,6 +698,7 @@ function SubjectsTab() {
    USERS TAB
 ══════════════════════════════════════════════════════ */
 function UsersTab() {
+  const { language } = useLanguage();
   const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -724,14 +731,14 @@ function UsersTab() {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-        <span className="text-sm font-semibold text-gray-700">{loading ? '読み込み中...' : `${users.length} ユーザー`}</span>
+        <span className="text-sm font-semibold text-gray-700">{loading ? translate(language, 'adminPage.loading') : translate(language, 'adminPage.userCount', { count: users.length })}</span>
         <button onClick={load} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition"><RefreshCw className="w-4 h-4" /></button>
       </div>
       {error && <p className="px-5 py-3 text-sm text-red-600 bg-red-50">{error}</p>}
       {loading ? (
         <div className="flex items-center justify-center py-16"><RefreshCw className="w-6 h-6 animate-spin text-gray-400" /></div>
       ) : users.length === 0 ? (
-        <div className="text-center py-16 text-gray-400 text-sm">ユーザーが見つかりません。</div>
+        <div className="text-center py-16 text-gray-400 text-sm">{translate(language, 'adminPage.noUsers')}</div>
       ) : (
         <div className="divide-y divide-gray-50">
           {users.map(u => (
@@ -742,15 +749,15 @@ function UsersTab() {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-gray-800">{u.name}</p>
                 <p className="text-xs text-gray-400">
-                  {u.student_id && `学籍番号: ${u.student_id} · `}
-                  {u.class_name && `クラス: ${u.class_name} · `}
-                  {new Date(u.created_at).toLocaleDateString('ja-JP')}
+                  {u.student_id && translate(language, 'adminPage.studentIdValue', { value: u.student_id })}
+                  {u.class_name && translate(language, 'adminPage.classValue', { value: u.class_name })}
+                  {new Date(u.created_at).toLocaleDateString(languageLocales[language])}
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 {u.is_admin && (
                   <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 flex items-center gap-1">
-                    <ShieldCheck className="w-3 h-3" />管理者
+                    <ShieldCheck className="w-3 h-3" />{translate(language, 'adminPage.administrator')}
                   </span>
                 )}
                 <button
@@ -762,7 +769,11 @@ function UsersTab() {
                       : 'bg-amber-50 text-amber-700 hover:bg-amber-100'
                   } disabled:opacity-50`}
                 >
-                  {saving === u.id ? '...' : u.is_admin ? '管理者解除' : '管理者にする'}
+                  {saving === u.id
+                    ? '...'
+                    : u.is_admin
+                      ? translate(language, 'adminPage.removeAdministrator')
+                      : translate(language, 'adminPage.makeAdministrator')}
                 </button>
               </div>
             </div>
@@ -786,6 +797,7 @@ interface StatsData {
 }
 
 function StatsTab() {
+  const { language } = useLanguage();
   const [stats, setStats] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -828,12 +840,12 @@ function StatsTab() {
   }
 
   const cards = [
-    { label: '総問題数', value: stats!.totalQuestions, color: 'blue', suffix: '問' },
-    { label: '科目数', value: stats!.totalSubjects, color: 'purple', suffix: '科目' },
-    { label: 'ユーザー数', value: stats!.totalUsers, color: 'emerald', suffix: '人' },
-    { label: '演習セッション', value: stats!.totalPracticeSessions, color: 'amber', suffix: '回' },
-    { label: '模試セッション', value: stats!.totalExamSessions, color: 'rose', suffix: '回' },
-    { label: '全体正答率', value: stats!.avgAccuracy, color: 'teal', suffix: '%' },
+    { label: translate(language, 'adminPage.totalQuestions'), value: stats!.totalQuestions, color: 'blue', suffix: translate(language, 'adminPage.questionsSuffix') },
+    { label: translate(language, 'adminPage.subjectCount'), value: stats!.totalSubjects, color: 'purple', suffix: translate(language, 'adminPage.subjectsSuffix') },
+    { label: translate(language, 'adminPage.userTotal'), value: stats!.totalUsers, color: 'emerald', suffix: translate(language, 'adminPage.peopleSuffix') },
+    { label: translate(language, 'adminPage.practiceSessions'), value: stats!.totalPracticeSessions, color: 'amber', suffix: translate(language, 'adminPage.sessionsSuffix') },
+    { label: translate(language, 'adminPage.mockExamSessions'), value: stats!.totalExamSessions, color: 'rose', suffix: translate(language, 'adminPage.sessionsSuffix') },
+    { label: translate(language, 'adminPage.overallAccuracy'), value: stats!.avgAccuracy, color: 'teal', suffix: '%' },
   ];
 
   const colorMap: Record<string, string> = {
