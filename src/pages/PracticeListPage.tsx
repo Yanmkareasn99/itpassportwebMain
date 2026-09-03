@@ -1,6 +1,7 @@
 import { translate, type Language } from '../i18n';
 import { useState, useEffect } from 'react';
 import {
+  BookOpen,
   PieChart,
   CheckCircle2,
   LayoutGrid,
@@ -9,6 +10,7 @@ import {
   ChevronRight,
   Play,
   TrendingUp,
+  type LucideIcon,
 } from 'lucide-react';
 import Layout from '../components/Layout';
 import { supabase } from '../lib/supabase';
@@ -63,6 +65,90 @@ const MAIN_CATEGORIES = [
   },
 ];
 
+const QUESTION_FETCH_PAGE_SIZE = 1000;
+
+type MainCategoryLabelKey = (typeof MAIN_CATEGORIES)[number]['labelKey'];
+
+interface PracticeCategory {
+  id: string;
+  labelKey?: MainCategoryLabelKey;
+  name?: string;
+  icon: LucideIcon;
+  color: string;
+  borderColor: string;
+  bgColor: string;
+  iconColor: string;
+  labelColor: string;
+  dotColor: string;
+  subjectIds: string[];
+}
+
+interface QuestionSummary {
+  id: string;
+  subject_id: string;
+}
+
+async function fetchAllQuestionSummaries(): Promise<QuestionSummary[]> {
+  const questions: QuestionSummary[] = [];
+
+  for (let from = 0; ; from += QUESTION_FETCH_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from('questions')
+      .select('id, subject_id')
+      .order('id')
+      .range(from, from + QUESTION_FETCH_PAGE_SIZE - 1);
+
+    if (error) throw error;
+
+    const page = (data ?? []) as QuestionSummary[];
+    questions.push(...page);
+    if (page.length < QUESTION_FETCH_PAGE_SIZE) break;
+  }
+
+  return questions;
+}
+
+async function fetchPracticeQuestions(
+  subjectIds: string[] | null,
+  diffFilter: DifficultyFilter,
+  formatFilter: FormatFilter,
+): Promise<Question[]> {
+  const questions: Question[] = [];
+
+  for (let from = 0; ; from += QUESTION_FETCH_PAGE_SIZE) {
+    let query = supabase
+      .from('questions')
+      .select('*, answer_choices(*)');
+
+    if (subjectIds) query = query.in('subject_id', subjectIds);
+
+    if (diffFilter === 'easy') {
+      query = query.eq('difficulty', 1);
+    } else if (diffFilter === 'medium') {
+      query = query.in('difficulty', [2, 3]);
+    } else if (diffFilter === 'hard') {
+      query = query.in('difficulty', [4, 5]);
+    }
+
+    if (formatFilter !== 'all') {
+      query = query.eq('question_type', formatFilter);
+    }
+
+    const { data, error } = await query
+      .order('question_number')
+      .order('id')
+      .range(from, from + QUESTION_FETCH_PAGE_SIZE - 1);
+
+    if (error) throw error;
+
+    const page = (data ?? []) as Question[];
+    questions.push(...page);
+    if (page.length < QUESTION_FETCH_PAGE_SIZE) break;
+  }
+
+  return questions;
+}
+
 type DifficultyFilter = 'all' | 'easy' | 'medium' | 'hard';
 type FormatFilter = 'all' | 'multiple_choice' | 'tree';
 type ModeFilter = 'all' | 'new' | 'review';
@@ -76,21 +162,37 @@ interface CategoryStats {
 }
 
 interface AnswerStatusRow {
+  id: string;
   question_id: string;
   is_correct: boolean;
   answered_at: string;
 }
 
 async function loadLatestAnswerStatus() {
-  const { data } = await supabase
-    .from('session_answers')
-    .select('question_id, is_correct, answered_at')
-    .order('answered_at', { ascending: true });
   const latest = new Map<string, boolean>();
-  for (const answer of (data ?? []) as AnswerStatusRow[]) {
-    latest.set(answer.question_id, answer.is_correct);
+
+  for (let from = 0; ; from += QUESTION_FETCH_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from('session_answers')
+      .select('id, question_id, is_correct, answered_at')
+      .order('answered_at', { ascending: true })
+      .order('id')
+      .range(from, from + QUESTION_FETCH_PAGE_SIZE - 1);
+
+    if (error) throw error;
+
+    const page = (data ?? []) as AnswerStatusRow[];
+    for (const answer of page) {
+      latest.set(answer.question_id, answer.is_correct);
+    }
+    if (page.length < QUESTION_FETCH_PAGE_SIZE) break;
   }
+
   return latest;
+}
+
+function getCategoryLabel(category: PracticeCategory, language: LanguageCode) {
+  return category.name ?? translate(language, category.labelKey!);
 }
 
 function CategoryCard({
@@ -100,14 +202,14 @@ function CategoryCard({
   loading,
   language,
 }: {
-  category: (typeof MAIN_CATEGORIES)[0];
+  category: PracticeCategory;
   stats: CategoryStats;
   onStart: () => void;
   loading: boolean;
   language: LanguageCode;
 }) {
   const Icon = category.icon;
-  const categoryLabel = translate(language, category.labelKey);
+  const categoryLabel = getCategoryLabel(category, language);
 
   return (
     <button
@@ -228,6 +330,8 @@ export default function PracticeListPage({
   const currentLanguage = language as LanguageCode;
 
   const [questionCounts, setQuestionCounts] = useState<Record<string, number>>({});
+  const [additionalCategories, setAdditionalCategories] = useState<PracticeCategory[]>([]);
+  const [totalQuestionCount, setTotalQuestionCount] = useState(0);
   const [sessionStats, setSessionStats] = useState<Record<string, { answered: number; correct: number }>>({});
   const [incorrectCount, setIncorrectCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -241,10 +345,8 @@ export default function PracticeListPage({
     async function load() {
       setLoading(true);
 
-      const allIds = MAIN_CATEGORIES.flatMap((c) => c.subjectIds);
-
-      const [{ data: questions }, { data: sessions }, latestAnswers] = await Promise.all([
-        supabase.from('questions').select('id, subject_id').in('subject_id', allIds),
+      const [{ data: subjects }, { data: sessions }, latestAnswers, questions] = await Promise.all([
+        supabase.from('subjects').select('id, name, color').order('name'),
         user
           ? supabase
               .from('practice_sessions')
@@ -252,18 +354,32 @@ export default function PracticeListPage({
               .eq('user_id', user.id)
           : Promise.resolve({ data: [] }),
         user ? loadLatestAnswerStatus() : Promise.resolve(new Map<string, boolean>()),
+        fetchAllQuestionSummaries(),
       ]);
 
       const counts: Record<string, number> = {};
-      for (const id of allIds) counts[id] = 0;
-
-      if (questions) {
-        for (const q of questions) {
-          counts[q.subject_id] = (counts[q.subject_id] ?? 0) + 1;
-        }
+      for (const q of questions) {
+        counts[q.subject_id] = (counts[q.subject_id] ?? 0) + 1;
       }
 
       setQuestionCounts(counts);
+      setTotalQuestionCount(questions.length);
+
+      const mainSubjectIds = new Set(MAIN_CATEGORIES.flatMap(category => category.subjectIds));
+      setAdditionalCategories((subjects ?? [])
+        .filter(subject => !mainSubjectIds.has(subject.id) && (counts[subject.id] ?? 0) > 0)
+        .map(subject => ({
+          id: `subject-${subject.id}`,
+          name: subject.name,
+          icon: BookOpen,
+          color: subject.color || '#8B5CF6',
+          borderColor: 'border-violet-400',
+          bgColor: 'bg-violet-50',
+          iconColor: 'text-violet-500',
+          labelColor: 'text-violet-600',
+          dotColor: 'bg-violet-500',
+          subjectIds: [subject.id],
+        })));
 
       const stats: Record<string, { answered: number; correct: number }> = {};
 
@@ -322,30 +438,10 @@ export default function PracticeListPage({
     };
   }
 
-  async function startCategory(subjectIds: string[], key: string) {
+  async function startCategory(subjectIds: string[] | null, key: string) {
     setStarting(key);
 
-    let query = supabase
-      .from('questions')
-      .select('*, answer_choices(*)')
-      .in('subject_id', subjectIds);
-
-    if (diffFilter === 'easy') {
-      query = query.eq('difficulty', 1);
-    } else if (diffFilter === 'medium') {
-      query = query.in('difficulty', [2, 3]);
-    } else if (diffFilter === 'hard') {
-      query = query.in('difficulty', [4, 5]);
-    }
-
-    if (formatFilter !== 'all') {
-      query = query.eq('question_type', formatFilter);
-    }
-
-    query = query.order('question_number');
-
-    const { data } = await query;
-    let selectedQuestions = (data ?? []) as Question[];
+    let selectedQuestions = await fetchPracticeQuestions(subjectIds, diffFilter, formatFilter);
 
     if (modeFilter !== 'all') {
       const latestAnswers = await loadLatestAnswerStatus();
@@ -355,7 +451,7 @@ export default function PracticeListPage({
     }
 
     if (selectedQuestions.length > 0) {
-      onStartPractice(subjectIds.length > 1 ? 'all' : subjectIds[0], selectedQuestions);
+      onStartPractice(!subjectIds || subjectIds.length > 1 ? 'all' : subjectIds[0], selectedQuestions);
     }
 
     setStarting(null);
@@ -387,7 +483,9 @@ export default function PracticeListPage({
     setStarting(null);
   }
 
-  const summaryRows = MAIN_CATEGORIES.map((cat) => {
+  const categories: PracticeCategory[] = [...MAIN_CATEGORIES, ...additionalCategories];
+
+  const summaryRows = categories.map((cat) => {
     const stats = getCategoryStats(cat.subjectIds);
     return { ...cat, stats };
   });
@@ -409,7 +507,7 @@ export default function PracticeListPage({
         </p>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-          {MAIN_CATEGORIES.map((cat) => (
+          {categories.map((cat) => (
             <CategoryCard
               key={cat.id}
               category={cat}
@@ -515,16 +613,14 @@ export default function PracticeListPage({
 
             <button
               onClick={() =>
-                startCategory(
-                  MAIN_CATEGORIES.flatMap((c) => c.subjectIds),
-                  'all'
-                )
+                startCategory(null, 'all')
               }
               disabled={!!starting}
               className="ml-auto flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-50"
             >
               <Play className="w-3.5 h-3.5" />
               {translate(currentLanguage, 'practiceListPage.practiceAll')}
+              {!loading && ` (${totalQuestionCount.toLocaleString()})`}
             </button>
           </div>
         </div>
@@ -577,7 +673,7 @@ export default function PracticeListPage({
                             className={`w-2.5 h-2.5 rounded-full ${row.dotColor}`}
                           />
                           <span className="font-medium text-gray-700">
-                            {translate(currentLanguage, row.labelKey)}
+                            {getCategoryLabel(row, currentLanguage)}
                           </span>
                         </div>
                       </td>
@@ -657,7 +753,7 @@ export default function PracticeListPage({
                     <tr key={row.id} className="hover:bg-gray-50 transition">
                       <td className="py-3">
                         <p className="font-semibold text-gray-700">
-                          {translate(currentLanguage, row.labelKey)}
+                          {getCategoryLabel(row, currentLanguage)}
                           {translate(currentLanguage, 'practiceListPage.fundamentals')}
                         </p>
 
