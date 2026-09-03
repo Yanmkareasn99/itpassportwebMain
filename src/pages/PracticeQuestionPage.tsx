@@ -1,5 +1,5 @@
 import { translate } from '../i18n';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertCircle, Flag, ArrowLeft } from 'lucide-react';
 import Layout from '../components/Layout';
 import { supabase } from '../lib/supabase';
@@ -22,6 +22,8 @@ interface PracticeAnswer {
   choiceId: string;
   isCorrect: boolean;
 }
+
+const QUESTION_MAP_PAGE_SIZE = 50;
 
 function TreeDiagram() {
   return (
@@ -59,6 +61,7 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
   const [answers, setAnswers] = useState<PracticeAnswer[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [finished, setFinished] = useState(false);
+  const [questionMapPage, setQuestionMapPage] = useState(0);
   const sessionCreatedRef = useRef(false);
   const sessionIdRef = useRef<string | null>(null);
   const sessionPromiseRef = useRef<Promise<string | null> | null>(null);
@@ -72,6 +75,16 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
   const correctSoFar = answers.filter(a => a.isCorrect).length;
   const accuracyPct = answers.length > 0 ? Math.round((correctSoFar / answers.length) * 100) : 0;
   const explanation = getLocalizedExplanation(question, language);
+  const answersByQuestionId = useMemo(
+    () => new Map(answers.map(answer => [answer.questionId, answer])),
+    [answers],
+  );
+  const questionMapPageCount = Math.max(1, Math.ceil(totalQuestions / QUESTION_MAP_PAGE_SIZE));
+  const questionMapStart = questionMapPage * QUESTION_MAP_PAGE_SIZE;
+  const visibleQuestionMap = questions.slice(
+    questionMapStart,
+    questionMapStart + QUESTION_MAP_PAGE_SIZE,
+  );
   const label = {
     completed: translate(language, 'practiceQuestionPage.practiceComplete'),
     practice: translate(language, 'practiceQuestionPage.practice'),
@@ -129,6 +142,10 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
     }
     sessionPromiseRef.current = createSession();
   }, [subjectId, totalQuestions, user]);
+
+  useEffect(() => {
+    setQuestionMapPage(Math.floor(currentIndex / QUESTION_MAP_PAGE_SIZE));
+  }, [currentIndex]);
   
 
   
@@ -243,7 +260,7 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
 
   return (
     <Layout currentPage={currentPage} onNavigate={onNavigate} title={label.questionTitle} subtitle={label.practice}>
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         {/* Progress bar */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-5">
           <div className="flex items-center justify-between mb-2">
@@ -373,7 +390,7 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
           </div>
 
           {/* Side panel */}
-          <div className="w-full lg:w-52 shrink-0 space-y-4">
+          <div className="w-full lg:w-64 shrink-0 space-y-4 lg:sticky lg:top-5 self-start">
             {/* Result indicator */}
             {answered && (
               <div className={`rounded-2xl p-4 text-center ${selectedCorrect ? 'bg-emerald-50 border border-emerald-100' : 'bg-red-50 border border-red-100'}`}>
@@ -393,25 +410,91 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
             )}
 
             {/* Question map */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-              <p className="text-xs font-semibold text-gray-500 mb-3">{label.questionList}</p>
-              <div className="grid grid-cols-5 sm:grid-cols-8 lg:grid-cols-4 gap-1.5">
-                {questions.map((mappedQuestion, i) => {
-                  const ans = answers.find(answer => answer.questionId === mappedQuestion.id);
-                  let cls = 'bg-gray-100 text-gray-500';
-                  if (i === currentIndex) cls = 'bg-blue-600 text-white';
-                  else if (ans?.isCorrect) cls = 'bg-emerald-100 text-emerald-600';
-                  else if (ans && !ans.isCorrect) cls = 'bg-red-100 text-red-600';
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => goToQuestion(i)}
-                      className={`h-8 rounded-lg text-xs font-bold transition ${cls}`}
-                    >
-                      {i + 1}
-                    </button>
-                  );
-                })}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3.5 overflow-hidden">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <div>
+                  <p className="text-xs font-semibold text-gray-600">{label.questionList}</p>
+                  <p className="text-[11px] text-gray-400 mt-0.5">
+                    {answers.length} / {totalQuestions}
+                  </p>
+                </div>
+                <span className="px-2.5 py-1 rounded-full bg-blue-50 text-[11px] font-bold text-blue-600">
+                  {currentIndex + 1} / {totalQuestions}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5 mb-2.5">
+                <button
+                  type="button"
+                  onClick={() => setQuestionMapPage(page => Math.max(0, page - 1))}
+                  disabled={questionMapPage === 0}
+                  className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                  aria-label={label.previous}
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
+
+                <div className="relative flex-1">
+                  <select
+                    value={questionMapPage}
+                    onChange={event => setQuestionMapPage(Number(event.target.value))}
+                    className="w-full h-8 appearance-none rounded-lg border border-gray-200 bg-gray-50 pl-2.5 pr-7 text-[11px] font-semibold text-gray-600 outline-none hover:border-blue-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition cursor-pointer"
+                    aria-label={label.questionList}
+                  >
+                    {Array.from({ length: questionMapPageCount }, (_, page) => {
+                      const start = page * QUESTION_MAP_PAGE_SIZE + 1;
+                      const end = Math.min((page + 1) * QUESTION_MAP_PAGE_SIZE, totalQuestions);
+                      return <option key={page} value={page}>{start}–{end}</option>;
+                    })}
+                  </select>
+                  <ChevronRight className="absolute right-2 top-1/2 -translate-y-1/2 rotate-90 w-3 h-3 text-gray-400 pointer-events-none" />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setQuestionMapPage(page => Math.min(questionMapPageCount - 1, page + 1))}
+                  disabled={questionMapPage >= questionMapPageCount - 1}
+                  className="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition disabled:opacity-30 disabled:cursor-not-allowed"
+                  aria-label={label.next}
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="rounded-xl border border-gray-100 bg-gray-50/70 p-2">
+                <div className="grid grid-cols-5 sm:grid-cols-10 lg:grid-cols-5 gap-1.5">
+                  {visibleQuestionMap.map((mappedQuestion, offset) => {
+                    const questionIndex = questionMapStart + offset;
+                    const answer = answersByQuestionId.get(mappedQuestion.id);
+                    let stateClass = 'bg-white text-gray-500 border-gray-100 hover:border-blue-300 hover:text-blue-600 hover:-translate-y-0.5';
+                    if (questionIndex === currentIndex) {
+                      stateClass = 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-200 ring-2 ring-blue-100';
+                    } else if (answer?.isCorrect) {
+                      stateClass = 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100';
+                    } else if (answer) {
+                      stateClass = 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100';
+                    }
+
+                    return (
+                      <button
+                        key={mappedQuestion.id}
+                        type="button"
+                        onClick={() => goToQuestion(questionIndex)}
+                        className={`h-8 min-w-0 rounded-lg border text-[11px] font-bold transition-all ${stateClass}`}
+                        aria-label={`${label.question} ${questionIndex + 1}`}
+                        aria-current={questionIndex === currentIndex ? 'step' : undefined}
+                      >
+                        {questionIndex + 1}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-center gap-3 mt-3 text-[10px] text-gray-400">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500" />{currentIndex + 1}</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-400" />{label.correctShort}</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400" />{label.wrongShort}</span>
               </div>
             </div>
 
