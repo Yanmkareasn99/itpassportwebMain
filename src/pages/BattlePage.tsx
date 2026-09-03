@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Question, AnswerChoice, BattleRoom, Page } from '../types';
+import { AnswerChoiceContent, QuestionImage } from '../components/QuestionMedia';
 
 interface BattlePageProps {
   currentPage: Page;
@@ -296,7 +297,8 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
           <p className="text-xs text-amber-600 font-bold bg-amber-50 px-2.5 py-1 rounded-full inline-block mb-4">
             {translate(language, 'battlePage.questionNumber', { number: currentIndex + 1 })}
           </p>
-          <p className="text-gray-800 leading-relaxed">{q?.question_text}</p>
+          <p className="text-gray-800 leading-relaxed whitespace-pre-line">{q?.question_text}</p>
+          <QuestionImage question={q} />
         </div>
 
         {/* Choices */}
@@ -318,7 +320,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                 className={`text-left p-4 rounded-xl border-2 transition-all ${cls} disabled:cursor-default`}
               >
                 <span className="text-xs font-bold text-gray-400 block mb-1">{String.fromCharCode(65 + idx)}</span>
-                <span className="text-sm text-gray-700">{choice.choice_text}</span>
+                <AnswerChoiceContent question={q} choice={choice} displayIndex={idx} />
                 {answered && choice.is_correct && <CheckCircle className="w-4 h-4 text-emerald-500 mt-1" />}
                 {answered && !choice.is_correct && choice.id === selectedChoice && <XCircle className="w-4 h-4 text-red-500 mt-1" />}
               </button>

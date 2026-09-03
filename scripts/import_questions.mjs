@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
@@ -56,24 +56,37 @@ function isImagePath(s) {
   return typeof s === 'string' && s.startsWith('../');
 }
 
-function hasImageOptions(options) {
-  if (typeof options === 'object' && !Array.isArray(options)) {
-    return Object.values(options).some(isImagePath);
-  }
-  return false;
+function normalizeImagePath(year, subjectKey, sourcePath, questionId, choiceSuffix = '') {
+  if (!isImagePath(sourcePath)) return null;
+  const filename = sourcePath.replaceAll('\\', '/').split('/').pop();
+  if (!filename) return null;
+  const value = String(year);
+  const folder = subjectKey === 'kakomon_A'
+    ? (value.toLowerCase() === 'sample' ? 'sampleA' : `${value}A`)
+    : `${value}S`;
+  const id = String(questionId ?? '');
+  const candidates = [
+    filename,
+    `${id}${choiceSuffix}.png`,
+    `${id.padStart(2, '0')}${choiceSuffix}.png`,
+    `${value}Q${id}${choiceSuffix}.png`,
+    `${value}Q${id.padStart(2, '0')}${choiceSuffix}.png`,
+  ];
+  const found = candidates.find(candidate => existsSync(resolve(BASE, 'img', folder, candidate)));
+  return found ? `img/${folder}/${found}` : null;
 }
 
-async function loadExistingTexts() {
-  const existing = new Set();
+async function loadExistingQuestions() {
+  const existing = new Map();
   let from = 0;
   while (true) {
     const { data, error } = await supabase
       .from('questions')
-      .select('question_text')
+      .select('id, question_text, image_url')
       .range(from, from + 999);
     if (error) throw new Error(`Unable to read existing questions: ${error.message}`);
     if (!data || data.length === 0) break;
-    data.forEach(q => existing.add(q.question_text.trim()));
+    data.forEach(q => existing.set(q.question_text.trim(), q));
     if (data.length < 1000) break;
     from += 1000;
   }
@@ -123,7 +136,7 @@ async function importCategoryQuestions(existing) {
       q.options.forEach((opt, idx) => {
         choices.push({ question_id: qId, choice_text: String(opt), is_correct: String(opt) === String(q.answer), sort_order: idx + 1 });
       });
-      existing.add(text);
+      existing.set(text, { id: qId, question_text: text, image_url: null });
     }
 
     const n = await insertBatch(questions, choices);
@@ -162,7 +175,7 @@ async function importQuestionsJson(existing) {
     q.options.forEach((opt, idx) => {
       choices.push({ question_id: qId, choice_text: String(opt), is_correct: String(opt) === String(q.answer), sort_order: idx + 1 });
     });
-    existing.add(text);
+    existing.set(text, { id: qId, question_text: text, image_url: null });
   }
 
   const n = await insertBatch(questions, choices);
@@ -181,22 +194,49 @@ async function importKakomonExam(examData, answers, subjectKey, existing) {
 
     for (const q of session.questions) {
       const text = q.question?.trim();
-      if (!text || existing.has(text)) continue;
-      if (!q.options || hasImageOptions(q.options)) continue;
+      if (!text || !q.options) continue;
 
       const answerLetter = sessionAnswers[String(q.id)];
       if (!answerLetter) continue;
 
+      const questionImageUrl = normalizeImagePath(session.year, subjectKey, q.image_file, q.id);
+      const existingQuestion = existing.get(text);
+      if (existingQuestion) {
+        if (questionImageUrl && !existingQuestion.image_url) {
+          const { error } = await supabase
+            .from('questions')
+            .update({ image_url: questionImageUrl })
+            .eq('id', existingQuestion.id);
+          if (error) throw new Error(`Question image update failed: ${error.message}`);
+          existingQuestion.image_url = questionImageUrl;
+        }
+        continue;
+      }
+
       const qId = randomUUID();
-      questions.push({ id: qId, subject_id: subjectId, question_number: q.id, question_text: text, question_type: 'multiple_choice', explanation: null, difficulty: 2, points: 1 });
+      questions.push({ id: qId, subject_id: subjectId, question_number: q.id, question_text: text, question_type: 'multiple_choice', image_url: questionImageUrl, explanation: null, difficulty: 2, points: 1 });
 
       OPTION_KEYS.forEach((key, idx) => {
         const optText = q.options[key];
-        if (!optText || isImagePath(optText)) return;
-        choices.push({ question_id: qId, choice_text: `${key}：${optText}`, is_correct: key === answerLetter, sort_order: idx + 1 });
+        if (!optText) return;
+        const optionIsImage = isImagePath(optText);
+        const optionImageUrl = normalizeImagePath(
+          session.year,
+          subjectKey,
+          optText,
+          q.id,
+          ['a', 'i', 'u', 'e'][idx],
+        );
+        choices.push({
+          question_id: qId,
+          choice_text: optionIsImage ? key : `${key}：${optText}`,
+          image_url: optionImageUrl,
+          is_correct: key === answerLetter,
+          sort_order: idx + 1,
+        });
       });
 
-      existing.add(text);
+      existing.set(text, { id: qId, question_text: text, image_url: questionImageUrl });
     }
 
     const n = await insertBatch(questions, choices);
@@ -211,7 +251,7 @@ async function main() {
   await verifySubjects();
 
   console.log('Loading existing questions...');
-  const existing = await loadExistingTexts();
+  const existing = await loadExistingQuestions();
 
   console.log('\n--- Importing category_questions.json ---');
   const catTotal = await importCategoryQuestions(existing);

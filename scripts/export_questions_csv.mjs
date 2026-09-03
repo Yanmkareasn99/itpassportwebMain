@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { randomUUID } from 'crypto';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
@@ -34,6 +34,26 @@ function isImagePath(value) {
   return typeof value === 'string' && value.startsWith('../');
 }
 
+function normalizeImagePath(year, subjectKey, sourcePath, questionId, choiceSuffix = '') {
+  if (!isImagePath(sourcePath)) return null;
+  const filename = sourcePath.replaceAll('\\', '/').split('/').pop();
+  if (!filename) return null;
+  const value = String(year);
+  const folder = subjectKey === 'kakomon_A'
+    ? (value.toLowerCase() === 'sample' ? 'sampleA' : `${value}A`)
+    : `${value}S`;
+  const id = String(questionId ?? '');
+  const candidates = [
+    filename,
+    `${id}${choiceSuffix}.png`,
+    `${id.padStart(2, '0')}${choiceSuffix}.png`,
+    `${value}Q${id}${choiceSuffix}.png`,
+    `${value}Q${id.padStart(2, '0')}${choiceSuffix}.png`,
+  ];
+  const found = candidates.find(candidate => existsSync(resolve(DATA_DIR, 'img', folder, candidate)));
+  return found ? `img/${folder}/${found}` : null;
+}
+
 function addQuestion({
   subjectId,
   number,
@@ -44,13 +64,14 @@ function addQuestion({
   explanationJa = null,
   explanationEn = null,
   explanationVi = null,
+  imageUrl = null,
 }) {
   const cleanText = typeof text === 'string' ? text.trim() : '';
   if (!cleanText || questionTexts.has(cleanText) || options.length === 0) return;
 
-  const questionId = randomUUID();
-  const validOptions = options.filter(option => option.text && !isImagePath(option.text));
+  const validOptions = options.filter(option => option.text || option.imageUrl);
   if (validOptions.length === 0) return;
+  const questionId = randomUUID();
 
   questionRows.push({
     id: questionId,
@@ -58,7 +79,7 @@ function addQuestion({
     question_number: number,
     question_text: cleanText,
     question_type: 'multiple_choice',
-    image_url: null,
+    image_url: imageUrl,
     explanation,
     difficulty: 2,
     points: 1,
@@ -71,7 +92,8 @@ function addQuestion({
     choiceRows.push({
       id: randomUUID(),
       question_id: questionId,
-      choice_text: option.text,
+      choice_text: option.text || option.key,
+      image_url: option.imageUrl ?? null,
       is_correct: option.key === correctAnswer || option.text === correctAnswer,
       sort_order: index + 1,
     });
@@ -119,14 +141,30 @@ function addKakomon(filename, answerGroup, subjectKey) {
   for (const session of source.exam_data ?? []) {
     const sessionAnswers = answers[answerGroup]?.[String(session.year)] ?? {};
     for (const question of session.questions ?? []) {
-      if (!question.options || Object.values(question.options).some(isImagePath)) continue;
+      if (!question.options) continue;
       const correctAnswer = sessionAnswers[String(question.id)];
       if (!correctAnswer) continue;
       addQuestion({
         subjectId: SUBJECT_IDS[subjectKey],
         number: question.id,
         text: question.question,
-        options: OPTION_KEYS.map(key => ({ key, text: question.options[key] ? `${key}：${question.options[key]}` : '' })),
+        imageUrl: normalizeImagePath(session.year, subjectKey, question.image_file, question.id),
+        options: OPTION_KEYS.map((key, index) => {
+          const value = question.options[key];
+          const optionIsImage = isImagePath(value);
+          const imageUrl = normalizeImagePath(
+            session.year,
+            subjectKey,
+            value,
+            question.id,
+            ['a', 'i', 'u', 'e'][index],
+          );
+          return {
+            key,
+            text: optionIsImage ? key : (value ? `${key}：${value}` : ''),
+            imageUrl,
+          };
+        }),
         correctAnswer,
       });
     }
@@ -191,7 +229,7 @@ writeFileSync(
 );
 writeFileSync(
   resolve(OUTPUT_DIR, 'answer_choices.csv'),
-  toCsv(choiceRows, ['id', 'question_id', 'choice_text', 'is_correct', 'sort_order']),
+  toCsv(choiceRows, ['id', 'question_id', 'choice_text', 'image_url', 'is_correct', 'sort_order']),
   'utf8',
 );
 

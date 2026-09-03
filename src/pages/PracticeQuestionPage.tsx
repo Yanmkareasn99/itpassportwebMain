@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getLocalizedExplanation } from '../lib/localizedQuestion';
 import { Question, AnswerChoice, Page } from '../types';
+import { AnswerChoiceContent, QuestionImage } from '../components/QuestionMedia';
 
 
 interface PracticeQuestionPageProps {
@@ -284,6 +285,7 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
                 <span className="text-xs text-gray-400">{'★'.repeat(question.difficulty)}</span>
               </div>
               <p className="text-gray-800 leading-relaxed text-sm whitespace-pre-line">{question.question_text}</p>
+              <QuestionImage question={question} />
               {question.question_type === 'tree' && <TreeDiagram />}
             </div>
 
@@ -309,7 +311,7 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
                     <span className="w-7 h-7 rounded-full border-2 border-current flex items-center justify-center text-xs font-bold shrink-0 text-gray-400">
                       {String.fromCharCode(65 + idx)}
                     </span>
-                    <span className="text-sm text-gray-700 flex-1">{choice.choice_text}</span>
+                    <AnswerChoiceContent question={question} choice={choice} displayIndex={idx} />
                     {answered && choice.is_correct && <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0" />}
                     {answered && !choice.is_correct && choice.id === selectedChoiceId && <XCircle className="w-5 h-5 text-red-500 shrink-0" />}
                   </button>

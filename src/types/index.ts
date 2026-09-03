@@ -37,6 +37,7 @@ export interface AnswerChoice {
   id: string;
   question_id: string;
   choice_text: string;
+  image_url?: string | null;
   is_correct: boolean;
   sort_order: number;
 }
