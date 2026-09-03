@@ -23,7 +23,7 @@ export function QuestionImage({ question }: QuestionImageProps) {
       <img
         src={src}
         alt={`Question ${question?.question_number ?? ''} reference diagram`}
-        className="mx-auto max-h-[28rem] max-w-full object-contain"
+        className="mx-auto h-auto max-w-full object-contain"
         loading="lazy"
         decoding="async"
         onError={() => setFailed(true)}

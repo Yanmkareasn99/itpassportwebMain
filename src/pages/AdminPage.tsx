@@ -5,6 +5,7 @@ import {
   Users, BookOpen, Layers, BarChart2, CheckCircle, XCircle, Search, RefreshCw, Upload,
 } from 'lucide-react';
 import Layout from '../components/Layout';
+import PdfQuestionImporter from '../components/admin/PdfQuestionImporter';
 import { supabase } from '../lib/supabase';
 import { getLocalizedExplanation } from '../lib/localizedQuestion';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -221,6 +222,7 @@ function QuestionsTab() {
   const [error, setError] = useState('');
   const [importData, setImportData] = useState<CsvImportData | null>(null);
   const [importing, setImporting] = useState(false);
+  const [showPdfImporter, setShowPdfImporter] = useState(false);
   const questionCsvInput = useRef<HTMLInputElement>(null);
   const choiceCsvInput = useRef<HTMLInputElement>(null);
 
@@ -701,7 +703,7 @@ function QuestionsTab() {
   return (
     <div className="space-y-4">
       {/* Toolbar */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
@@ -751,6 +753,13 @@ function QuestionsTab() {
           {translate(language, 'adminPage.answersCsv')}
         </button>
         <button
+          onClick={() => setShowPdfImporter(current => !current)}
+          className="flex items-center gap-2 px-3 py-2 border border-violet-200 bg-violet-50 hover:bg-violet-100 text-violet-700 text-sm font-medium rounded-xl transition"
+        >
+          <Upload className="w-4 h-4" />
+          {translate(language, 'adminPage.pdfImport')}
+        </button>
+        <button
           onClick={startNew}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition"
         >
@@ -758,6 +767,14 @@ function QuestionsTab() {
           {translate(language, 'adminPage.addQuestion')}
         </button>
       </div>
+
+      {showPdfImporter && (
+        <PdfQuestionImporter
+          subjects={subjects}
+          onClose={() => setShowPdfImporter(false)}
+          onImported={load}
+        />
+      )}
 
       {importData && (
         <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
