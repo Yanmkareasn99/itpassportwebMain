@@ -9,8 +9,27 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error('Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY before importing questions.');
 }
+if (SUPABASE_URL.includes('[') || SUPABASE_URL.includes(']') || SUPABASE_URL.includes('\\')) {
+  throw new Error('SUPABASE_URL must be a plain https://...supabase.co URL without Markdown or backslashes.');
+}
+if (SUPABASE_SERVICE_ROLE_KEY.includes('\\')) {
+  throw new Error('SUPABASE_SERVICE_ROLE_KEY must not contain backslashes.');
+}
+if (SUPABASE_SERVICE_ROLE_KEY.startsWith('sb_publishable_')) {
+  throw new Error('Use an sb_secret_ key (or legacy service_role key), not an sb_publishable_ key.');
+}
+
+// This script only uses PostgREST. Supplying an unused transport prevents the
+// Realtime client from requiring Node 22's global WebSocket during setup.
+class DisabledRealtimeTransport {
+  constructor() {
+    throw new Error('Realtime is disabled for the question import script.');
+  }
+}
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
+  realtime: { transport: DisabledRealtimeTransport },
 });
 
 const BASE = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'data');
