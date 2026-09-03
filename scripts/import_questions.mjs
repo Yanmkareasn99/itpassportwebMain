@@ -18,11 +18,11 @@ const BASE = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'src', 'data
 const SUBJECT_IDS = {
   // category_questions.json categories → real subject IDs
   '理論':                    'cc000003-0000-0000-0000-000000000001', // テクノロジ系
-  'ネットワーク':            '33333333-3333-3333-3333-333333333333',
-  'データベース':            '22222222-2222-2222-2222-222222222222',
+  'ネットワーク':            'cc000003-0000-0000-0000-000000000001', // テクノロジ系
+  'データベース':            'cc000003-0000-0000-0000-000000000001', // テクノロジ系
   'セキュリティ':            'cc000003-0000-0000-0000-000000000001', // テクノロジ系
   'プロジェクトマネジメント':'cc000002-0000-0000-0000-000000000001', // マネジメント系
-  'アルゴリズム':            '44444444-4444-4444-4444-444444444444', // プログラミング
+  'アルゴリズム':            'cc000003-0000-0000-0000-000000000001', // テクノロジ系
   // questions.json categories
   'テクノロジ':              'cc000003-0000-0000-0000-000000000001',
   'マネジメント':            'cc000002-0000-0000-0000-000000000001',
@@ -33,6 +33,24 @@ const SUBJECT_IDS = {
 };
 
 const OPTION_KEYS = ['ア', 'イ', 'ウ', 'エ'];
+
+async function verifySubjects() {
+  const requiredIds = [...new Set(Object.values(SUBJECT_IDS))];
+  const { data, error } = await supabase
+    .from('subjects')
+    .select('id')
+    .in('id', requiredIds);
+
+  if (error) throw new Error(`Unable to read subjects: ${error.message}`);
+
+  const foundIds = new Set((data ?? []).map(subject => subject.id));
+  const missingIds = requiredIds.filter(id => !foundIds.has(id));
+  if (missingIds.length > 0) {
+    throw new Error(
+      `Required subjects are missing (${missingIds.join(', ')}). Apply the subject migrations before importing questions.`,
+    );
+  }
+}
 
 function isImagePath(s) {
   return typeof s === 'string' && s.startsWith('../');
@@ -53,7 +71,8 @@ async function loadExistingTexts() {
       .from('questions')
       .select('question_text')
       .range(from, from + 999);
-    if (error || !data || data.length === 0) break;
+    if (error) throw new Error(`Unable to read existing questions: ${error.message}`);
+    if (!data || data.length === 0) break;
     data.forEach(q => existing.add(q.question_text.trim()));
     if (data.length < 1000) break;
     from += 1000;
@@ -65,11 +84,11 @@ async function loadExistingTexts() {
 async function insertBatch(questions, choices) {
   if (questions.length === 0) return 0;
   const { error } = await supabase.from('questions').insert(questions);
-  if (error) { console.error('  Q insert error:', error.message); return 0; }
+  if (error) throw new Error(`Question insert failed: ${error.message}`);
 
   for (let i = 0; i < choices.length; i += 200) {
     const { error: ce } = await supabase.from('answer_choices').insert(choices.slice(i, i + 200));
-    if (ce) console.error('  Choice insert error:', ce.message);
+    if (ce) throw new Error(`Answer-choice insert failed: ${ce.message}`);
   }
   return questions.length;
 }
@@ -90,7 +109,17 @@ async function importCategoryQuestions(existing) {
       if (!Array.isArray(q.options) || q.options.length === 0) continue;
 
       const qId = randomUUID();
-      questions.push({ id: qId, subject_id: subjectId, question_number: i + 1, question_text: text, question_type: 'multiple_choice', explanation: q.explanation || null, difficulty: 2, points: 1 });
+      questions.push({
+        id: qId,
+        subject_id: subjectId,
+        question_number: i + 1,
+        question_text: text,
+        question_type: 'multiple_choice',
+        explanation: q.explanation || null,
+        explanation_ja: q.explanation || null,
+        difficulty: 2,
+        points: 1,
+      });
       q.options.forEach((opt, idx) => {
         choices.push({ question_id: qId, choice_text: String(opt), is_correct: String(opt) === String(q.answer), sort_order: idx + 1 });
       });
@@ -117,7 +146,19 @@ async function importQuestionsJson(existing) {
     if (!Array.isArray(q.options) || q.options.length === 0) continue;
 
     const qId = randomUUID();
-    questions.push({ id: qId, subject_id: subjectId, question_number: i + 1, question_text: text, question_type: 'multiple_choice', explanation: q.explanation || null, difficulty: 2, points: 1 });
+    questions.push({
+      id: qId,
+      subject_id: subjectId,
+      question_number: i + 1,
+      question_text: text,
+      question_type: 'multiple_choice',
+      explanation: q.explanation || q.explanation_ja || null,
+      explanation_ja: q.explanation_ja || q.explanation || null,
+      explanation_en: q.explanation_en || null,
+      explanation_vi: q.explanation_vi || null,
+      difficulty: 2,
+      points: 1,
+    });
     q.options.forEach((opt, idx) => {
       choices.push({ question_id: qId, choice_text: String(opt), is_correct: String(opt) === String(q.answer), sort_order: idx + 1 });
     });
@@ -166,6 +207,9 @@ async function importKakomonExam(examData, answers, subjectKey, existing) {
 }
 
 async function main() {
+  console.log('Checking required subjects...');
+  await verifySubjects();
+
   console.log('Loading existing questions...');
   const existing = await loadExistingTexts();
 
