@@ -1,7 +1,8 @@
+import { supportedLanguages, translate } from '../i18n';
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { BookOpen, Eye, EyeOff, AlertCircle } from 'lucide-react';
-import { Language, useLanguage } from '../contexts/LanguageContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function LoginPage() {
   const { signIn, signUp, signInWithGoogle } = useAuth();
@@ -16,22 +17,22 @@ export default function LoginPage() {
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
   const text = {
-    subtitle: language === 'ja' ? '大阪電子専門学校 学習支援システム' : language === 'en' ? 'Osaka Denshi learning support system' : 'Hệ thống hỗ trợ học tập Osaka Denshi',
-    login: language === 'ja' ? 'ログイン' : language === 'en' ? 'Sign in' : 'Đăng nhập',
-    signup: language === 'ja' ? 'アカウント作成' : language === 'en' ? 'Create account' : 'Tạo tài khoản',
-    loginHelp: language === 'ja' ? 'パスワードを受け取ろう！' : language === 'en' ? 'Sign in to continue learning.' : 'Đăng nhập để tiếp tục học.',
-    signupHelp: language === 'ja' ? '新しいアカウントを作成します' : language === 'en' ? 'Create a new account.' : 'Tạo tài khoản mới.',
-    name: language === 'ja' ? 'お名前' : language === 'en' ? 'Name' : 'Họ tên',
-    studentId: language === 'ja' ? '学籍番号（任意）' : language === 'en' ? 'Student ID (optional)' : 'Mã sinh viên (tùy chọn)',
-    email: language === 'ja' ? 'メール' : language === 'en' ? 'Email' : 'Email',
-    password: language === 'ja' ? 'パスワード' : language === 'en' ? 'Password' : 'Mật khẩu',
-    processing: language === 'ja' ? '処理中...' : language === 'en' ? 'Processing...' : 'Đang xử lý...',
-    noAccount: language === 'ja' ? 'アカウントをお持ちでない方はこちら' : language === 'en' ? 'No account? Create one' : 'Chưa có tài khoản? Tạo mới',
-    hasAccount: language === 'ja' ? 'すでにアカウントをお持ちの方' : language === 'en' ? 'Already have an account?' : 'Đã có tài khoản?',
-    loginError: language === 'ja' ? 'メールアドレスまたはパスワードが正しくありません。' : language === 'en' ? 'Email or password is incorrect.' : 'Email hoặc mật khẩu không chính xác.',
-    nameError: language === 'ja' ? '名前を入力してください。' : language === 'en' ? 'Please enter your name.' : 'Vui lòng nhập tên của bạn.',
-    signupError: language === 'ja' ? 'アカウント作成に失敗しました: ' : language === 'en' ? 'Failed to create account: ' : 'Tạo tài khoản thất bại: ',
-    confirmationSent: language === 'ja' ? '確認メールを送信しました。メールを確認してからログインしてください。' : language === 'en' ? 'Confirmation email sent. Confirm your email, then sign in.' : 'Đã gửi email xác nhận. Hãy xác nhận email rồi đăng nhập.',
+    subtitle: translate(language, 'loginPage.osakaDenshiLearningSupportSystem'),
+    login: translate(language, 'loginPage.signIn'),
+    signup: translate(language, 'loginPage.createAccount'),
+    loginHelp: translate(language, 'loginPage.signInToContinueLearning'),
+    signupHelp: translate(language, 'loginPage.createANewAccount'),
+    name: translate(language, 'loginPage.name'),
+    studentId: translate(language, 'loginPage.studentIdOptional'),
+    email: translate(language, 'loginPage.email'),
+    password: translate(language, 'loginPage.password'),
+    processing: translate(language, 'loginPage.processing'),
+    noAccount: translate(language, 'loginPage.noAccountCreateOne'),
+    hasAccount: translate(language, 'loginPage.alreadyHaveAnAccount'),
+    loginError: translate(language, 'loginPage.emailOrPasswordIsIncorrect'),
+    nameError: translate(language, 'loginPage.pleaseEnterYourName'),
+    signupError: translate(language, 'loginPage.failedToCreateAccount'),
+    confirmationSent: translate(language, 'loginPage.confirmationEmailSentConfirmYourEmailThenSign'),
   };
 
   async function handleSubmit(e: React.FormEvent) {
@@ -72,7 +73,7 @@ export default function LoginPage() {
           </div>
           <p className="text-sm text-gray-500">{text.subtitle}</p>
           <div className="flex justify-center gap-2 mt-4">
-            {(['ja', 'en', 'vi'] as Language[]).map(code => (
+            {supportedLanguages.map(code => (
               <button
                 key={code}
                 type="button"
@@ -109,7 +110,7 @@ export default function LoginPage() {
                     type="text"
                     value={name}
                     onChange={e => setName(e.target.value)}
-                    placeholder="山田 太郎"
+                    placeholder={translate(language, 'loginPage.namePlaceholder')}
                     className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                     required
                   />
@@ -120,7 +121,7 @@ export default function LoginPage() {
                     type="text"
                     value={studentId}
                     onChange={e => setStudentId(e.target.value)}
-                    placeholder="例: 2024001"
+                    placeholder={translate(language, 'loginPage.studentIdPlaceholder')}
                     className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                   />
                 </div>
@@ -181,7 +182,7 @@ export default function LoginPage() {
 
           <div className="mt-4">
             <div className="oauth-divider text-center my-3">
-              <span>または</span>
+              <span>{translate(language, 'loginPage.or')}</span>
             </div>
 
             <button
@@ -194,7 +195,7 @@ export default function LoginPage() {
                   await signInWithGoogle();
                 } catch (err) {
                   console.error(err);
-                  setError('Googleログインに失敗しました。');
+                  setError(translate(language, 'loginPage.googleLoginFailed'));
                 } finally {
                   setLoading(false);
                 }
@@ -202,7 +203,7 @@ export default function LoginPage() {
               disabled={loading}
             >
               <span className="google-icon mr-2">G</span>
-              Googleでログイン
+              {translate(language, 'loginPage.signInWithGoogle')}
             </button>
           </div>
 
@@ -217,7 +218,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-6">
-          © 2024 大阪電子専門学校 マナビ
+          {translate(language, 'loginPage.copyright')}
         </p>
       </div>
     </div>

@@ -1,3 +1,4 @@
+import { translate } from '../i18n';
 import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertCircle, Flag, ArrowLeft } from 'lucide-react';
 import Layout from '../components/Layout';
@@ -71,28 +72,28 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
   const accuracyPct = answers.length > 0 ? Math.round((correctSoFar / answers.length) * 100) : 0;
   const explanation = getLocalizedExplanation(question, language);
   const label = {
-    completed: language === 'ja' ? '演習完了' : language === 'en' ? 'Practice complete' : 'Hoàn thành luyện tập',
-    practice: language === 'ja' ? '問題演習' : language === 'en' ? 'Practice' : 'Luyện tập',
-    questionTitle: language === 'ja' ? '練習問題' : language === 'en' ? 'Practice question' : 'Câu hỏi luyện tập',
-    question: language === 'ja' ? '問題' : language === 'en' ? 'Question' : 'Câu',
-    accuracy: language === 'ja' ? '正答率' : language === 'en' ? 'Accuracy' : 'Tỷ lệ đúng',
-    showExplanation: language === 'ja' ? '解説を見る' : language === 'en' ? 'Show explanation' : 'Xem giải thích',
-    hideExplanation: language === 'ja' ? '解説を閉じる' : language === 'en' ? 'Hide explanation' : 'Ẩn giải thích',
-    answer: language === 'ja' ? '答える' : language === 'en' ? 'Answer' : 'Trả lời',
-    next: language === 'ja' ? '次へ' : language === 'en' ? 'Next' : 'Tiếp',
-    result: language === 'ja' ? '結果を見る' : language === 'en' ? 'See results' : 'Xem kết quả',
-    previous: language === 'ja' ? '前へ' : language === 'en' ? 'Previous' : 'Trước',
-    correct: language === 'ja' ? '正解！' : language === 'en' ? 'Correct!' : 'Đúng!',
-    incorrect: language === 'ja' ? '不正解' : language === 'en' ? 'Incorrect' : 'Sai',
-    correctAnswer: language === 'ja' ? '正解' : language === 'en' ? 'Correct answer' : 'Đáp án đúng',
-    questionList: language === 'ja' ? '問題一覧' : language === 'en' ? 'Question list' : 'Danh sách câu hỏi',
-    currentAccuracy: language === 'ja' ? '現在の正答率' : language === 'en' ? 'Current accuracy' : 'Tỷ lệ đúng hiện tại',
-    doneMessage: language === 'ja' ? 'お疲れさまでした！' : language === 'en' ? 'Great work!' : 'Bạn làm tốt lắm!',
-    total: language === 'ja' ? '出題数' : language === 'en' ? 'Questions' : 'Số câu',
-    correctShort: language === 'ja' ? '正解' : language === 'en' ? 'Correct' : 'Đúng',
-    wrongShort: language === 'ja' ? '不正解' : language === 'en' ? 'Incorrect' : 'Sai',
-    backToSubjects: language === 'ja' ? '科目選択へ戻る' : language === 'en' ? 'Back to subjects' : 'Về chọn môn',
-    home: language === 'ja' ? 'ホームへ' : language === 'en' ? 'Home' : 'Trang chủ',
+    completed: translate(language, 'practiceQuestionPage.practiceComplete'),
+    practice: translate(language, 'practiceQuestionPage.practice'),
+    questionTitle: translate(language, 'practiceQuestionPage.practiceQuestion'),
+    question: translate(language, 'practiceQuestionPage.question'),
+    accuracy: translate(language, 'practiceQuestionPage.accuracy'),
+    showExplanation: translate(language, 'practiceQuestionPage.showExplanation'),
+    hideExplanation: translate(language, 'practiceQuestionPage.hideExplanation'),
+    answer: translate(language, 'practiceQuestionPage.answer'),
+    next: translate(language, 'practiceQuestionPage.next'),
+    result: translate(language, 'practiceQuestionPage.seeResults'),
+    previous: translate(language, 'practiceQuestionPage.previous'),
+    correct: translate(language, 'practiceQuestionPage.correct'),
+    incorrect: translate(language, 'practiceQuestionPage.incorrect'),
+    correctAnswer: translate(language, 'practiceQuestionPage.correctAnswer'),
+    questionList: translate(language, 'practiceQuestionPage.questionList'),
+    currentAccuracy: translate(language, 'practiceQuestionPage.currentAccuracy'),
+    doneMessage: translate(language, 'practiceQuestionPage.greatWork'),
+    total: translate(language, 'practiceQuestionPage.questions'),
+    correctShort: translate(language, 'practiceQuestionPage.correct2'),
+    wrongShort: translate(language, 'practiceQuestionPage.incorrect'),
+    backToSubjects: translate(language, 'practiceQuestionPage.backToSubjects'),
+    home: translate(language, 'practiceQuestionPage.home'),
   };
   
 
@@ -198,7 +199,7 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
             </div>
             <h2 className="text-2xl font-bold text-gray-800 mb-2">{label.doneMessage}</h2>
             <p className="text-gray-500 mb-6">
-              {language === 'ja' ? `${total}問中 ${correct}問 正解` : `${correct} / ${total} ${label.correctShort.toLowerCase()}`}
+              {translate(language, 'practiceQuestionPage.resultSummary', { total, correct })}
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
@@ -419,7 +420,7 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
                 {accuracyPct}%
               </p>
               <p className="text-xs text-gray-400 mt-1">
-                {language === 'ja' ? `${correctSoFar} / ${answers.length} 問正解` : `${correctSoFar} / ${answers.length} ${label.correctShort.toLowerCase()}`}
+                {translate(language, 'practiceQuestionPage.currentResult', { correct: correctSoFar, total: answers.length })}
               </p>
             </div>
           </div>

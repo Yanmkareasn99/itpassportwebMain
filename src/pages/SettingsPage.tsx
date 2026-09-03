@@ -1,3 +1,4 @@
+import { nativeLanguageNames, translate } from '../i18n';
 import { useState, useEffect } from 'react';
 import { User, Calendar, Lock, CheckCircle, AlertCircle, Save, Languages } from 'lucide-react';
 import Layout from '../components/Layout';
@@ -62,10 +63,10 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
       .update({ name: name.trim(), student_id: studentId.trim() || null, class_name: className.trim() || null })
       .eq('id', user!.id);
     if (error) {
-      setProfileMsg({ type: 'err', text: '保存に失敗しました: ' + error.message });
+      setProfileMsg({ type: 'err', text: translate(language, 'settingsPage.profileSaveFailed', { error: error.message }) });
     } else {
       await refreshProfile();
-      setProfileMsg({ type: 'ok', text: 'プロフィールを保存しました' });
+      setProfileMsg({ type: 'ok', text: translate(language, 'settingsPage.profileSaved') });
     }
     setProfileSaving(false);
   }
@@ -78,9 +79,9 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
       .from('exam_targets')
       .upsert({ user_id: user!.id, target_date: targetDate, exam_name: examName.trim() || null }, { onConflict: 'user_id' });
     if (error) {
-      setTargetMsg({ type: 'err', text: '保存に失敗しました: ' + error.message });
+      setTargetMsg({ type: 'err', text: translate(language, 'settingsPage.profileSaveFailed', { error: error.message }) });
     } else {
-      setTargetMsg({ type: 'ok', text: '目標試験日を保存しました' });
+      setTargetMsg({ type: 'ok', text: translate(language, 'settingsPage.targetSaved') });
     }
     setTargetSaving(false);
   }
@@ -89,19 +90,19 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
     e.preventDefault();
     setPasswordMsg(null);
     if (newPassword !== confirmPassword) {
-      setPasswordMsg({ type: 'err', text: '新しいパスワードが一致しません' });
+      setPasswordMsg({ type: 'err', text: translate(language, 'settingsPage.passwordsDoNotMatch') });
       return;
     }
     if (newPassword.length < 6) {
-      setPasswordMsg({ type: 'err', text: 'パスワードは6文字以上必要です' });
+      setPasswordMsg({ type: 'err', text: translate(language, 'settingsPage.passwordMinimum') });
       return;
     }
     setPasswordSaving(true);
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) {
-      setPasswordMsg({ type: 'err', text: '変更に失敗しました: ' + error.message });
+      setPasswordMsg({ type: 'err', text: translate(language, 'settingsPage.passwordChangeFailed', { error: error.message }) });
     } else {
-      setPasswordMsg({ type: 'ok', text: 'パスワードを変更しました' });
+      setPasswordMsg({ type: 'ok', text: translate(language, 'settingsPage.passwordChanged') });
       setNewPassword('');
       setConfirmPassword('');
     }
@@ -119,17 +120,17 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
   }
 
   const languageOptions: { code: Language; label: string; helper: string }[] = [
-    { code: 'ja', label: '日本語', helper: 'Japanese' },
-    { code: 'en', label: 'English', helper: '英語' },
-    { code: 'vi', label: 'Tiếng Việt', helper: 'ベトナム語' },
+    { code: 'ja', label: nativeLanguageNames.ja, helper: translate(language, 'settingsPage.languageJapanese') },
+    { code: 'en', label: nativeLanguageNames.en, helper: translate(language, 'settingsPage.languageEnglish') },
+    { code: 'vi', label: nativeLanguageNames.vi, helper: translate(language, 'settingsPage.languageVietnamese') },
   ];
 
   return (
     <Layout
       currentPage={currentPage}
       onNavigate={onNavigate}
-      title={language === 'ja' ? '設定' : language === 'en' ? 'Settings' : 'Cài đặt'}
-      subtitle={language === 'ja' ? 'アカウント' : language === 'en' ? 'Account' : 'Tài khoản'}
+      title={translate(language, 'settingsPage.settings')}
+      subtitle={translate(language, 'settingsPage.account')}
     >
       <div className="max-w-2xl mx-auto space-y-6">
 
@@ -140,13 +141,9 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
               <Languages className="w-5 h-5 text-violet-600" />
             </div>
             <div>
-              <h2 className="font-bold text-gray-800">多言語対応</h2>
+              <h2 className="font-bold text-gray-800">{translate(language, 'settingsPage.multilingualSupport')}</h2>
               <p className="text-xs text-gray-400 mt-0.5">
-                {language === 'ja'
-                  ? '表示言語を選択できます'
-                  : language === 'en'
-                    ? 'Choose the display language'
-                    : 'Chọn ngôn ngữ hiển thị'}
+                {translate(language, 'settingsPage.chooseTheDisplayLanguage')}
               </p>
             </div>
           </div>
@@ -182,66 +179,46 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
             <div className="w-9 h-9 bg-blue-100 rounded-xl flex items-center justify-center">
               <User className="w-5 h-5 text-blue-600" />
             </div>
-            <h2 className="font-bold text-gray-800">{language === 'ja'
-                  ? 'プロフィール'
-                  : language === 'en'
-                    ? 'Profile'
-                    : 'Hồ sơ'}</h2>
+            <h2 className="font-bold text-gray-800">{translate(language, 'settingsPage.profile')}</h2>
           </div>
 
           <form onSubmit={saveProfile} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-                {language === 'ja'
-                  ? 'お名前'
-                  : language === 'en'
-                    ? 'Name'
-                    : 'Họ và tên'}
+                {translate(language, 'settingsPage.name')}
               </label>
               <input
                 type="text"
                 value={name}
                 onChange={e => setName(e.target.value)}
-                placeholder="山田 太郎"
+                placeholder={translate(language, 'settingsPage.namePlaceholder')}
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                 required
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5"> {language === 'ja'
-                  ? '学籍番号'
-                  : language === 'en'
-                    ? 'Student ID'
-                    : 'Mã số sinh viên'}</label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5"> {translate(language, 'settingsPage.studentId')}</label>
               <input
                 type="text"
                 value={studentId}
                 onChange={e => setStudentId(e.target.value)}
-                placeholder="例: 2024001"
+                placeholder={translate(language, 'settingsPage.studentIdPlaceholder')}
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5"> {language === 'ja'
-                  ? 'クラス'
-                  : language === 'en'
-                    ? 'Class'
-                    : 'Lớp'}</label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5"> {translate(language, 'settingsPage.class')}</label>
               <input
                 type="text"
                 value={className}
                 onChange={e => setClassName(e.target.value)}
-                placeholder="例: IT科2年A組"
+                placeholder={translate(language, 'settingsPage.classPlaceholder')}
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-                {language === 'ja'
-                  ? 'メールアドレス'
-                  : language === 'en'
-                    ? 'Email Address'
-                    : 'Địa chỉ Email'}</label>
+                {translate(language, 'settingsPage.emailAddress')}</label>
               <input
                 type="email"
                 value={user?.email ?? ''}
@@ -256,7 +233,7 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
               className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60"
             >
               <Save className="w-4 h-4" />
-              {profileSaving ? '保存中...' : '保存する'}
+              {profileSaving ? translate(language, 'settingsPage.saving') : translate(language, 'settingsPage.saveAction')}
             </button>
           </form>
         </div>
@@ -268,38 +245,26 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
               <Calendar className="w-5 h-5 text-emerald-600" />
             </div>
             <h2 className="font-bold text-gray-800">
-              {language === 'ja'
-                ? '目標試験日'
-                : language === 'en'
-                  ? 'Target Exam Date'
-                  : 'Ngày thi mục tiêu'}
+              {translate(language, 'settingsPage.targetExamDate')}
             </h2>
           </div>
 
           <form onSubmit={saveTarget} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-                {language === 'ja'
-                  ? '試験名'
-                  : language === 'en'
-                    ? 'Exam Name'
-                    : 'Tên kỳ thi'}
+                {translate(language, 'settingsPage.examName')}
               </label>
               <input
                 type="text"
                 value={examName}
                 onChange={e => setExamName(e.target.value)}
-                placeholder="例: 基本情報技術者試験"
+                placeholder={translate(language, 'settingsPage.examNamePlaceholder')}
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               />
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-                {language === 'ja'
-                  ? '試験日'
-                  : language === 'en'
-                    ? 'Exam Date'
-                    : 'Ngày thi'}
+                {translate(language, 'settingsPage.examDate')}
               </label>
               <input
                 type="date"
@@ -312,9 +277,9 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
             {targetDate && (
               <div className="px-4 py-3 bg-blue-50 rounded-xl border border-blue-100">
                 <p className="text-sm text-blue-700">
-                  試験まで <span className="font-bold">
-                    {Math.max(0, Math.ceil((new Date(targetDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))}
-                  </span> 日
+                  {translate(language, 'settingsPage.daysUntilExam', {
+                    count: Math.max(0, Math.ceil((new Date(targetDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))),
+                  })}
                 </p>
               </div>
             )}
@@ -325,7 +290,7 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
               className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition disabled:opacity-60"
             >
               <Save className="w-4 h-4" />
-              {targetSaving ? '保存中...' : '保存する'}
+              {targetSaving ? translate(language, 'settingsPage.saving') : translate(language, 'settingsPage.saveAction')}
             </button>
           </form>
         </div>
@@ -336,20 +301,12 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
             <div className="w-9 h-9 bg-amber-100 rounded-xl flex items-center justify-center">
               <Lock className="w-5 h-5 text-amber-600" />
             </div>
-            <h2 className="font-bold text-gray-800"> {language === 'ja'
-                  ? 'パスワード変更'
-                  : language === 'en'
-                    ? 'Change Password'
-                    : 'Đổi mật khẩu'}</h2>
+            <h2 className="font-bold text-gray-800"> {translate(language, 'settingsPage.changePassword')}</h2>
           </div>
 
           <form onSubmit={changePassword} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5">{language === 'ja'
-                  ? '新しいパスワード'
-                  : language === 'en'
-                    ? 'New Password'
-                    : 'Mật khẩu mới'}</label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5">{translate(language, 'settingsPage.newPassword')}</label>
               <input
                 type="password"
                 value={newPassword}
@@ -361,11 +318,7 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5">{language === 'ja'
-                  ? '新しいパスワード（確認）'
-                  : language === 'en'
-                    ? 'Confirm New Password'
-                    : 'Xác nhận mật khẩu mới'}</label>
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5">{translate(language, 'settingsPage.confirmNewPassword')}</label>
               <input
                 type="password"
                 value={confirmPassword}
@@ -383,7 +336,7 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
               className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 text-white rounded-xl text-sm font-semibold hover:bg-amber-600 transition disabled:opacity-60"
             >
               <Lock className="w-4 h-4" />
-              {passwordSaving ? '変更中...' : 'パスワードを変更する'}
+              {passwordSaving ? translate(language, 'settingsPage.changing') : translate(language, 'settingsPage.changePasswordAction')}
             </button>
           </form>
         </div>

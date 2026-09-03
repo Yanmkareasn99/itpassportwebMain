@@ -1,3 +1,4 @@
+import { translate } from '../i18n';
 import {
   BookOpen,
   Home,
@@ -31,71 +32,43 @@ export default function Sidebar({
     {
       icon: Home,
       label:
-        language === "ja"
-          ? "ホーム"
-          : language === "en"
-          ? "Home"
-          : "Trang chủ",
+        translate(language, 'sidebar.home'),
       page: "home" as Page,
     },
     {
       icon: Layers,
       label:
-        language === "ja"
-          ? "問題演習"
-          : language === "en"
-          ? "Practice"
-          : "Luyện tập",
+        translate(language, 'sidebar.practice'),
       page: "practice-list" as Page,
     },
     {
       icon: BarChart2,
       label:
-        language === "ja"
-          ? "模擬試験"
-          : language === "en"
-          ? "Mock exam"
-          : "Thi thử",
+        translate(language, 'sidebar.mockExam'),
       page: "mock-exam" as Page,
     },
     {
       icon: Trophy,
       label:
-        language === "ja"
-          ? "対戦"
-          : language === "en"
-          ? "Battle"
-          : "Đối kháng",
+        translate(language, 'sidebar.battle'),
       page: "battle" as Page,
     },
     {
       icon: MessageCircle,
       label:
-        language === "ja"
-          ? "AIチャット"
-          : language === "en"
-          ? "AI Chat"
-          : "AI Chat",
+        translate(language, 'sidebar.aiChat'),
       page: "ai-chat" as Page,
     },
     {
       icon: FileText,
       label:
-        language === "ja"
-          ? "教材"
-          : language === "en"
-          ? "Materials"
-          : "Tài liệu",
+        translate(language, 'sidebar.materials'),
       page: "materials" as Page,
     },
     {
       icon: Settings,
       label:
-        language === "ja"
-          ? "設定"
-          : language === "en"
-          ? "Settings"
-          : "Cài đặt",
+        translate(language, 'sidebar.settings'),
       page: "settings" as Page,
     },
   ];
@@ -125,19 +98,15 @@ export default function Sidebar({
 
           <div className="min-w-0">
             <p className="font-semibold truncate">
-              {profile?.name ?? "Guest"}
+              {profile?.name ?? translate(language, 'sidebar.guest')}
             </p>
 
             <p className="text-xs text-gray-500 truncate">
               {profile?.student_id
                 ? profile.student_id
                 : profile?.role === "teacher"
-                ? language === "ja"
-                  ? "教師"
-                  : "Teacher"
-                : language === "ja"
-                ? "学生"
-                : "Student"}
+                ? translate(language, 'sidebar.teacher')
+                : translate(language, 'sidebar.student')}
             </p>
           </div>
         </div>
@@ -189,7 +158,7 @@ export default function Sidebar({
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-amber-50"
           >
             <ShieldCheck size={20} />
-            <span>Admin</span>
+            <span>{translate(language, 'adminPage.admin')}</span>
           </button>
         )}
 
@@ -199,11 +168,7 @@ export default function Sidebar({
         >
           <Settings size={20} />
           <span>
-            {language === "ja"
-              ? "設定"
-              : language === "en"
-              ? "Settings"
-              : "Cài đặt"}
+            {translate(language, 'sidebar.settings')}
           </span>
         </button>
 
@@ -213,11 +178,7 @@ export default function Sidebar({
         >
           <LogOut size={20} />
           <span>
-            {language === "ja"
-              ? "ログアウト"
-              : language === "en"
-              ? "Sign out"
-              : "Đăng xuất"}
+            {translate(language, 'sidebar.signOut')}
           </span>
         </button>
       </div>

@@ -1,3 +1,4 @@
+import { translate, type Language } from '../i18n';
 import { useState, useEffect } from 'react';
 import {
   PieChart,
@@ -21,22 +22,12 @@ interface PracticeListPageProps {
   onStartPractice: (subjectId: string, questions: Question[]) => void;
 }
 
-type LanguageCode = 'ja' | 'en' | 'vi';
-
-type LocalizedLabel = {
-  ja: string;
-  en: string;
-  vi: string;
-};
-
-function getLocalizedText(label: LocalizedLabel, language: LanguageCode) {
-  return label[language] ?? label.en ?? label.ja ?? '';
-}
+type LanguageCode = Language;
 
 const MAIN_CATEGORIES = [
   {
     id: 'strategy',
-    label: { ja: 'ストラテジ系', en: 'Strategy', vi: 'Chiến lược' },
+    labelKey: 'practiceListPage.strategy' as const,
     icon: PieChart,
     color: '#3B82F6',
     borderColor: 'border-blue-400',
@@ -48,7 +39,7 @@ const MAIN_CATEGORIES = [
   },
   {
     id: 'management',
-    label: { ja: 'マネジメント系', en: 'Management', vi: 'Quản lý' },
+    labelKey: 'practiceListPage.management' as const,
     icon: CheckCircle2,
     color: '#10B981',
     borderColor: 'border-emerald-400',
@@ -60,7 +51,7 @@ const MAIN_CATEGORIES = [
   },
   {
     id: 'technology',
-    label: { ja: 'テクノロジ系', en: 'Technology', vi: 'Công nghệ' },
+    labelKey: 'practiceListPage.technology' as const,
     icon: LayoutGrid,
     color: '#F59E0B',
     borderColor: 'border-amber-400',
@@ -116,7 +107,7 @@ function CategoryCard({
   language: LanguageCode;
 }) {
   const Icon = category.icon;
-  const categoryLabel = getLocalizedText(category.label, language);
+  const categoryLabel = translate(language, category.labelKey);
 
   return (
     <button
@@ -134,13 +125,13 @@ function CategoryCard({
       </div>
 
       <p className="text-xs text-gray-500">
-        {language === 'ja' ? '学習進捗' : language === 'en' ? 'Progress' : 'Tiến độ học'}{' '}
+        {translate(language, 'practiceListPage.progress')}{' '}
         <span className="font-semibold text-gray-700">{stats.progress}%</span>
         {' '}／{' '}
-        {language === 'ja' ? '問題数' : language === 'en' ? 'Questions' : 'Số câu'}{' '}
+        {translate(language, 'practiceListPage.questions')}{' '}
         <span className="font-semibold text-gray-700">
           {stats.questionCount}
-          {language === 'ja' ? '問' : ''}
+          {translate(language, 'practiceListPage.questionCountSuffix')}
         </span>
       </p>
 
@@ -155,7 +146,7 @@ function CategoryCard({
 
       {loading && (
         <p className="text-xs text-gray-400 mt-1">
-          {language === 'ja' ? '読み込み中...' : language === 'en' ? 'Loading...' : 'Đang tải...'}
+          {translate(language, 'practiceListPage.loading')}
         </p>
       )}
     </button>
@@ -182,15 +173,15 @@ function ReviewCard({
           <RefreshCw className="w-4 h-4 text-white" />
         </div>
         <span className="font-bold text-base text-purple-600">
-          {language === 'ja' ? '間違い問題から復習' : language === 'en' ? 'Review mistakes' : 'Ôn lại câu sai'}
+          {translate(language, 'practiceListPage.reviewMistakes')}
         </span>
       </div>
 
       <p className="text-xs text-gray-500">
-        {language === 'ja' ? '未復習' : language === 'en' ? 'Not reviewed' : 'Chưa ôn'}{' '}
+        {translate(language, 'practiceListPage.notReviewed')}{' '}
         <span className="font-semibold text-gray-700">
           {count}
-          {language === 'ja' ? '問' : ''}
+          {translate(language, 'practiceListPage.questionCountSuffix')}
         </span>
       </p>
     </button>
@@ -406,27 +397,15 @@ export default function PracticeListPage({
       currentPage={currentPage}
       onNavigate={onNavigate}
       title={
-        currentLanguage === 'ja'
-          ? '問題演習'
-          : currentLanguage === 'en'
-          ? 'Practice'
-          : 'Luyện tập'
+        translate(currentLanguage, 'practiceListPage.practice')
       }
       subtitle={
-        currentLanguage === 'ja'
-          ? '学習メニュー'
-          : currentLanguage === 'en'
-          ? 'Study menu'
-          : 'Thực đơn học tập'
+        translate(currentLanguage, 'practiceListPage.studyMenu')
       }
     >
       <div className="max-w-5xl mx-auto space-y-6">
         <p className="text-sm text-gray-500">
-          {currentLanguage === 'ja'
-            ? '分野や条件を選んで、演習を始めましょう。'
-            : currentLanguage === 'en'
-            ? 'Choose a subject and filters to begin practice.'
-            : 'Chọn chủ đề và bộ lọc để bắt đầu luyện tập.'}
+          {translate(currentLanguage, 'practiceListPage.chooseASubjectAndFiltersToBeginPractice')}
         </p>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
@@ -451,20 +430,12 @@ export default function PracticeListPage({
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-sm font-semibold text-gray-600 shrink-0">
-              {currentLanguage === 'ja'
-                ? '条件で絞り込む'
-                : currentLanguage === 'en'
-                ? 'Filter by'
-                : 'Lọc theo'}
+              {translate(currentLanguage, 'practiceListPage.filterBy')}
             </span>
 
             <SelectDropdown
               label={
-                currentLanguage === 'ja'
-                  ? '難易度'
-                  : currentLanguage === 'en'
-                  ? 'Difficulty'
-                  : 'Độ khó'
+                translate(currentLanguage, 'practiceListPage.difficulty')
               }
               value={diffFilter}
               onChange={(v) => setDiffFilter(v as DifficultyFilter)}
@@ -472,49 +443,29 @@ export default function PracticeListPage({
                 {
                   value: 'all',
                   label:
-                    currentLanguage === 'ja'
-                      ? 'すべて'
-                      : currentLanguage === 'en'
-                      ? 'All'
-                      : 'Tất cả',
+                    translate(currentLanguage, 'practiceListPage.all'),
                 },
                 {
                   value: 'easy',
                   label:
-                    currentLanguage === 'ja'
-                      ? '初級'
-                      : currentLanguage === 'en'
-                      ? 'Easy'
-                      : 'Dễ',
+                    translate(currentLanguage, 'practiceListPage.easy'),
                 },
                 {
                   value: 'medium',
                   label:
-                    currentLanguage === 'ja'
-                      ? '中級'
-                      : currentLanguage === 'en'
-                      ? 'Medium'
-                      : 'Trung bình',
+                    translate(currentLanguage, 'practiceListPage.medium'),
                 },
                 {
                   value: 'hard',
                   label:
-                    currentLanguage === 'ja'
-                      ? '上級'
-                      : currentLanguage === 'en'
-                      ? 'Hard'
-                      : 'Khó',
+                    translate(currentLanguage, 'practiceListPage.hard'),
                 },
               ]}
             />
 
             <SelectDropdown
               label={
-                currentLanguage === 'ja'
-                  ? '出題形式'
-                  : currentLanguage === 'en'
-                  ? 'Question type'
-                  : 'Dạng câu hỏi'
+                translate(currentLanguage, 'practiceListPage.questionType')
               }
               value={formatFilter}
               onChange={(v) => setFormatFilter(v as FormatFilter)}
@@ -522,40 +473,24 @@ export default function PracticeListPage({
                 {
                   value: 'all',
                   label:
-                    currentLanguage === 'ja'
-                      ? 'すべて'
-                      : currentLanguage === 'en'
-                      ? 'All'
-                      : 'Tất cả',
+                    translate(currentLanguage, 'practiceListPage.all'),
                 },
                 {
                   value: 'multiple_choice',
                   label:
-                    currentLanguage === 'ja'
-                      ? '選択式'
-                      : currentLanguage === 'en'
-                      ? 'Multiple choice'
-                      : 'Trắc nghiệm',
+                    translate(currentLanguage, 'practiceListPage.multipleChoice'),
                 },
                 {
                   value: 'tree',
                   label:
-                    currentLanguage === 'ja'
-                      ? 'ツリー問題'
-                      : currentLanguage === 'en'
-                      ? 'Tree question'
-                      : 'Câu hỏi cây',
+                    translate(currentLanguage, 'practiceListPage.treeQuestion'),
                 },
               ]}
             />
 
             <SelectDropdown
               label={
-                currentLanguage === 'ja'
-                  ? '学習モード'
-                  : currentLanguage === 'en'
-                  ? 'Learning mode'
-                  : 'Chế độ học'
+                translate(currentLanguage, 'practiceListPage.learningMode')
               }
               value={modeFilter}
               onChange={(v) => setModeFilter(v as ModeFilter)}
@@ -563,29 +498,17 @@ export default function PracticeListPage({
                 {
                   value: 'all',
                   label:
-                    currentLanguage === 'ja'
-                      ? 'すべて'
-                      : currentLanguage === 'en'
-                      ? 'All'
-                      : 'Tất cả',
+                    translate(currentLanguage, 'practiceListPage.all'),
                 },
                 {
                   value: 'new',
                   label:
-                    currentLanguage === 'ja'
-                      ? '未解答'
-                      : currentLanguage === 'en'
-                      ? 'New'
-                      : 'Chưa trả lời',
+                    translate(currentLanguage, 'practiceListPage.new'),
                 },
                 {
                   value: 'review',
                   label:
-                    currentLanguage === 'ja'
-                      ? '復習'
-                      : currentLanguage === 'en'
-                      ? 'Review'
-                      : 'Ôn tập',
+                    translate(currentLanguage, 'practiceListPage.review'),
                 },
               ]}
             />
@@ -601,11 +524,7 @@ export default function PracticeListPage({
               className="ml-auto flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-50"
             >
               <Play className="w-3.5 h-3.5" />
-              {currentLanguage === 'ja'
-                ? '全分野演習'
-                : currentLanguage === 'en'
-                ? 'Practice all'
-                : 'Luyện tất cả'}
+              {translate(currentLanguage, 'practiceListPage.practiceAll')}
             </button>
           </div>
         </div>
@@ -614,11 +533,7 @@ export default function PracticeListPage({
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-blue-500" />
-              {currentLanguage === 'ja'
-                ? '分野別 学習進捗サマリー'
-                : currentLanguage === 'en'
-                ? 'Progress by subject'
-                : 'Tiến độ theo chủ đề'}
+              {translate(currentLanguage, 'practiceListPage.progressBySubject')}
             </h3>
 
             {loading ? (
@@ -636,32 +551,16 @@ export default function PracticeListPage({
                 <thead>
                   <tr className="text-xs text-gray-400 border-b border-gray-100">
                     <th className="pb-2 text-left font-semibold">
-                      {currentLanguage === 'ja'
-                        ? '分野'
-                        : currentLanguage === 'en'
-                        ? 'Subject'
-                        : 'Chủ đề'}
+                      {translate(currentLanguage, 'practiceListPage.subject')}
                     </th>
                     <th className="pb-2 text-center font-semibold">
-                      {currentLanguage === 'ja'
-                        ? '進捗'
-                        : currentLanguage === 'en'
-                        ? 'Progress'
-                        : 'Tiến độ'}
+                      {translate(currentLanguage, 'practiceListPage.progress2')}
                     </th>
                     <th className="pb-2 text-center font-semibold">
-                      {currentLanguage === 'ja'
-                        ? '正答率'
-                        : currentLanguage === 'en'
-                        ? 'Accuracy'
-                        : 'Độ chính xác'}
+                      {translate(currentLanguage, 'practiceListPage.accuracy')}
                     </th>
                     <th className="pb-2 text-right font-semibold">
-                      {currentLanguage === 'ja'
-                        ? '問題数'
-                        : currentLanguage === 'en'
-                        ? 'Questions'
-                        : 'Số câu'}
+                      {translate(currentLanguage, 'practiceListPage.questions')}
                     </th>
                   </tr>
                 </thead>
@@ -678,7 +577,7 @@ export default function PracticeListPage({
                             className={`w-2.5 h-2.5 rounded-full ${row.dotColor}`}
                           />
                           <span className="font-medium text-gray-700">
-                            {getLocalizedText(row.label, currentLanguage)}
+                            {translate(currentLanguage, row.labelKey)}
                           </span>
                         </div>
                       </td>
@@ -717,7 +616,7 @@ export default function PracticeListPage({
 
                       <td className="py-3 text-right text-gray-500">
                         {row.stats.questionCount}
-                        {currentLanguage === 'ja' ? '問' : ''}
+                        {translate(currentLanguage, 'practiceListPage.questionCountSuffix')}
                       </td>
                     </tr>
                   ))}
@@ -730,11 +629,7 @@ export default function PracticeListPage({
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
               <ChevronRight className="w-4 h-4 text-blue-500" />
-              {currentLanguage === 'ja'
-                ? 'おすすめの次のアクション'
-                : currentLanguage === 'en'
-                ? 'Recommended next actions'
-                : 'Hành động tiếp theo'}
+              {translate(currentLanguage, 'practiceListPage.recommendedNextActions')}
             </h3>
 
             <div className="overflow-x-auto -mx-5 px-5">
@@ -742,18 +637,10 @@ export default function PracticeListPage({
               <thead>
                 <tr className="text-xs text-gray-400 border-b border-gray-100">
                   <th className="pb-2 text-left font-semibold">
-                    {currentLanguage === 'ja'
-                      ? '内容'
-                      : currentLanguage === 'en'
-                      ? 'Item'
-                      : 'Nội dung'}
+                    {translate(currentLanguage, 'practiceListPage.item')}
                   </th>
                   <th className="pb-2 text-right font-semibold">
-                    {currentLanguage === 'ja'
-                      ? 'アクション'
-                      : currentLanguage === 'en'
-                      ? 'Action'
-                      : 'Hành động'}
+                    {translate(currentLanguage, 'practiceListPage.action')}
                   </th>
                 </tr>
               </thead>
@@ -770,27 +657,15 @@ export default function PracticeListPage({
                     <tr key={row.id} className="hover:bg-gray-50 transition">
                       <td className="py-3">
                         <p className="font-semibold text-gray-700">
-                          {getLocalizedText(row.label, currentLanguage)}
-                          {currentLanguage === 'ja'
-                            ? 'の基礎固め'
-                            : currentLanguage === 'en'
-                            ? ' fundamentals'
-                            : ' nền tảng'}
+                          {translate(currentLanguage, row.labelKey)}
+                          {translate(currentLanguage, 'practiceListPage.fundamentals')}
                         </p>
 
                         <p className="text-xs text-gray-400">
                           {row.stats.answeredCount === 0
-                            ? currentLanguage === 'ja'
-                              ? 'まだ解いていません'
-                              : currentLanguage === 'en'
-                              ? 'Not attempted yet'
-                              : 'Chưa giải'
+                            ? translate(currentLanguage, 'practiceListPage.notAttemptedYet')
                             : `${
-                                currentLanguage === 'ja'
-                                  ? '正答率'
-                                  : currentLanguage === 'en'
-                                  ? 'Accuracy'
-                                  : 'Độ chính xác'
+                                translate(currentLanguage, 'practiceListPage.accuracy')
                               } ${row.stats.accuracy}%`}
                         </p>
                       </td>
@@ -800,11 +675,7 @@ export default function PracticeListPage({
                           onClick={() => startCategory(row.subjectIds, row.id)}
                           className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline transition"
                         >
-                          {currentLanguage === 'ja'
-                            ? '問題を解く'
-                            : currentLanguage === 'en'
-                            ? 'Solve'
-                            : 'Làm bài'}
+                          {translate(currentLanguage, 'practiceListPage.solve')}
                         </button>
                       </td>
                     </tr>
@@ -813,18 +684,10 @@ export default function PracticeListPage({
                 <tr className="hover:bg-gray-50 transition">
                   <td className="py-3">
                     <p className="font-semibold text-gray-700">
-                      {currentLanguage === 'ja'
-                        ? '模擬試験で実力確認'
-                        : currentLanguage === 'en'
-                        ? 'Check your level with a mock exam'
-                        : 'Kiểm tra trình độ bằng thi thử'}
+                      {translate(currentLanguage, 'practiceListPage.checkYourLevelWithAMockExam')}
                     </p>
                     <p className="text-xs text-gray-400">
-                      {currentLanguage === 'ja'
-                        ? '本番形式で時間を計って挑戦'
-                        : currentLanguage === 'en'
-                        ? 'Take it under real exam timing'
-                        : 'Làm bài theo thời gian thi thật'}
+                      {translate(currentLanguage, 'practiceListPage.takeItUnderRealExamTiming')}
                     </p>
                   </td>
 
@@ -833,11 +696,7 @@ export default function PracticeListPage({
                       onClick={() => onNavigate('mock-exam')}
                       className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline transition"
                     >
-                      {currentLanguage === 'ja'
-                        ? '模擬試験へ'
-                        : currentLanguage === 'en'
-                        ? 'Go to mock exam'
-                        : 'Đến thi thử'}
+                      {translate(currentLanguage, 'practiceListPage.goToMockExam')}
                     </button>
                   </td>
                 </tr>
@@ -846,19 +705,11 @@ export default function PracticeListPage({
                   <tr className="hover:bg-gray-50 transition">
                     <td className="py-3">
                       <p className="font-semibold text-gray-700">
-                        {currentLanguage === 'ja'
-                          ? '間違えた問題を復習する'
-                          : currentLanguage === 'en'
-                          ? 'Review missed questions'
-                          : 'Ôn lại câu sai'}
+                        {translate(currentLanguage, 'practiceListPage.reviewMissedQuestions')}
                       </p>
 
                       <p className="text-xs text-gray-400">
-                        {currentLanguage === 'ja'
-                          ? `${incorrectCount}問の未復習問題あり`
-                          : currentLanguage === 'en'
-                          ? `${incorrectCount} questions to review`
-                          : `${incorrectCount} câu cần ôn`}
+                        {translate(currentLanguage, 'practiceListPage.unreviewedCount', { count: incorrectCount })}
                       </p>
                     </td>
 
@@ -867,11 +718,7 @@ export default function PracticeListPage({
                         onClick={startReview}
                         className="text-xs font-semibold text-purple-600 hover:text-purple-700 hover:underline transition"
                       >
-                        {currentLanguage === 'ja'
-                          ? '復習する'
-                          : currentLanguage === 'en'
-                          ? 'Review'
-                          : 'Ôn tập'}
+                        {translate(currentLanguage, 'practiceListPage.review2')}
                       </button>
                     </td>
                   </tr>

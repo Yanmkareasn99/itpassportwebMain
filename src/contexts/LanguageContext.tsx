@@ -1,15 +1,13 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import {
+  isLanguage,
+  translate,
+  type Language,
+  type TranslationKey,
+  type TranslationParams,
+} from "../i18n";
 
-export type Language = "ja" | "en" | "vi";
-
-type LocalizedText =
-  | string
-  | {
-      ja?: string;
-      en?: string;
-      vi?: string;
-      [key: string]: string | undefined;
-    };
+export type { Language } from "../i18n";
 
 type LanguageContextValue = {
   language: Language;
@@ -17,26 +15,17 @@ type LanguageContextValue = {
   setLanguage: (language: Language) => void;
   changeLanguage: (language: Language) => void;
   toggleLanguage: () => void;
-  t: (value: LocalizedText, fallback?: string) => string;
-};
-
-const translations: Record<Language, Record<string, string>> = {
-  ja: {},
-  en: {},
-  vi: {},
+  t: (key: TranslationKey, params?: TranslationParams) => string;
 };
 
 const LANGUAGE_STORAGE_KEY = "manabi_language";
 const defaultLanguage: Language = "ja";
-const supportedLanguages: Language[] = ["ja", "en", "vi"];
 
 function getInitialLanguage(): Language {
   if (typeof window === "undefined") return defaultLanguage;
 
   const saved = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
-  return supportedLanguages.includes(saved as Language)
-    ? (saved as Language)
-    : defaultLanguage;
+  return isLanguage(saved) ? saved : defaultLanguage;
 }
 
 const LanguageContext = createContext<LanguageContextValue | undefined>(
@@ -52,21 +41,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   }, [language]);
 
   const value = useMemo(() => {
-    const t = (value: LocalizedText, fallback = ""): string => {
-      if (!value) return fallback;
-
-      if (typeof value === "string") {
-        return translations[language][value] ?? value;
-      }
-
-      return (
-        value[language] ??
-        value.ja ??
-        value.en ??
-        value.vi ??
-        fallback
-      );
-    };
+    const t = (key: TranslationKey, params?: TranslationParams) =>
+      translate(language, key, params);
 
     const setLanguage = (newLanguage: Language) => {
       setLanguageState(newLanguage);

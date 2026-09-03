@@ -1,4 +1,5 @@
 import { Question, Subject } from '../types';
+import { translate, type Language } from '../i18n';
 import { isSupabaseEnabled, supabase } from './supabase';
 
 export interface ChatMessage {
@@ -14,68 +15,71 @@ export interface ChatTurn {
 }
 
 interface ChatContext {
+  language: Language;
   profileName?: string;
   subject?: Subject | null;
   recentQuestions: Question[];
   history: ChatTurn[];
 }
 
-const DEFAULT_REPLY =
-  '学習内容について質問できます。たとえば「基本情報の午後問題をどう勉強すればいい？」や「この問題の考え方を教えて」と聞いてください。';
-
-function summarizeQuestions(questions: Question[]) {
-  if (questions.length === 0) return '直近の問題データはありません。';
+function summarizeQuestions(questions: Question[], language: Language) {
+  if (questions.length === 0) return translate(language, 'aiChat.noRecentQuestions');
   return questions
     .slice(0, 3)
-    .map(q => `問${q.question_number}: ${q.question_text}`)
+    .map(q => translate(language, 'aiChat.questionSummary', {
+      number: q.question_number,
+      text: q.question_text,
+    }))
     .join('\n');
 }
 
 function buildLocalAnswer(prompt: string, context: ChatContext) {
   const lower = prompt.toLowerCase();
-  const isPlan = /計画|スケジュール|勉強|学習/.test(prompt);
-  const isDifficulty = /難しい|苦手|わからない|理解/.test(prompt);
-  const subjectName = context.subject?.name ?? '現在の科目';
+  const isPlan = /計画|スケジュール|勉強|学習|plan|schedule|study|kế hoạch|lịch|học/.test(lower);
+  const isDifficulty = /難しい|苦手|わからない|理解|difficult|weak|understand|khó|yếu|hiểu/.test(lower);
+  const subjectName = context.subject?.name ?? translate(context.language, 'aiChat.currentSubject');
 
   if (isPlan) {
     return [
-      `${context.profileName ?? 'あなた'}向けの学習プランです。`,
-      `1. ${subjectName}の重要用語を先に確認する`,
-      '2. 問題演習を解いたあと、解説を1問ずつ要約する',
-      '3. 間違えた論点だけをAIチャットで質問し直す',
+      translate(context.language, 'aiChat.planIntro', { name: context.profileName ?? translate(context.language, 'common.you') }),
+      translate(context.language, 'aiChat.planStep1', { subject: subjectName }),
+      translate(context.language, 'aiChat.planStep2'),
+      translate(context.language, 'aiChat.planStep3'),
     ].join('\n');
   }
 
   if (isDifficulty) {
     return [
-      `${subjectName}でつまずいたときは、まず「何を問われているか」を1文で言い換えるのが有効です。`,
-      '次に、選択肢を先に見ずに用語の意味を思い出してから答えを選ぶと、消去法より理解が進みます。',
-      '必要なら、問題文をそのまま送ってくれれば考え方を分解して説明します。',
+      translate(context.language, 'aiChat.difficultyStep1', { subject: subjectName }),
+      translate(context.language, 'aiChat.difficultyStep2'),
+      translate(context.language, 'aiChat.difficultyStep3'),
     ].join('\n');
   }
 
-  if (/午後|アルゴリズム|ネットワーク|セキュリティ/.test(lower)) {
+  if (/午後|アルゴリズム|ネットワーク|セキュリティ|afternoon|algorithm|network|security|buổi chiều|thuật toán|mạng|bảo mật/.test(lower)) {
     return [
-      '午後問題は、いきなり全文を理解しようとせず、設問と図表から先に読むのがコツです。',
-      'キーワードを拾って、問われている範囲を限定してから本文に戻ると読みやすくなります。',
+      translate(context.language, 'aiChat.afternoonStep1'),
+      translate(context.language, 'aiChat.afternoonStep2'),
     ].join('\n');
   }
 
-  return `${DEFAULT_REPLY}\n\n直近の問題例:\n${summarizeQuestions(context.recentQuestions)}`;
+  return `${translate(context.language, 'aiChat.defaultReply')}\n\n${translate(context.language, 'aiChat.recentExamples', {
+    questions: summarizeQuestions(context.recentQuestions, context.language),
+  })}`;
 }
 
 function buildSystemPrompt(context: ChatContext) {
-  const subjectName = context.subject?.name ?? '現在の科目';
-  const recentQuestions = summarizeQuestions(context.recentQuestions);
+  const subjectName = context.subject?.name ?? translate(context.language, 'aiChat.currentSubject');
+  const recentQuestions = summarizeQuestions(context.recentQuestions, context.language);
 
   return [
-    'あなたは学習支援のAIチューターです。',
-    '日本語で、簡潔かつ実践的に答えてください。',
-    '必要なら箇条書きや手順に分けて説明してください。',
-    '高校・専門学校の学習者にもわかる表現を優先してください。',
-    `対象科目: ${subjectName}`,
-    `学習者: ${context.profileName ?? '不明'}`,
-    `最近の問題データ:\n${recentQuestions}`,
+    translate(context.language, 'aiChat.systemRole'),
+    translate(context.language, 'aiChat.systemLanguage'),
+    translate(context.language, 'aiChat.systemStructure'),
+    translate(context.language, 'aiChat.systemAudience'),
+    translate(context.language, 'aiChat.systemSubject', { subject: subjectName }),
+    translate(context.language, 'aiChat.systemLearner', { name: context.profileName ?? translate(context.language, 'common.you') }),
+    translate(context.language, 'aiChat.systemRecentQuestions', { questions: recentQuestions }),
   ].join('\n');
 }
 
