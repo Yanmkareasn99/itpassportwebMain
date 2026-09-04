@@ -45,18 +45,15 @@ DROP POLICY IF EXISTS "admins_update_profiles" ON public.profiles;
 
 DO $$
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1
-    FROM pg_policies
-    WHERE schemaname = 'public'
-      AND tablename = 'profiles'
-      AND policyname = 'update_own_profile'
-  ) THEN
+  BEGIN
     CREATE POLICY "update_own_profile" ON public.profiles
     FOR UPDATE TO authenticated
     USING (auth.uid() = id)
     WITH CHECK (auth.uid() = id);
-  END IF;
+  EXCEPTION
+    WHEN duplicate_object THEN
+      NULL;
+  END;
 END
 $$;
 
