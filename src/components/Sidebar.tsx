@@ -65,12 +65,6 @@ export default function Sidebar({
         translate(language, 'sidebar.materials'),
       page: "materials" as Page,
     },
-    {
-      icon: Settings,
-      label:
-        translate(language, 'sidebar.settings'),
-      page: "settings" as Page,
-    },
   ];
 
   return (
