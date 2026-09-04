@@ -11,9 +11,13 @@ CREATE TABLE IF NOT EXISTS profiles (
 );
 
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "select_own_profile" ON profiles;
 CREATE POLICY "select_own_profile" ON profiles FOR SELECT TO authenticated USING (auth.uid() = id);
+DROP POLICY IF EXISTS "insert_own_profile" ON profiles;
 CREATE POLICY "insert_own_profile" ON profiles FOR INSERT TO authenticated WITH CHECK (auth.uid() = id);
+DROP POLICY IF EXISTS "update_own_profile" ON profiles;
 CREATE POLICY "update_own_profile" ON profiles FOR UPDATE TO authenticated USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
+DROP POLICY IF EXISTS "delete_own_profile" ON profiles;
 CREATE POLICY "delete_own_profile" ON profiles FOR DELETE TO authenticated USING (auth.uid() = id);
 
 -- Subjects
@@ -26,9 +30,13 @@ CREATE TABLE IF NOT EXISTS subjects (
 );
 
 ALTER TABLE subjects ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "select_subjects" ON subjects;
 CREATE POLICY "select_subjects" ON subjects FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "insert_subjects" ON subjects;
 CREATE POLICY "insert_subjects" ON subjects FOR INSERT TO authenticated WITH CHECK (true);
+DROP POLICY IF EXISTS "update_subjects" ON subjects;
 CREATE POLICY "update_subjects" ON subjects FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "delete_subjects" ON subjects;
 CREATE POLICY "delete_subjects" ON subjects FOR DELETE TO authenticated USING (true);
 
 -- Questions
@@ -46,9 +54,13 @@ CREATE TABLE IF NOT EXISTS questions (
 );
 
 ALTER TABLE questions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "select_questions" ON questions;
 CREATE POLICY "select_questions" ON questions FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "insert_questions" ON questions;
 CREATE POLICY "insert_questions" ON questions FOR INSERT TO authenticated WITH CHECK (true);
+DROP POLICY IF EXISTS "update_questions" ON questions;
 CREATE POLICY "update_questions" ON questions FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "delete_questions" ON questions;
 CREATE POLICY "delete_questions" ON questions FOR DELETE TO authenticated USING (true);
 
 -- Answer choices
@@ -62,9 +74,13 @@ CREATE TABLE IF NOT EXISTS answer_choices (
 );
 
 ALTER TABLE answer_choices ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "select_choices" ON answer_choices;
 CREATE POLICY "select_choices" ON answer_choices FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "insert_choices" ON answer_choices;
 CREATE POLICY "insert_choices" ON answer_choices FOR INSERT TO authenticated WITH CHECK (true);
+DROP POLICY IF EXISTS "update_choices" ON answer_choices;
 CREATE POLICY "update_choices" ON answer_choices FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "delete_choices" ON answer_choices;
 CREATE POLICY "delete_choices" ON answer_choices FOR DELETE TO authenticated USING (true);
 
 -- Practice sessions
