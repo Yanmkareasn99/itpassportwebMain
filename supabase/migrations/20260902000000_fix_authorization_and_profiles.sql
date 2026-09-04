@@ -40,14 +40,25 @@ GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
 -- Profiles are created by a trusted trigger. Clients can update only the
 -- editable profile columns, preventing changes to is_admin and role.
 DROP POLICY IF EXISTS "insert_own_profile" ON public.profiles;
-DROP POLICY IF EXISTS "update_own_profile" ON public.profiles;
 DROP POLICY IF EXISTS "delete_own_profile" ON public.profiles;
 DROP POLICY IF EXISTS "admins_update_profiles" ON public.profiles;
 
-CREATE POLICY "update_own_profile" ON public.profiles
-FOR UPDATE TO authenticated
-USING (auth.uid() = id)
-WITH CHECK (auth.uid() = id);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'profiles'
+      AND policyname = 'update_own_profile'
+  ) THEN
+    CREATE POLICY "update_own_profile" ON public.profiles
+    FOR UPDATE TO authenticated
+    USING (auth.uid() = id)
+    WITH CHECK (auth.uid() = id);
+  END IF;
+END
+$$;
 
 REVOKE INSERT, UPDATE, DELETE ON TABLE public.profiles FROM authenticated;
 GRANT UPDATE (name, student_id, class_name, avatar_url)
