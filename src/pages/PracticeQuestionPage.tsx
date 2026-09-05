@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getLocalizedExplanation } from '../lib/localizedQuestion';
-import { getChatReply } from '../lib/aiChat';
+import { getQuestionExplanation } from '../lib/aiChat';
 import { Question, AnswerChoice, Page } from '../types';
 import { AnswerChoiceContent, QuestionImage } from '../components/QuestionMedia';
 
@@ -181,19 +181,19 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
   async function handleAIExplanation() {
     setIsLoadingAI(true);
     try {
-      const selectedChoice = choices.find(c => c.id === selectedChoiceId);
       const selectedIndex = choices.findIndex(c => c.id === selectedChoiceId);
       const correctIndex = choices.findIndex(c => c.is_correct);
       
-      const prompt = `${question.question_text}\n\nOptions:\n${choices.map((c, i) => `${String.fromCharCode(65 + i)}) ${c.answer_text}`).join('\n')}\n\nMy answer: ${String.fromCharCode(65 + selectedIndex)}\nCorrect answer: ${String.fromCharCode(65 + correctIndex)}\n\nPlease explain why the correct answer is right and help me understand this concept.`;
-
-      const reply = await getChatReply(prompt, {
+      const optionTexts = choices.map(c => c.answer_text);
+      
+      const reply = await getQuestionExplanation(
+        question.question_text,
+        optionTexts,
+        selectedIndex,
+        correctIndex,
         language,
-        profileName: profile?.name,
-        subject: null,
-        recentQuestions: [question],
-        history: [],
-      });
+        profile?.name
+      );
       
       setAiExplanation(reply);
     } catch (err) {
