@@ -139,7 +139,6 @@ export default function Header({ title, subtitle }: HeaderProps) {
           </div>
           <div className="hidden sm:block">
             <p className="text-xs font-semibold text-gray-700 leading-tight">{profile?.name ?? guest}</p>
-            <p className="text-[10px] text-gray-400">{greeting(language)}</p>
           </div>
         </div>
       </div>

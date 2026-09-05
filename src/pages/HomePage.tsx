@@ -264,14 +264,14 @@ export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
             {features.map(({ page, icon: Icon, title, description, cta, bgClass, iconBg, iconColor, ctaClass }) => (
               <div
                 key={page}
-                className={`bg-gradient-to-r ${bgClass} rounded-2xl border border-gray-100 p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 group cursor-pointer hover:shadow-md transition-all`}
+                className={`bg-gradient-to-r ${bgClass} rounded-2xl border border-gray-100 p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 group cursor-pointer hover:shadow-md transition-all min-h-[120px] w-full items-center justify-center`}
                 onClick={() => onNavigate(page)}
               >
-                <div className="flex items-start sm:items-center gap-3 sm:gap-5">
+                <div className="flex flex-col items-center sm:items-start sm:flex-row sm:gap-5 gap-3 w-full sm:w-auto">
                   <div className={`w-11 h-11 sm:w-14 sm:h-14 shrink-0 ${iconBg} rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
                     <Icon className={`w-5 h-5 sm:w-7 sm:h-7 ${iconColor}`} />
                   </div>
-                  <div>
+                  <div className="text-center sm:text-left">
                     <h2 className="text-lg sm:text-xl font-bold text-gray-800">{title}</h2>
                     <p className="text-xs sm:text-sm text-gray-500 mt-0.5 max-w-md">{description}</p>
                   </div>
