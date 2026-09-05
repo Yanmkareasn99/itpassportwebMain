@@ -12,7 +12,7 @@ interface HomePageProps {
   onNavigate: (page: Page) => void;
 }
 
-function CalendarWidget({ daysLeft, language }: { daysLeft: number; language: Language }) {
+function CalendarWidget({ daysLeft, language, sessions = [], examTargetDate }: { daysLeft: number; language: Language; sessions?: PracticeSession[]; examTargetDate?: string | null }) {
   const today = new Date();
   const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
 
@@ -27,11 +27,33 @@ function CalendarWidget({ daysLeft, language }: { daysLeft: number; language: La
   const weekDays = Array.from({ length: 7 }, (_, day) =>
     new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(new Date(2024, 0, 7 + day)),
   );
+  
+  // Get set of dates with practice sessions
+  const practiceDates = new Set(
+    sessions.map(s => {
+      const date = new Date(s.created_at);
+      return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+    })
+  );
+  
+  // Parse exam target date
+  const examDate = examTargetDate ? new Date(examTargetDate) : null;
+  
   const isToday = (d: number | null) =>
     d !== null &&
     today.getFullYear() === year &&
     today.getMonth() === month &&
     today.getDate() === d;
+    
+  const isExamDay = (d: number | null) =>
+    d !== null &&
+    examDate &&
+    examDate.getFullYear() === year &&
+    examDate.getMonth() === month &&
+    examDate.getDate() === d;
+    
+  const hasPractice = (d: number | null) =>
+    d !== null && practiceDates.has(`${year}-${month}-${d}`);
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
@@ -43,9 +65,13 @@ function CalendarWidget({ daysLeft, language }: { daysLeft: number; language: La
             {translate(language, 'homePage.daysRemaining', { count: daysLeft })}
           </p>
         </div>
-        <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center">
+        <button 
+          onClick={() => setViewDate(new Date(today.getFullYear(), today.getMonth(), 1))}
+          className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center hover:bg-blue-100 active:bg-blue-200 transition cursor-pointer"
+          title="Go to current date"
+        >
           <Target className="w-6 h-6 text-blue-500" />
-        </div>
+        </button>
       </div>
 
       {/* Calendar nav */}
@@ -76,8 +102,13 @@ function CalendarWidget({ daysLeft, language }: { daysLeft: number; language: La
                 ? ''
                 : isToday(d)
                 ? 'bg-blue-600 text-white font-bold'
+                : isExamDay(d)
+                ? 'bg-red-500 text-white font-bold border border-red-600 ring-2 ring-red-300'
+                : hasPractice(d)
+                ? 'bg-emerald-100 text-emerald-700 font-semibold border border-emerald-300'
                 : 'hover:bg-gray-50 text-gray-600 cursor-pointer'
             }`}
+            title={isExamDay(d) ? 'Exam Day 📝' : hasPractice(d) ? 'Practice session' : ''}
           >
             {d}
           </div>
@@ -197,6 +228,7 @@ export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
   const [practiceSessions, setPracticeSessions] = useState<PracticeSession[]>([]);
   const [examSessions, setExamSessions] = useState<ExamSession[]>([]);
   const [daysLeft, setDaysLeft] = useState(92);
+  const [examTargetDate, setExamTargetDate] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -209,6 +241,7 @@ export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
 
       const { data: target } = await supabase.from('exam_targets').select('target_date').maybeSingle();
       if (target?.target_date) {
+        setExamTargetDate(target.target_date);
         const diff = Math.ceil((new Date(target.target_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
         setDaysLeft(Math.max(0, diff));
       }
@@ -297,7 +330,7 @@ export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
 
           {/* Right column */}
           <div className="w-full lg:w-72 space-y-5 shrink-0">
-            <CalendarWidget daysLeft={daysLeft} language={language} />
+            <CalendarWidget daysLeft={daysLeft} language={language} sessions={practiceSessions} examTargetDate={examTargetDate} />
             <StatsCard sessions={practiceSessions} examSessions={examSessions} language={language} />
           </div>
         </div>
