@@ -1,11 +1,12 @@
 import { translate } from '../i18n';
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertCircle, Flag, ArrowLeft } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertCircle, Flag, ArrowLeft, Sparkles, Loader } from 'lucide-react';
 import Layout from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getLocalizedExplanation } from '../lib/localizedQuestion';
+import { getChatReply } from '../lib/aiChat';
 import { Question, AnswerChoice, Page } from '../types';
 import { AnswerChoiceContent, QuestionImage } from '../components/QuestionMedia';
 
@@ -52,7 +53,7 @@ function TreeDiagram() {
 }
 
 export default function PracticeQuestionPage({ currentPage, onNavigate, questions, subjectId }: PracticeQuestionPageProps) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { language } = useLanguage();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
@@ -62,6 +63,8 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [finished, setFinished] = useState(false);
   const [questionMapPage, setQuestionMapPage] = useState(0);
+  const [isLoadingAI, setIsLoadingAI] = useState(false);
+  const [aiExplanation, setAiExplanation] = useState<string | null>(null);
   const sessionCreatedRef = useRef(false);
   const sessionIdRef = useRef<string | null>(null);
   const sessionPromiseRef = useRef<Promise<string | null> | null>(null);
@@ -155,6 +158,7 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
     setSelectedChoiceId(choiceId);
     setAnswered(true);
     setShowExplanation(false);
+    setAiExplanation(null);
     const correct = choices.find(c => c.id === choiceId)?.is_correct ?? false;
     const answer = { questionId: question.id, choiceId, isCorrect: correct };
     setAnswers(prev => [...prev.filter(item => item.questionId !== question.id), answer]);
@@ -174,12 +178,39 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
     }
   }
 
+  async function handleAIExplanation() {
+    setIsLoadingAI(true);
+    try {
+      const selectedChoice = choices.find(c => c.id === selectedChoiceId);
+      const selectedIndex = choices.findIndex(c => c.id === selectedChoiceId);
+      const correctIndex = choices.findIndex(c => c.is_correct);
+      
+      const prompt = `${question.question_text}\n\nOptions:\n${choices.map((c, i) => `${String.fromCharCode(65 + i)}) ${c.answer_text}`).join('\n')}\n\nMy answer: ${String.fromCharCode(65 + selectedIndex)}\nCorrect answer: ${String.fromCharCode(65 + correctIndex)}\n\nPlease explain why the correct answer is right and help me understand this concept.`;
+
+      const reply = await getChatReply(prompt, {
+        language,
+        profileName: profile?.name,
+        subject: null,
+        recentQuestions: [question],
+        history: [],
+      });
+      
+      setAiExplanation(reply);
+    } catch (err) {
+      console.error('AI explanation error:', err);
+      setAiExplanation('Failed to get AI explanation. Please try again.');
+    } finally {
+      setIsLoadingAI(false);
+    }
+  }
+
   function goToQuestion(index: number) {
     const priorAnswer = answers.find(answer => answer.questionId === questions[index]?.id);
     setCurrentIndex(index);
     setSelectedChoiceId(priorAnswer?.choiceId ?? null);
     setAnswered(Boolean(priorAnswer));
     setShowExplanation(false);
+    setAiExplanation(null);
   }
 
   async function handleNext() {
@@ -353,6 +384,27 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
     </p>
   </div>
 )}
+              </div>
+            )}
+
+            {/* AI Explanation */}
+            {answered && (
+              <div>
+                <button
+                  onClick={handleAIExplanation}
+                  disabled={isLoadingAI}
+                  className="flex items-center gap-2 text-sm text-purple-600 font-medium hover:underline mb-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoadingAI ? <Loader className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                  {isLoadingAI ? 'AI is thinking...' : 'Ask AI for explanation'}
+                </button>
+                {aiExplanation && (
+                  <div className="bg-purple-50 rounded-xl p-4 border border-purple-100">
+                    <p className="text-sm text-purple-800 leading-relaxed">
+                      {aiExplanation}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
