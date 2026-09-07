@@ -59,9 +59,16 @@ function buildSystemPrompt(context: ChatContext) {
   const subjectName = context.subject?.name ?? translate(context.language, 'aiChat.currentSubject');
   const recentQuestions = summarizeQuestions(context.recentQuestions, context.language);
 
+  const languageNames: Record<Language, string> = {
+    ja: 'Japanese',
+    en: 'English',
+    vi: 'Vietnamese',
+  };
+
   return [
     translate(context.language, 'aiChat.systemRole'),
     translate(context.language, 'aiChat.systemLanguage'),
+    `You must respond in ${languageNames[context.language]} only. Do not use any other language.`,
     translate(context.language, 'aiChat.systemStructure'),
     translate(context.language, 'aiChat.systemAudience'),
     translate(context.language, 'aiChat.systemSubject', { subject: subjectName }),
@@ -127,7 +134,15 @@ export async function getQuestionExplanation(
   language: Language,
   profileName?: string
 ) {
+  const languageNames: Record<Language, string> = {
+    ja: 'Japanese',
+    en: 'English',
+    vi: 'Vietnamese',
+  };
+
   const systemPrompt = `You are an expert educator specializing in IT Passport exam preparation. Your role is to help students understand why they got a question wrong and how to approach similar questions in the future.
+
+IMPORTANT: You must respond in ${languageNames[language]} only. Do not use any other language.
 
 When explaining a question:
 1. Acknowledge their attempt with respect
@@ -152,12 +167,10 @@ Correct answer: ${String.fromCharCode(65 + correctAnswerIndex)}
 Please explain why the correct answer is right and help me understand this concept better.`;
 
   if (!isSupabaseEnabled) {
-    console.log('[AI] Supabase not enabled, using local fallback');
-    return buildLocalQuestionExplanation(questionText, userAnswerIndex, correctAnswerIndex);
+    return buildLocalQuestionExplanation(questionText, userAnswerIndex, correctAnswerIndex, language);
   }
 
   try {
-    console.log('[AI] Invoking ai-chat function for question explanation');
     const { data, error } = await supabase.functions.invoke('ai-chat', {
       body: { 
         prompt: userPrompt, 
@@ -166,33 +179,94 @@ Please explain why the correct answer is right and help me understand this conce
       },
     });
 
-    if (error) {
-      console.error('[AI] Function error:', error);
-      throw error;
-    }
-    
-    console.log('[AI] Function response:', data);
-    
-    if (data && typeof data === 'object' && 'reply' in data) {
+    if (!error && data && typeof data === 'object' && 'reply' in data) {
       const reply = (data as { reply?: unknown }).reply;
       if (typeof reply === 'string' && reply.trim()) {
-        console.log('[AI] Got valid reply from function');
         return reply.trim();
       }
     }
-    
-    console.log('[AI] Invalid response format from function, using fallback');
   } catch (err) {
-    console.error('[AI] Question explanation error:', err);
+    // Silently fall back to local explanation
   }
 
-  return buildLocalQuestionExplanation(questionText, userAnswerIndex, correctAnswerIndex);
+  return buildLocalQuestionExplanation(questionText, userAnswerIndex, correctAnswerIndex, language);
 }
 
-function buildLocalQuestionExplanation(questionText: string, userAnswerIndex: number, correctAnswerIndex: number): string {
+function buildLocalQuestionExplanation(questionText: string, userAnswerIndex: number, correctAnswerIndex: number, language: Language): string {
   const userAnswerLabel = String.fromCharCode(65 + userAnswerIndex);
   const correctAnswerLabel = String.fromCharCode(65 + correctAnswerIndex);
   
+  if (language === 'ja') {
+    return `**問題を段階的に分解してみましょう**
+
+**ステップ1: 何が問われているか？**
+この問題を解くカギは、何が問われているかを正確に理解することです。問題を一文で言い換えてみてください。
+
+**ステップ2: キーワードを思い出す**
+選択肢を見る前に、以下のことを思い出してください:
+- 問題に含まれる各キーワードは何を意味するか？
+- このトピックに関連する概念は何か？
+- この分野について何を学んだか？
+
+**あなたの回答 vs 正解:**
+- あなたの選択: **${userAnswerLabel}**
+- 正解: **${correctAnswerLabel}**
+
+**${correctAnswerLabel}が正解である理由:**
+選択肢${correctAnswerLabel}はテストされている主要な概念に直接対応しています。問題が求めている定義や原理を正確に反映しています。
+
+**${userAnswerLabel}が間違っていた理由:**
+選択肢${userAnswerLabel}は一見もっともらしく見えるかもしれませんが、以下のいずれかに当たります:
+- 問題が求めている特定のポイントを見落としている
+- このトピックについての一般的な誤解を反映している
+- 関連しているが異なる概念に対応している
+
+**💡 同様の問題に対する学習戦略:**
+1. 常に問われていることを一文で明確にしてから始める
+2. 選択肢を見る前にこのトピックについて知っていることを考える
+3. 消去法を最後の手段として使う
+4. 丸暗記ではなく理解に焦点を当てる
+
+**次回:**
+同様の問題に出会ったときは、この概念と${correctAnswerLabel}が正解である理由を思い出してください。`;
+  }
+  
+  if (language === 'vi') {
+    return `**Phân tích Câu Hỏi Từng Bước**
+
+**Bước 1: Câu Hỏi Yêu Cầu Gì?**
+Chìa khóa để giải quyết câu hỏi này là hiểu chính xác những gì được hỏi. Phát biểu lại câu hỏi bằng một câu đơn giản.
+
+**Bước 2: Nhớ Lại Các Khái Niệm Chính**
+Trước khi xem các lựa chọn, hãy cố gắng nhớ lại:
+- Mỗi từ khóa trong câu hỏi có ý nghĩa gì?
+- Những khái niệm nào liên quan đến chủ đề này?
+- Bạn đã học gì về điều này?
+
+**Câu Trả Lời Của Bạn vs Câu Trả Lời Đúng:**
+- Bạn chọn: **${userAnswerLabel}**
+- Câu trả lời đúng: **${correctAnswerLabel}**
+
+**Tại Sao ${correctAnswerLabel} Là Đúng:**
+Lựa chọn ${correctAnswerLabel} trực tiếp đề cập đến khái niệm chính đang được kiểm tra. Nó phản ánh chính xác định nghĩa hoặc nguyên tắc mà câu hỏi đang yêu cầu.
+
+**Tại Sao ${userAnswerLabel} Không Đúng:**
+Lựa chọn ${userAnswerLabel} có vẻ hợp lý, nhưng nó có thể:
+- Bỏ lỡ điểm cụ thể mà câu hỏi yêu cầu
+- Đại diện cho một quan niệm sai lầm phổ biến về chủ đề này
+- Giải quyết một khái niệm liên quan nhưng khác
+
+**💡 Chiến Lược Học Tập Cho Các Câu Hỏi Tương Tự:**
+1. Luôn làm rõ những gì được hỏi bằng một câu trước
+2. Hãy suy nghĩ về những gì bạn biết về chủ đề TRƯỚC khi xem các lựa chọn
+3. Sử dụng phương pháp loại trừ như là phương tiện cuối cùng
+4. Tập trung vào sự hiểu biết, không phải chỉ ghi nhớ câu trả lời
+
+**Lần Tới:**
+Khi bạn gặp một câu hỏi tương tự, hãy nhớ lại khái niệm này và lý do tại sao ${correctAnswerLabel} là câu trả lời đúng.`;
+  }
+  
+  // English (default)
   return `**Break Down This Question Step-by-Step:**
 
 **Step 1: What's Being Asked?**
