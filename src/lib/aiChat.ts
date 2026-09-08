@@ -186,13 +186,14 @@ Please explain why the correct answer is right and help me understand this conce
       }
     }
   } catch (err) {
-    // Silently fall back to local explanation
+    console.warn('[AI] Question explanation failed, using local fallback:', err);
   }
 
   return buildLocalQuestionExplanation(questionText, userAnswerIndex, correctAnswerIndex, language);
 }
 
 function buildLocalQuestionExplanation(questionText: string, userAnswerIndex: number, correctAnswerIndex: number, language: Language): string {
+  void questionText;
   const userAnswerLabel = String.fromCharCode(65 + userAnswerIndex);
   const correctAnswerLabel = String.fromCharCode(65 + correctAnswerIndex);
   
