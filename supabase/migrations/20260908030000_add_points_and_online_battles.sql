@@ -17,9 +17,11 @@ ON CONFLICT (key) DO NOTHING;
 
 ALTER TABLE point_settings ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "select_point_settings" ON point_settings;
 CREATE POLICY "select_point_settings" ON point_settings
   FOR SELECT TO authenticated USING (true);
 
+DROP POLICY IF EXISTS "admin_update_point_settings" ON point_settings;
 CREATE POLICY "admin_update_point_settings" ON point_settings
   FOR UPDATE TO authenticated USING (
     EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.is_admin = true)
@@ -36,6 +38,7 @@ CREATE TABLE IF NOT EXISTS profile_points (
 
 ALTER TABLE profile_points ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "select_own_points" ON profile_points;
 CREATE POLICY "select_own_points" ON profile_points
   FOR SELECT TO authenticated USING (auth.uid() = user_id);
 
@@ -51,6 +54,7 @@ CREATE TABLE IF NOT EXISTS point_ledger (
 
 ALTER TABLE point_ledger ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "select_own_point_ledger" ON point_ledger;
 CREATE POLICY "select_own_point_ledger" ON point_ledger
   FOR SELECT TO authenticated USING (auth.uid() = user_id);
 
@@ -105,6 +109,7 @@ BEGIN
   END IF;
 END $$;
 
+DROP POLICY IF EXISTS "select_participant_battle_answers" ON battle_answers;
 CREATE POLICY "select_participant_battle_answers" ON battle_answers
   FOR SELECT TO authenticated USING (
     EXISTS (
