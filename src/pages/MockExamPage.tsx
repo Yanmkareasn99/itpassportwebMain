@@ -5,6 +5,7 @@ import Layout from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { awardLocalAnswerPoints } from '../lib/points';
 import { Question, AnswerChoice, Page } from '../types';
 import { AnswerChoiceContent, QuestionImage } from '../components/QuestionMedia';
 
@@ -35,19 +36,25 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
     setCurrentIndex(0);
     setTimeLeft(EXAM_DURATION);
     setSessionId(null);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('questions')
       .select('*, answer_choices(*)')
       .order('question_number');
+    if (error) {
+      console.error('Failed to load mock exam questions:', error.message);
+      setLoading(false);
+      return;
+    }
     if (data && data.length > 0) {
       const shuffled = [...data].sort(() => Math.random() - 0.5).slice(0, Math.min(8, data.length));
       setQuestions(shuffled as Question[]);
       if (user) {
-        const { data: s } = await supabase
+        const { data: s, error: sessionError } = await supabase
           .from('exam_sessions')
           .insert({ user_id: user.id, total_questions: shuffled.length })
           .select()
           .single();
+        if (sessionError) console.error('Failed to create exam session:', sessionError.message);
         if (s) setSessionId(s.id);
       }
       setStage('exam');
@@ -67,26 +74,29 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
       if (chosen && choices.find(c => c.id === chosen)?.is_correct) correct++;
     }
     if (sessionId) {
-      await supabase.from('exam_sessions').update({
+      const { error: updateError } = await supabase.from('exam_sessions').update({
         correct_answers: correct,
         time_taken_seconds: timeTaken,
         completed_at: new Date().toISOString(),
       }).eq('id', sessionId);
+      if (updateError) console.error('Failed to save exam result:', updateError.message);
       for (const q of questions) {
         const chosen = userAnswers[q.id];
         if (!chosen) continue;
         const choices: AnswerChoice[] = (q.answer_choices ?? []) as AnswerChoice[];
         const isCorrect = choices.find(c => c.id === chosen)?.is_correct ?? false;
-        await supabase.from('exam_answers').insert({
+        if (user) await awardLocalAnswerPoints(user.id, isCorrect, 'mock');
+        const { error: answerError } = await supabase.from('exam_answers').insert({
           exam_session_id: sessionId,
           question_id: q.id,
           selected_choice_id: chosen,
           is_correct: isCorrect,
         });
+        if (answerError) console.error('Failed to save exam answer:', answerError.message);
       }
     }
     setStage('result');
-  }, [questions, sessionId, timeLeft, userAnswers]);
+  }, [questions, sessionId, timeLeft, user, userAnswers]);
 
   useEffect(() => {
     if (stage !== 'exam') return;

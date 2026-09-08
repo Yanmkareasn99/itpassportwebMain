@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { isSupabaseEnabled, supabase } from '../lib/supabase';
+import { claimDailyLoginPoints } from '../lib/points';
 import { Profile } from '../types';
 
 interface AuthContextType {
@@ -63,6 +64,12 @@ function saveLocalAuth(email: string, profile: Profile) {
   localStorage.setItem(LOCAL_AUTH_KEY, JSON.stringify({ email, profile }));
 }
 
+function claimDailyPointsQuietly(userId: string) {
+  claimDailyLoginPoints(userId).catch(error => {
+    console.warn('Failed to claim daily login points:', error instanceof Error ? error.message : error);
+  });
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -101,6 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (local) {
         setProfile(local.profile);
         setUser(makeLocalUser(local.profile, local.email));
+        claimDailyPointsQuietly(local.profile.id);
       }
       setSession(null);
       setLoading(false);
@@ -111,7 +119,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id).finally(() => setLoading(false));
+      if (session?.user) {
+        claimDailyPointsQuietly(session.user.id);
+        fetchProfile(session.user.id).finally(() => setLoading(false));
+      }
       else setLoading(false);
     }).catch(error => {
       console.error('Failed to restore Supabase session:', error);
@@ -124,7 +135,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
+      if (session?.user) {
+        claimDailyPointsQuietly(session.user.id);
+        fetchProfile(session.user.id);
+      }
       else setProfile(null);
     });
 
@@ -142,6 +156,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(profile);
       setUser(makeLocalUser(profile, email));
       setSession(null);
+      claimDailyPointsQuietly(profile.id);
       return;
     }
 
@@ -159,6 +174,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(profile);
       setUser(makeLocalUser(profile, email));
       setSession(null);
+      claimDailyPointsQuietly(profile.id);
       return false;
     }
 

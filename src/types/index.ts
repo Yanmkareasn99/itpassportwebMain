@@ -70,9 +70,25 @@ export interface BattleRoom {
   status: 'waiting' | 'active' | 'completed';
   creator_score: number;
   opponent_score: number;
+  wager_points: number;
+  question_ids: string[];
   winner_id: string | null;
   created_at: string;
+  started_at: string | null;
   completed_at: string | null;
+}
+
+export interface ProfilePoints {
+  user_id: string;
+  balance: number;
+  last_daily_awarded_on: string | null;
+  updated_at: string;
+}
+
+export interface PointSetting {
+  key: string;
+  value: number;
+  updated_at: string;
 }
 
 export type Page =

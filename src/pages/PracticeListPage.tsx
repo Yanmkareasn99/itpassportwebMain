@@ -320,6 +320,7 @@ export default function PracticeListPage({
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [progressWarning, setProgressWarning] = useState('');
 
   const [diffFilter, setDiffFilter] = useState<DifficultyFilter>('all');
   const [formatFilter, setFormatFilter] = useState<FormatFilter>('all');
@@ -401,6 +402,7 @@ export default function PracticeListPage({
     }
 
     async function loadUserStats() {
+      setProgressWarning('');
       if (!user) {
         if (!cancelled) {
           setSessionStats({});
@@ -434,7 +436,11 @@ export default function PracticeListPage({
         setSessionStats(stats);
         setIncorrectCount([...latestAnswers.values()].filter(isCorrect => !isCorrect).length);
       } catch (error) {
-        if (!cancelled) setError(error instanceof Error ? error.message : 'Unable to load practice progress.');
+        if (!cancelled) {
+          setSessionStats({});
+          setIncorrectCount(0);
+          setProgressWarning(error instanceof Error ? error.message : 'Unable to load practice progress.');
+        }
       }
     }
 
@@ -558,6 +564,11 @@ export default function PracticeListPage({
         {error && (
           <div className="bg-red-50 border border-red-100 rounded-2xl p-4 text-sm text-red-600">
             {error}
+          </div>
+        )}
+        {progressWarning && (
+          <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 text-sm text-amber-700">
+            Practice questions are available, but progress history could not be loaded: {progressWarning}
           </div>
         )}
 
