@@ -58,6 +58,23 @@ ALTER TABLE battle_rooms ADD COLUMN IF NOT EXISTS wager_points int NOT NULL DEFA
 ALTER TABLE battle_rooms ADD COLUMN IF NOT EXISTS question_ids uuid[] NOT NULL DEFAULT '{}';
 ALTER TABLE battle_rooms ADD COLUMN IF NOT EXISTS started_at timestamptz;
 
+DROP POLICY IF EXISTS "select_battle_profiles" ON profiles;
+CREATE POLICY "select_battle_profiles" ON profiles
+  FOR SELECT TO authenticated USING (
+    auth.uid() = id
+    OR EXISTS (
+      SELECT 1 FROM battle_rooms
+      WHERE battle_rooms.creator_id = profiles.id
+        AND battle_rooms.status = 'waiting'
+    )
+    OR EXISTS (
+      SELECT 1 FROM battle_rooms
+      WHERE battle_rooms.status IN ('active', 'completed')
+        AND (battle_rooms.creator_id = auth.uid() OR battle_rooms.opponent_id = auth.uid())
+        AND (battle_rooms.creator_id = profiles.id OR battle_rooms.opponent_id = profiles.id)
+    )
+  );
+
 CREATE TABLE IF NOT EXISTS battle_answers (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   room_id uuid NOT NULL REFERENCES battle_rooms(id) ON DELETE CASCADE,
