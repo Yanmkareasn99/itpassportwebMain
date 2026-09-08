@@ -4,6 +4,8 @@ import { translate } from '../../../i18n';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { supabase } from '../../../lib/supabase';
 import { calculateAccuracy } from '../../../lib/scoring';
+import { fetchPointSettings, updatePointSetting } from '../../../lib/points';
+import { PointSetting } from '../../../types';
 
 interface StatsData {
   totalQuestions: number;
@@ -19,6 +21,8 @@ export default function StatsTab() {
   const [stats, setStats] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [pointSettings, setPointSettings] = useState<PointSetting[]>([]);
+  const [savingKey, setSavingKey] = useState('');
 
   useEffect(() => {
     async function load() {
@@ -26,12 +30,13 @@ export default function StatsTab() {
       setError('');
 
       try {
-        const [questions, subjects, users, practice, exams] = await Promise.all([
+        const [questions, subjects, users, practice, exams, settings] = await Promise.all([
           supabase.from('questions').select('*', { count: 'exact', head: true }),
           supabase.from('subjects').select('*', { count: 'exact', head: true }),
           supabase.from('profiles').select('*', { count: 'exact', head: true }),
           supabase.from('practice_sessions').select('correct_answers, total_questions'),
           supabase.from('exam_sessions').select('correct_answers, total_questions'),
+          fetchPointSettings(),
         ]);
 
         const firstError = questions.error ?? subjects.error ?? users.error ?? practice.error ?? exams.error;
@@ -49,6 +54,7 @@ export default function StatsTab() {
           totalExamSessions: exams.data?.length ?? 0,
           avgAccuracy: calculateAccuracy(correctAnswers, totalQuestions),
         });
+        setPointSettings(settings);
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : 'Unable to load statistics.');
       } finally {
@@ -63,7 +69,7 @@ export default function StatsTab() {
     return <div className="flex items-center justify-center py-16"><RefreshCw className="w-6 h-6 animate-spin text-gray-400" /></div>;
   }
 
-  if (error || !stats) {
+  if (!stats) {
     return <div className="bg-red-50 border border-red-100 rounded-2xl p-4 text-sm text-red-600">{error}</div>;
   }
 
@@ -85,16 +91,67 @@ export default function StatsTab() {
     teal: 'bg-teal-50 text-teal-600',
   };
 
+  async function handlePointSettingChange(key: string, value: number) {
+    const safeValue = Math.max(0, Math.round(value));
+    setPointSettings(settings => settings.map(setting =>
+      setting.key === key ? { ...setting, value: safeValue } : setting,
+    ));
+    setSavingKey(key);
+    setError('');
+    try {
+      await updatePointSetting(key, safeValue);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Unable to save point setting.');
+    } finally {
+      setSavingKey('');
+    }
+  }
+
+  const settingLabels: Record<string, string> = {
+    daily_login_points: 'Daily login',
+    practice_correct_points: 'Practice correct',
+    practice_wrong_points: 'Practice wrong',
+    mock_correct_points: 'Mock correct',
+    mock_wrong_points: 'Mock wrong',
+  };
+
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-      {cards.map(card => (
-        <div key={card.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
-          <p className="text-xs font-semibold text-gray-400 mb-2">{card.label}</p>
-          <p className={`text-2xl sm:text-4xl font-bold ${colorMap[card.color]?.split(' ')[1]}`}>
-            {card.value.toLocaleString()}<span className="text-sm sm:text-lg font-medium ml-1">{card.suffix}</span>
-          </p>
+    <div className="space-y-5">
+      {error && <div className="bg-red-50 border border-red-100 rounded-2xl p-4 text-sm text-red-600">{error}</div>}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+        {cards.map(card => (
+          <div key={card.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
+            <p className="text-xs font-semibold text-gray-400 mb-2">{card.label}</p>
+            <p className={`text-2xl sm:text-4xl font-bold ${colorMap[card.color]?.split(' ')[1]}`}>
+              {card.value.toLocaleString()}<span className="text-sm sm:text-lg font-medium ml-1">{card.suffix}</span>
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div>
+            <h3 className="text-sm font-bold text-gray-800">Point Rewards</h3>
+            <p className="text-xs text-gray-400">Control how many points users earn from login, practice, and mock exams.</p>
+          </div>
+          {savingKey && <RefreshCw className="w-4 h-4 animate-spin text-gray-400" />}
         </div>
-      ))}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {pointSettings.map(setting => (
+            <label key={setting.key} className="block rounded-xl border border-gray-100 bg-gray-50 p-3">
+              <span className="text-xs font-semibold text-gray-500">{settingLabels[setting.key] ?? setting.key}</span>
+              <input
+                type="number"
+                min={0}
+                value={setting.value}
+                onChange={event => void handlePointSettingChange(setting.key, Number(event.target.value))}
+                className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </label>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

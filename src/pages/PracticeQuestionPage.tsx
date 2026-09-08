@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getLocalizedExplanation } from '../lib/localizedQuestion';
 import { getQuestionExplanation } from '../lib/aiChat';
+import { awardLocalAnswerPoints } from '../lib/points';
 import { Question, AnswerChoice, Page } from '../types';
 import { AnswerChoiceContent, QuestionImage } from '../components/QuestionMedia';
 
@@ -162,14 +163,22 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
     const correct = choices.find(c => c.id === choiceId)?.is_correct ?? false;
     const answer = { questionId: question.id, choiceId, isCorrect: correct };
     setAnswers(prev => [...prev.filter(item => item.questionId !== question.id), answer]);
+    if (user) {
+      void awardLocalAnswerPoints(user.id, correct, 'practice');
+    }
     const activeSessionId = sessionIdRef.current ?? sessionId;
     if (activeSessionId) {
-      void supabase.from('session_answers').insert({
-        session_id: activeSessionId,
-        question_id: question.id,
-        selected_choice_id: choiceId,
-        is_correct: correct,
-      });
+      void supabase
+        .from('session_answers')
+        .insert({
+          session_id: activeSessionId,
+          question_id: question.id,
+          selected_choice_id: choiceId,
+          is_correct: correct,
+        })
+        .then(({ error }) => {
+          if (error) console.error('Failed to save practice answer:', error.message);
+        });
     } else {
       pendingAnswersRef.current = [
         ...pendingAnswersRef.current.filter(item => item.questionId !== question.id),
