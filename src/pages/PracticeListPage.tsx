@@ -319,6 +319,7 @@ export default function PracticeListPage({
   const [incorrectCount, setIncorrectCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState<string | null>(null);
+  const [error, setError] = useState('');
 
   const [diffFilter, setDiffFilter] = useState<DifficultyFilter>('all');
   const [formatFilter, setFormatFilter] = useState<FormatFilter>('all');
@@ -336,9 +337,7 @@ export default function PracticeListPage({
           .select('id, name, color')
           .order('name');
 
-        if (subjectError) {
-          console.error('Unable to load subjects:', subjectError);
-        }
+        if (subjectError) throw subjectError;
 
         const subjectMap = new Map(
           KNOWN_ADDITIONAL_SUBJECTS.map(subject => [subject.id, subject]),
@@ -367,7 +366,7 @@ export default function PracticeListPage({
         const counts: Record<string, number> = {};
         countResults.forEach((result, index) => {
           if (result.error) {
-            console.error(`Unable to count questions for ${subjectIds[index]}:`, result.error);
+            throw new Error(`Unable to count questions for ${subjectIds[index]}: ${result.error.message}`);
           }
           counts[subjectIds[index]] = result.count ?? 0;
         });
@@ -395,7 +394,7 @@ export default function PracticeListPage({
             subjectIds: [subject.id],
           })));
       } catch (error) {
-        console.error('Unable to load practice subjects:', error);
+        if (!cancelled) setError(error instanceof Error ? error.message : 'Unable to load practice subjects.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -435,7 +434,7 @@ export default function PracticeListPage({
         setSessionStats(stats);
         setIncorrectCount([...latestAnswers.values()].filter(isCorrect => !isCorrect).length);
       } catch (error) {
-        console.error('Unable to load practice progress:', error);
+        if (!cancelled) setError(error instanceof Error ? error.message : 'Unable to load practice progress.');
       }
     }
 
@@ -480,6 +479,7 @@ export default function PracticeListPage({
 
   async function startCategory(subjectIds: string[] | null, key: string) {
     setStarting(key);
+    setError('');
 
     try {
       let selectedQuestions = await fetchPracticeQuestions(subjectIds, diffFilter, formatFilter);
@@ -495,7 +495,7 @@ export default function PracticeListPage({
         onStartPractice(!subjectIds || subjectIds.length > 1 ? 'all' : subjectIds[0], selectedQuestions);
       }
     } catch (error) {
-      console.error('Unable to start practice:', error);
+      setError(error instanceof Error ? error.message : 'Unable to start practice.');
     } finally {
       setStarting(null);
     }
@@ -503,28 +503,34 @@ export default function PracticeListPage({
 
   async function startReview() {
     setStarting('review');
+    setError('');
 
-    const latestAnswers = await loadLatestAnswerStatus();
-    const qIds = [...latestAnswers.entries()]
-      .filter(([, isCorrect]) => !isCorrect)
-      .map(([questionId]) => questionId)
-      .slice(0, 20);
+    try {
+      const latestAnswers = await loadLatestAnswerStatus();
+      const qIds = [...latestAnswers.entries()]
+        .filter(([, isCorrect]) => !isCorrect)
+        .map(([questionId]) => questionId)
+        .slice(0, 20);
 
-    if (qIds.length === 0) {
+      if (qIds.length === 0) {
+        return;
+      }
+
+      const { data, error: questionsError } = await supabase
+        .from('questions')
+        .select('*, answer_choices(*)')
+        .in('id', qIds);
+
+      if (questionsError) throw questionsError;
+
+      if (data && data.length > 0) {
+        onStartPractice('review', data as Question[]);
+      }
+    } catch (reviewError) {
+      setError(reviewError instanceof Error ? reviewError.message : 'Unable to start review.');
+    } finally {
       setStarting(null);
-      return;
     }
-
-    const { data } = await supabase
-      .from('questions')
-      .select('*, answer_choices(*)')
-      .in('id', qIds);
-
-    if (data && data.length > 0) {
-      onStartPractice('review', data as Question[]);
-    }
-
-    setStarting(null);
   }
 
   const categories: PracticeCategory[] = [...MAIN_CATEGORIES, ...additionalCategories];
@@ -549,6 +555,11 @@ export default function PracticeListPage({
         <p className="text-sm text-gray-500">
           {translate(currentLanguage, 'practiceListPage.chooseASubjectAndFiltersToBeginPractice')}
         </p>
+        {error && (
+          <div className="bg-red-50 border border-red-100 rounded-2xl p-4 text-sm text-red-600">
+            {error}
+          </div>
+        )}
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           {categories.map((cat) => (

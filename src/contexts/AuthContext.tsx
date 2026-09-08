@@ -107,11 +107,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) throw error;
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) fetchProfile(session.user.id).finally(() => setLoading(false));
       else setLoading(false);
+    }).catch(error => {
+      console.error('Failed to restore Supabase session:', error);
+      setSession(null);
+      setUser(null);
+      setProfile(null);
+      setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -182,7 +189,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
   }
 
   async function signInWithGoogle() {

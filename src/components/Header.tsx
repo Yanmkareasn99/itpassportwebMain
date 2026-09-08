@@ -1,4 +1,4 @@
-import { translate, type Language } from '../i18n';
+import { translate } from '../i18n';
 import { useEffect, useRef, useState } from 'react';
 import { Bell, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,13 +7,6 @@ import { useLanguage } from '../contexts/LanguageContext';
 interface HeaderProps {
   title: string;
   subtitle?: string;
-}
-
-function greeting(language: Language) {
-  const h = new Date().getHours();
-  if (h < 12) return translate(language, 'header.goodMorning');
-  if (h < 17) return translate(language, 'header.goodAfternoon');
-  return translate(language, 'header.goodEvening');
 }
 
 export default function Header({ title, subtitle }: HeaderProps) {

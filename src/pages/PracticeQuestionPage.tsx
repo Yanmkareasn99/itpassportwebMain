@@ -184,7 +184,7 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
       const selectedIndex = choices.findIndex(c => c.id === selectedChoiceId);
       const correctIndex = choices.findIndex(c => c.is_correct);
       
-      const optionTexts = choices.map(c => c.answer_text);
+      const optionTexts = choices.map(c => c.choice_text);
       
       const reply = await getQuestionExplanation(
         question.question_text,
