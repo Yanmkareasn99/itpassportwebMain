@@ -159,11 +159,28 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     const room = data as BattleRoom;
     setActiveRoom(room);
     void loadProfileNames([room.creator_id, room.opponent_id]);
-    await loadRoomAnswers(room.id);
+
     if (room.status === 'active' && stage === 'waiting') {
-      await loadQuestionsForRoom(room);
-      setStage('battle');
+      try {
+        await loadQuestionsForRoom(room);
+        setCurrentIndex(0);
+        setSelectedChoiceId(null);
+        setAnswered(false);
+        setWaitingForOpponent(false);
+        setTimeLeft(TIME_PER_QUESTION);
+        setStage('battle');
+      } catch (questionError) {
+        setError(questionError instanceof Error ? questionError.message : 'Unable to load battle questions.');
+        return;
+      }
     }
+
+    try {
+      await loadRoomAnswers(room.id);
+    } catch (answerError) {
+      setError(answerError instanceof Error ? answerError.message : 'Unable to load battle answers.');
+    }
+
     if (room.status === 'completed') {
       setStage('result');
       await loadBalance();
@@ -465,13 +482,22 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
           <p className="text-sm text-gray-500 mt-2">Wager locked: {activeRoom?.wager_points.toLocaleString() ?? 0} pts</p>
           <p className="text-sm text-gray-400 mt-4">Keep this page open. The battle starts when another user joins.</p>
           {error && <p className="text-sm text-red-500 mt-4">{error}</p>}
-          <button
-            onClick={() => void cancelRoom()}
-            disabled={loading}
-            className="mt-6 px-5 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200 transition disabled:opacity-50"
-          >
-            Cancel and Refund
-          </button>
+          <div className="mt-6 flex flex-col sm:flex-row justify-center gap-3">
+            <button
+              onClick={() => void refreshActiveRoom()}
+              disabled={loading}
+              className="px-5 py-2.5 rounded-xl bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition disabled:opacity-50"
+            >
+              Check Room
+            </button>
+            <button
+              onClick={() => void cancelRoom()}
+              disabled={loading}
+              className="px-5 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200 transition disabled:opacity-50"
+            >
+              Cancel and Refund
+            </button>
+          </div>
         </div>
       </Layout>
     );
