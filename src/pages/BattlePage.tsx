@@ -33,6 +33,11 @@ type BattleAnswerRow = {
   is_correct: boolean;
 };
 
+type BattleProfileName = {
+  id: string;
+  name: string;
+};
+
 export default function BattlePage({ currentPage, onNavigate }: BattlePageProps) {
   const { profile } = useAuth();
   const { language } = useLanguage();
@@ -50,8 +55,13 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [waitingForOpponent, setWaitingForOpponent] = useState(false);
+  const [profileNames, setProfileNames] = useState<Record<string, string>>({});
 
   const isCreator = activeRoom?.creator_id === profile?.id;
+  const activeCreatorId = activeRoom?.creator_id;
+  const activeOpponentId = activeRoom?.opponent_id;
+  const opponentId = isCreator ? activeRoom?.opponent_id : activeRoom?.creator_id;
+  const opponentName = opponentId ? profileNames[opponentId] ?? 'Opponent' : 'Opponent';
   const playerScore = isCreator ? activeRoom?.creator_score ?? 0 : activeRoom?.opponent_score ?? 0;
   const opponentScore = isCreator ? activeRoom?.opponent_score ?? 0 : activeRoom?.creator_score ?? 0;
   const question = questions[currentIndex];
@@ -72,6 +82,26 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     }
   }, [profile]);
 
+  const loadProfileNames = useCallback(async (ids: Array<string | null | undefined>) => {
+    const uniqueIds = [...new Set(ids.filter((id): id is string => Boolean(id)))];
+    if (uniqueIds.length === 0) return;
+
+    const { data, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, name')
+      .in('id', uniqueIds);
+
+    if (profileError) {
+      console.warn('Failed to load battle profile names:', profileError.message);
+      return;
+    }
+
+    setProfileNames(current => ({
+      ...current,
+      ...Object.fromEntries(((data ?? []) as BattleProfileName[]).map(item => [item.id, item.name])),
+    }));
+  }, []);
+
   const loadRooms = useCallback(async () => {
     if (!isSupabaseEnabled) return;
     setError('');
@@ -85,8 +115,10 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
       setError(roomError.message);
       return;
     }
-    setRooms((data ?? []) as BattleRoom[]);
-  }, []);
+    const waitingRooms = (data ?? []) as BattleRoom[];
+    setRooms(waitingRooms);
+    void loadProfileNames(waitingRooms.map(room => room.creator_id));
+  }, [loadProfileNames]);
 
   const loadRoomAnswers = useCallback(async (roomId: string) => {
     const { data, error: answerError } = await supabase
@@ -126,6 +158,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
 
     const room = data as BattleRoom;
     setActiveRoom(room);
+    void loadProfileNames([room.creator_id, room.opponent_id]);
     await loadRoomAnswers(room.id);
     if (room.status === 'active' && stage === 'waiting') {
       await loadQuestionsForRoom(room);
@@ -135,12 +168,24 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
       setStage('result');
       await loadBalance();
     }
-  }, [activeRoom, loadBalance, loadQuestionsForRoom, loadRoomAnswers, stage]);
+  }, [activeRoom, loadBalance, loadProfileNames, loadQuestionsForRoom, loadRoomAnswers, stage]);
 
   useEffect(() => {
     void loadRooms();
     void loadBalance();
   }, [loadBalance, loadRooms]);
+
+  useEffect(() => {
+    if (profile) {
+      setProfileNames(current => ({ ...current, [profile.id]: profile.name }));
+    }
+  }, [profile]);
+
+  useEffect(() => {
+    if (activeCreatorId || activeOpponentId) {
+      void loadProfileNames([activeCreatorId, activeOpponentId]);
+    }
+  }, [activeCreatorId, activeOpponentId, loadProfileNames]);
 
   useEffect(() => {
     if (!isSupabaseEnabled || !activeRoom) return;
@@ -237,6 +282,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     try {
       const room = await createOnlineBattleRoom(Math.max(0, Math.round(wager)), BATTLE_QUESTIONS);
       setActiveRoom(room);
+      void loadProfileNames([room.creator_id]);
       setQuestions([]);
       setAnswers([]);
       setStage('waiting');
@@ -255,6 +301,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     try {
       const room = await joinOnlineBattleRoom(roomId);
       setActiveRoom(room);
+      void loadProfileNames([room.creator_id, room.opponent_id]);
       await loadQuestionsForRoom(room);
       await loadRoomAnswers(room.id);
       setCurrentIndex(0);
@@ -296,6 +343,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     try {
       const room = await submitOnlineBattleAnswer(activeRoom.id, question.id, choiceId);
       setActiveRoom(room);
+      void loadProfileNames([room.creator_id, room.opponent_id]);
       const latestAnswers = await loadRoomAnswers(room.id);
       window.setTimeout(() => {
         if (currentIndex + 1 < questions.length) resetQuestionState(currentIndex + 1);
@@ -367,7 +415,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                     <div>
                       <p className="text-sm font-medium text-gray-700">Room #{room.id.slice(0, 8)}</p>
                       <p className="text-xs text-gray-400">
-                        {room.wager_points.toLocaleString()} pts wager | {new Date(room.created_at).toLocaleTimeString(languageLocales[language])}
+                        {profileNames[room.creator_id] ?? 'Waiting player'} | {room.wager_points.toLocaleString()} pts wager | {new Date(room.created_at).toLocaleTimeString(languageLocales[language])}
                       </p>
                     </div>
                     <button
@@ -453,7 +501,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
               </div>
               <div className="text-2xl font-bold text-gray-300">vs</div>
               <div className="text-center">
-                <p className="text-sm font-semibold text-gray-700">Opponent</p>
+                <p className="text-sm font-semibold text-gray-700">{opponentName}</p>
                 <p className="text-3xl font-bold text-amber-600 mt-1">{opponentScore}</p>
               </div>
             </div>
@@ -490,7 +538,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
               <p className="text-xs text-gray-400 mt-1">{currentIndex + 1} / {questions.length}</p>
             </div>
             <div className="text-right">
-              <p className="text-sm font-semibold text-gray-700">Opponent</p>
+              <p className="text-sm font-semibold text-gray-700">{opponentName}</p>
               <p className="text-xl font-bold text-amber-600">{opponentScore}</p>
             </div>
           </div>
