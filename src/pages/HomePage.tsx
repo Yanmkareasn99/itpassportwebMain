@@ -1,6 +1,6 @@
 import { languageLocales, translate, type Language } from '../i18n';
 import { useState, useEffect } from 'react';
-import { ChevronRight, ArrowRight, ChevronLeft, Target, Layers, BarChart2, Trophy, MessageCircle, TrendingUp, CheckCircle, Clock, FileText } from 'lucide-react';
+import { ChevronRight, ArrowRight, ChevronLeft, Layers, BarChart2, Trophy, MessageCircle, TrendingUp, CheckCircle, Clock, FileText } from 'lucide-react';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -67,10 +67,10 @@ function CalendarWidget({ daysLeft, language, sessions = [], examTargetDate }: {
         </div>
         <button 
           onClick={() => setViewDate(new Date(today.getFullYear(), today.getMonth(), 1))}
-          className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center hover:bg-blue-100 active:bg-blue-200 transition cursor-pointer"
-          title="Go to current date"
+          className="h-10 rounded-full bg-blue-50 px-4 text-sm font-semibold text-blue-600 hover:bg-blue-100 active:bg-blue-200 transition cursor-pointer"
+          title={translate(language, 'homePage.today')}
         >
-          <Target className="w-6 h-6 text-blue-500" />
+          {translate(language, 'homePage.today')}
         </button>
       </div>
 

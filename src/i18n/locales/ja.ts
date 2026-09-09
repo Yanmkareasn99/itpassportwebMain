@@ -144,6 +144,7 @@ export const ja = {
   "homePage.startPractice2": "問題演習を始める",
   "homePage.studentsCanCheckMaterialsAnytimeMakingInformationSharing": "学生はいつでも教材を確認できるため、情報共有がスムーズになります。",
   "homePage.takeExam": "模擬試験を受ける",
+  "homePage.today": "今日",
   "homePage.untilExam": "試験まで",
   "homePage.viewMaterials": "教材を見る",
   "loginPage.alreadyHaveAnAccount": "すでにアカウントをお持ちの方",
