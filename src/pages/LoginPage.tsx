@@ -60,6 +60,20 @@ export default function LoginPage() {
     }
   }
 
+  async function handleGoogleAuth() {
+    if (loading) return;
+    setError('');
+    setLoading(true);
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      console.error(err);
+      setError(translate(language, 'loginPage.googleLoginFailed'));
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
@@ -188,23 +202,24 @@ export default function LoginPage() {
             <button
               type="button"
               className={`google-login-button w-full py-2 px-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-sm font-medium flex items-center justify-center gap-2 shadow-sm`}
-              onClick={async () => {
-                setError('');
-                setLoading(true);
-                try {
-                  await signInWithGoogle();
-                } catch (err) {
-                  console.error(err);
-                  setError(translate(language, 'loginPage.googleLoginFailed'));
-                } finally {
-                  setLoading(false);
-                }
-              }}
+              onClick={() => void handleGoogleAuth()}
               disabled={loading}
             >
               <span className="google-icon mr-2">G</span>
               {translate(language, 'loginPage.signInWithGoogle')}
             </button>
+            <button
+              type="button"
+              onClick={() => void handleGoogleAuth()}
+              disabled={loading}
+              className="google-login-button mt-3 w-full py-2 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-medium flex items-center justify-center gap-2 shadow-sm disabled:opacity-60"
+            >
+              <span aria-hidden="true" className="google-icon mr-2">G</span>
+              {translate(language, 'loginPage.signUpWithGoogle')}
+            </button>
+            <p className="mt-2 text-xs text-gray-500 text-center">
+              {translate(language, 'loginPage.chooseAnotherGoogleAccount')}
+            </p>
           </div>
 
           <div className="mt-5 text-center">

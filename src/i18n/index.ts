@@ -43,3 +43,35 @@ export function translate(
 export function isLanguage(value: string | null): value is Language {
   return supportedLanguages.includes(value as Language);
 }
+
+// Translate application messages at render time so stored notices follow language changes.
+// Unknown server diagnostics are preserved instead of hiding their useful details.
+const messageTemplates = (Object.keys(en) as TranslationKey[])
+  .filter(key => key.startsWith('ui.'))
+  .map(key => {
+    const names: string[] = [];
+    const pattern = en[key].split(/(\{\w+\})/g).map(part => {
+      if (/^\{\w+\}$/.test(part)) {
+        const name = part.slice(1, -1);
+        names.push(name);
+        return ['count', 'seconds', 'min', 'max', 'required', 'available'].includes(name)
+          ? '([0-9][0-9.,]*)'
+          : '([\\s\\S]*?)';
+      }
+      return part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }).join('');
+    return { key, names, pattern: new RegExp(`^${pattern}$`) };
+  }).sort((a, b) => a.names.length - b.names.length);
+
+export function translateMessage(language: Language, message: string): string {
+  if (!message || language === 'en') return message;
+  for (const { key, names, pattern } of messageTemplates) {
+    const match = message.match(pattern);
+    if (!match) continue;
+    const params = Object.fromEntries(names.map((name, index) => [name,
+      name === 'field' ? translateMessage(language, match[index + 1]) : match[index + 1],
+    ]));
+    return translate(language, key, params);
+  }
+  return message;
+}

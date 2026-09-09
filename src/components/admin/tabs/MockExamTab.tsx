@@ -1,7 +1,10 @@
+import { translateMessage, translate } from '../../../i18n';
+import { useLanguage } from '../../../contexts/LanguageContext';
 import { useEffect, useState } from 'react';
 import { DEFAULT_MOCK_EXAM_SETTINGS, fetchMockExamSettings, saveMockExamSettings } from '../../../lib/mockExamSettings';
 
 export default function MockExamTab() {
+  const { language } = useLanguage();
   const [settings, setSettings] = useState(DEFAULT_MOCK_EXAM_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [loaded, setLoaded] = useState(false);
@@ -32,17 +35,17 @@ export default function MockExamTab() {
       } finally { setSaving(false); }
     }}>
       <div>
-        <h2 className="text-lg font-bold text-gray-800">Mock exam settings</h2>
-        <p className="text-sm text-gray-500 mt-1">Changes apply to new exams for all students. Exams already in progress keep their original settings.</p>
+        <h2 className="text-lg font-bold text-gray-800">{translate(language, 'ui.mockSettings')}</h2>
+        <p className="text-sm text-gray-500 mt-1">{translate(language, 'ui.mockHelp')}</p>
       </div>
-      {loading && <p role="status">Loading settings...</p>}
-      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-      {saved && <p role="status" className="text-sm text-emerald-700">Mock exam settings saved.</p>}
+      {loading && <p role="status">{translate(language, 'ui.loadingSettings')}</p>}
+      {error && <p role="alert" className="text-sm text-red-600">{translateMessage(language, error)}</p>}
+      {saved && <p role="status" className="text-sm text-emerald-700">{translate(language, 'ui.settingsSaved')}</p>}
       <fieldset disabled={loading || !loaded || saving} className="space-y-4 disabled:opacity-50">
         {([
-          ['question_count', 'Question count', 1, 1000],
-          ['duration_minutes', 'Time limit (minutes)', 1, 1440],
-          ['passing_score_percent', 'Passing score (%)', 0, 100],
+          ['question_count', translate(language, 'ui.questionCount'), 1, 1000],
+          ['duration_minutes', translate(language, 'ui.timeMinutes'), 1, 1440],
+          ['passing_score_percent', translate(language, 'ui.passingPercent'), 0, 100],
         ] as const).map(([key, label, min, max]) => (
           <label key={key} className="block text-sm font-medium text-gray-700">
             {label}
@@ -51,8 +54,8 @@ export default function MockExamTab() {
               className="block w-full mt-1 rounded-xl border border-gray-200 px-3 py-2" />
           </label>
         ))}
-        <p className="text-xs text-gray-500">The question bank must contain at least the configured number of questions.</p>
-        <button type="submit" className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-semibold">{saving ? 'Saving...' : 'Save settings'}</button>
+        <p className="text-xs text-gray-500">{translate(language, 'ui.questionBankHelp')}</p>
+        <button type="submit" className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-semibold">{saving ? translate(language, 'ui.saving') : translate(language, 'ui.saveSettings')}</button>
       </fieldset>
     </form>
   );

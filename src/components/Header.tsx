@@ -1,4 +1,4 @@
-import { translate } from '../i18n';
+import { translate, translateMessage } from '../i18n';
 import { useEffect, useRef, useState } from 'react';
 import { Bell, Coins, RefreshCw } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -188,7 +188,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
                   <div className="flex items-center gap-2">
                     <Coins className="w-5 h-5 text-amber-600" />
                     <div>
-                      <p className="text-xs font-semibold text-amber-700">Points</p>
+                      <p className="text-xs font-semibold text-amber-700">{translate(language, 'ui.points')}</p>
                       <p className="text-xl font-bold text-amber-700">{pointBalance?.toLocaleString() ?? 0}</p>
                     </div>
                   </div>
@@ -197,12 +197,12 @@ export default function Header({ title, subtitle }: HeaderProps) {
                     onClick={loadPoints}
                     disabled={pointsLoading}
                     className="p-2 rounded-lg text-amber-700 hover:bg-amber-100 transition disabled:opacity-50"
-                    aria-label="Refresh points"
+                    aria-label={translate(language, 'ui.refreshPoints')}
                   >
                     <RefreshCw className={`w-4 h-4 ${pointsLoading ? 'animate-spin' : ''}`} />
                   </button>
                 </div>
-                {pointsError && <p className="text-xs text-red-500 mt-2">{pointsError}</p>}
+                {pointsError && <p className="text-xs text-red-500 mt-2">{translateMessage(language, pointsError)}</p>}
               </div>
             </div>
           )}

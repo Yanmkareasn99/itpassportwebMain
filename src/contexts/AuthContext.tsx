@@ -219,6 +219,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       options: {
         redirectTo: window.location.origin,
         scopes: 'https://www.googleapis.com/auth/userinfo.email',
+        queryParams: { prompt: 'select_account' },
       },
     });
 

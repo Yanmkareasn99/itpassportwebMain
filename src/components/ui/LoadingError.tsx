@@ -1,3 +1,5 @@
+import { translate, translateMessage } from '../../i18n';
+import { useLanguage } from '../../contexts/LanguageContext';
 /**
  * Reusable error and loading display components
  */
@@ -16,6 +18,7 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
   onRetry,
   onDismiss,
 }) => {
+  const { language } = useLanguage();
   if (!error) return null;
 
   return (
@@ -36,9 +39,9 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
           </svg>
         </div>
         <div className="ml-3 flex-1">
-          <h3 className="text-sm font-medium text-red-800">{error.message}</h3>
+          <h3 className="text-sm font-medium text-red-800">{translateMessage(language, error.message)}</h3>
           {import.meta.env.DEV && error.code && (
-            <p className="text-xs text-red-600 mt-1">Code: {error.code}</p>
+            <p className="text-xs text-red-600 mt-1">{translate(language, 'ui.errorCode', { code: error.code })}</p>
           )}
         </div>
         <div className="ml-3 flex gap-2">
@@ -47,7 +50,7 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
               onClick={onRetry}
               className="text-sm font-medium text-red-600 hover:text-red-500"
             >
-              Retry
+              {translate(language, 'ui.retry')}
             </button>
           )}
           {onDismiss && (
@@ -55,7 +58,7 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
               onClick={onDismiss}
               className="text-sm font-medium text-red-600 hover:text-red-500"
             >
-              Dismiss
+              {translate(language, 'ui.dismiss')}
             </button>
           )}
         </div>
@@ -73,6 +76,7 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
   size = 'md',
   message,
 }) => {
+  const { language } = useLanguage();
   const sizeClasses = {
     sm: 'h-4 w-4',
     md: 'h-8 w-8',
@@ -101,7 +105,7 @@ export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
         />
       </svg>
-      {message && <p className="mt-3 text-sm text-gray-600">{message}</p>}
+      {message && <p className="mt-3 text-sm text-gray-600">{translateMessage(language, message)}</p>}
     </div>
   );
 };
@@ -130,6 +134,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
   loadingMessage,
   emptyMessage = 'No data available',
 }) => {
+  const { language } = useLanguage();
   if (loading) {
     return <LoadingSpinner message={loadingMessage} />;
   }
@@ -155,7 +160,7 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
           />
         </svg>
-        <p className="mt-4 text-sm text-gray-600">{emptyMessage}</p>
+        <p className="mt-4 text-sm text-gray-600">{translateMessage(language, emptyMessage)}</p>
       </div>
     );
   }
@@ -171,10 +176,11 @@ interface FormErrorProps {
  * Inline field error display
  */
 export const FormError: React.FC<FormErrorProps> = ({ error }) => {
+  const { language } = useLanguage();
   if (!error) return null;
 
   return (
-    <p className="mt-1 text-sm text-red-600">{error}</p>
+    <p className="mt-1 text-sm text-red-600">{translateMessage(language, error)}</p>
   );
 };
 
@@ -190,6 +196,7 @@ export const WarningMessage: React.FC<WarningMessageProps> = ({
   message,
   onDismiss,
 }) => {
+  const { language } = useLanguage();
   return (
     <div className="rounded-lg bg-yellow-50 border border-yellow-200 p-4 mb-4">
       <div className="flex items-start">
@@ -208,14 +215,14 @@ export const WarningMessage: React.FC<WarningMessageProps> = ({
           </svg>
         </div>
         <div className="ml-3 flex-1">
-          <p className="text-sm font-medium text-yellow-800">{message}</p>
+          <p className="text-sm font-medium text-yellow-800">{translateMessage(language, message)}</p>
         </div>
         {onDismiss && (
           <button
             onClick={onDismiss}
             className="text-sm font-medium text-yellow-600 hover:text-yellow-500"
           >
-            Dismiss
+            {translate(language, 'ui.dismiss')}
           </button>
         )}
       </div>
@@ -235,6 +242,7 @@ export const SuccessMessage: React.FC<SuccessMessageProps> = ({
   message,
   onDismiss,
 }) => {
+  const { language } = useLanguage();
   return (
     <div className="rounded-lg bg-green-50 border border-green-200 p-4 mb-4">
       <div className="flex items-start">
@@ -253,14 +261,14 @@ export const SuccessMessage: React.FC<SuccessMessageProps> = ({
           </svg>
         </div>
         <div className="ml-3 flex-1">
-          <p className="text-sm font-medium text-green-800">{message}</p>
+          <p className="text-sm font-medium text-green-800">{translateMessage(language, message)}</p>
         </div>
         {onDismiss && (
           <button
             onClick={onDismiss}
             className="text-sm font-medium text-green-600 hover:text-green-500"
           >
-            Dismiss
+            {translate(language, 'ui.dismiss')}
           </button>
         )}
       </div>

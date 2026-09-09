@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
-import { translate } from '../../../i18n';
+import { translateMessage, translate } from '../../../i18n';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { supabase } from '../../../lib/supabase';
 import { calculateAccuracy } from '../../../lib/scoring';
@@ -70,7 +70,7 @@ export default function StatsTab() {
   }
 
   if (!stats) {
-    return <div className="bg-red-50 border border-red-100 rounded-2xl p-4 text-sm text-red-600">{error}</div>;
+    return <div className="bg-red-50 border border-red-100 rounded-2xl p-4 text-sm text-red-600">{translateMessage(language, error)}</div>;
   }
 
   const cards = [
@@ -108,16 +108,16 @@ export default function StatsTab() {
   }
 
   const settingLabels: Record<string, string> = {
-    daily_login_points: 'Daily login',
-    practice_correct_points: 'Practice correct',
-    practice_wrong_points: 'Practice wrong',
-    mock_correct_points: 'Mock correct',
-    mock_wrong_points: 'Mock wrong',
+    daily_login_points: translate(language, 'ui.dailyLogin'),
+    practice_correct_points: translate(language, 'ui.practiceCorrect'),
+    practice_wrong_points: translate(language, 'ui.practiceWrong'),
+    mock_correct_points: translate(language, 'ui.mockCorrect'),
+    mock_wrong_points: translate(language, 'ui.mockWrong'),
   };
 
   return (
     <div className="space-y-5">
-      {error && <div className="bg-red-50 border border-red-100 rounded-2xl p-4 text-sm text-red-600">{error}</div>}
+      {error && <div className="bg-red-50 border border-red-100 rounded-2xl p-4 text-sm text-red-600">{translateMessage(language, error)}</div>}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
         {cards.map(card => (
           <div key={card.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
@@ -132,8 +132,8 @@ export default function StatsTab() {
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
         <div className="flex items-center justify-between gap-3 mb-4">
           <div>
-            <h3 className="text-sm font-bold text-gray-800">Point Rewards</h3>
-            <p className="text-xs text-gray-400">Control how many points users earn from login, practice, and mock exams.</p>
+            <h3 className="text-sm font-bold text-gray-800">{translate(language, 'ui.pointRewards')}</h3>
+            <p className="text-xs text-gray-400">{translate(language, 'ui.pointHelp')}</p>
           </div>
           {savingKey && <RefreshCw className="w-4 h-4 animate-spin text-gray-400" />}
         </div>

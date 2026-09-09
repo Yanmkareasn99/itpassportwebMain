@@ -1,4 +1,4 @@
-import { translate } from '../i18n';
+import { translateMessage, translate } from '../i18n';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertCircle, Flag, ArrowLeft, Sparkles, Loader } from 'lucide-react';
 import Layout from '../components/Layout';
@@ -259,8 +259,8 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
 
   return (
     <Layout currentPage={currentPage} onNavigate={onNavigate} title={label.questionTitle} subtitle={label.practice}>
-      {saveError && <p role="alert" className="max-w-5xl mx-auto mb-4 p-3 rounded-xl bg-red-50 text-red-600">{saveError}</p>}
-      {saving && <p role="status" className="max-w-5xl mx-auto mb-2 text-sm text-gray-500">Saving answer...</p>}
+      {saveError && <p role="alert" className="max-w-5xl mx-auto mb-4 p-3 rounded-xl bg-red-50 text-red-600">{translateMessage(language, saveError)}</p>}
+      {saving && <p role="status" className="max-w-5xl mx-auto mb-2 text-sm text-gray-500">{translate(language, 'ui.savingAnswer')}</p>}
 
       <div className="max-w-6xl mx-auto">
         {/* Progress bar */}
@@ -372,7 +372,7 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
                 {aiExplanation && (
                   <div className="bg-purple-50 rounded-xl p-4 border border-purple-100">
                     <p className="text-sm text-purple-800 leading-relaxed">
-                      {aiExplanation}
+                      {aiExplanation && translateMessage(language, aiExplanation)}
                     </p>
                   </div>
                 )}
