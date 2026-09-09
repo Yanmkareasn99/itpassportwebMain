@@ -1,4 +1,4 @@
-import { languageLocales, translate, type Language } from '../i18n';
+import { translateMessage, languageLocales, translate, type Language } from '../i18n';
 import { useState, useEffect } from 'react';
 import { ChevronRight, ArrowRight, ChevronLeft, Layers, BarChart2, Trophy, MessageCircle, TrendingUp, CheckCircle, Clock, FileText } from 'lucide-react';
 import Layout from '../components/Layout';
@@ -348,7 +348,7 @@ export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
           {/* Right column */}
           <div className="w-full lg:w-72 space-y-5 shrink-0">
             <CalendarWidget daysLeft={daysLeft} language={language} sessions={practiceSessions} examTargetDate={examTargetDate} />
-            {progressError && <p role="alert" className="text-sm text-red-600">{progressError}</p>}
+            {progressError && <p role="alert" className="text-sm text-red-600">{translateMessage(language, progressError)}</p>}
             <StatsCard sessions={practiceSessions} examSessions={examSessions} language={language} />
           </div>
         </div>

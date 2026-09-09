@@ -1,3 +1,5 @@
+import { translateMessage, translate } from './i18n';
+import { useLanguage } from './contexts/LanguageContext';
 import { useEffect, useState } from 'react';
 import { createPracticeSession, loadPracticeSession, practiceErrorMessage } from './lib/practice';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
@@ -28,11 +30,12 @@ const pagePaths: Record<Page, string> = {
 };
 
 function LoadingScreen() {
+  const { language } = useLanguage();
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="flex flex-col items-center gap-3">
         <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm text-gray-500">Loading...</p>
+        <p className="text-sm text-gray-500">{translate(language, 'ui.loading')}</p>
       </div>
     </div>
   );
@@ -93,6 +96,7 @@ function PracticeListRoute() {
 }
 
 function PracticeSessionRoute() {
+  const { language } = useLanguage();
   const onNavigate = usePageNavigation();
   const { user } = useAuth();
   const location = useLocation();
@@ -118,9 +122,9 @@ function PracticeSessionRoute() {
   if (!sessionId) return <Navigate to="/practice" replace />;
   if (error) return (
     <div className="max-w-lg mx-auto p-8 space-y-4">
-      <p role="alert">{error}</p>
-      <button className="mr-4 text-blue-600" onClick={() => setAttempt(value => value + 1)}>Retry</button>
-      <button className="text-blue-600" onClick={() => onNavigate('practice-list')}>Back to practice</button>
+      <p role="alert">{translateMessage(language, error)}</p>
+      <button className="mr-4 text-blue-600" onClick={() => setAttempt(value => value + 1)}>{translate(language, 'ui.retry')}</button>
+      <button className="text-blue-600" onClick={() => onNavigate('practice-list')}>{translate(language, 'ui.backPractice')}</button>
     </div>
   );
   if (!loaded || loaded.id !== sessionId) return <LoadingScreen />;

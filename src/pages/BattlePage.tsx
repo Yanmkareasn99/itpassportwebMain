@@ -4,7 +4,7 @@ import Layout from '../components/Layout';
 import { supabase, isSupabaseEnabled } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { translate, languageLocales } from '../i18n';
+import { translateMessage, translate, languageLocales } from '../i18n';
 import { AnswerChoice, BattleRoom, Page, Question } from '../types';
 import { AnswerChoiceContent, QuestionImage } from '../components/QuestionMedia';
 import {
@@ -76,7 +76,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   const activeCreatorId = activeRoom?.creator_id;
   const activeOpponentId = activeRoom?.opponent_id;
   const opponentId = isCreator ? activeRoom?.opponent_id : activeRoom?.creator_id;
-  const opponentName = opponentId ? profileNames[opponentId] ?? 'Opponent' : 'Opponent';
+  const opponentName = opponentId ? profileNames[opponentId] ?? translate(language, 'ui.opponent') : translate(language, 'ui.opponent');
   const playerScore = isCreator ? activeRoom?.creator_score ?? 0 : activeRoom?.opponent_score ?? 0;
   const opponentScore = isCreator ? activeRoom?.opponent_score ?? 0 : activeRoom?.creator_score ?? 0;
   const question = questions[currentIndex];
@@ -419,28 +419,28 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
-                <h2 className="text-xl font-bold text-gray-800">Online Battle Rooms</h2>
-                <p className="text-sm text-gray-500 mt-1">Create or join a room, wager points, and answer the same questions against another online user.</p>
+                <h2 className="text-xl font-bold text-gray-800">{translate(language, 'ui.onlineRooms')}</h2>
+                <p className="text-sm text-gray-500 mt-1">{translate(language, 'ui.roomIntro')}</p>
               </div>
               <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-100 px-4 py-3 text-amber-700">
                 <Coins className="w-5 h-5" />
-                <span className="text-sm font-bold">{balance.toLocaleString()} pts</span>
+                <span className="text-sm font-bold">{translate(language, 'ui.pointAmount', { count: balance.toLocaleString(languageLocales[language]) })}</span>
               </div>
             </div>
             {!isSupabaseEnabled && (
               <div className="mt-4 rounded-xl border border-amber-100 bg-amber-50 p-3 text-sm text-amber-700">
-                Online user-vs-user battle needs Supabase enabled because rooms, wagers, and realtime updates live in the database.
+                {translate(language, 'ui.onlineRequired')}
               </div>
             )}
           </div>
 
-          {error && <div className="bg-red-50 border border-red-100 rounded-2xl p-4 text-sm text-red-600">{error}</div>}
+          {error && <div className="bg-red-50 border border-red-100 rounded-2xl p-4 text-sm text-red-600">{translateMessage(language, error)}</div>}
 
           <div className="grid grid-cols-3 gap-4">
             {[
-              { icon: Trophy, label: 'Questions', value: `${questionCount}` },
-              { icon: Clock, label: 'Per question', value: `${secondsPerQuestion}s` },
-              { icon: Coins, label: 'Default wager', value: `${wager} pts` },
+              { icon: Trophy, label: translate(language, 'ui.questions'), value: `${questionCount}` },
+              { icon: Clock, label: translate(language, 'ui.perQuestion'), value: translate(language, 'ui.seconds', { count: secondsPerQuestion }) },
+              { icon: Coins, label: translate(language, 'ui.defaultWager'), value: translate(language, 'ui.pointAmount', { count: wager }) },
             ].map(({ icon: Icon, label, value }) => (
               <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-center">
                 <Icon className="w-6 h-6 text-amber-500 mx-auto mb-2" />
@@ -454,7 +454,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
             <div className="flex items-center justify-between gap-3 mb-4">
               <h3 className="font-semibold text-gray-700 flex items-center gap-2">
                 <Users className="w-4 h-4 text-gray-400" />
-                Available Rooms
+                {translate(language, 'ui.availableRooms')}
               </h3>
               <button onClick={loadRooms} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition">
                 <RefreshCw className="w-4 h-4" />
@@ -464,16 +464,16 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
             {rooms.length === 0 ? (
               <div className="text-center py-8 text-gray-400">
                 <Users className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                <p className="text-sm">No rooms are waiting right now.</p>
+                <p className="text-sm">{translate(language, 'ui.noRooms')}</p>
               </div>
             ) : (
               <div className="space-y-2">
                 {rooms.map(room => (
                   <div key={room.id} className="flex items-center justify-between gap-3 p-3 bg-gray-50 rounded-xl">
                     <div>
-                      <p className="text-sm font-medium text-gray-700">Room #{room.id.slice(0, 8)}</p>
+                      <p className="text-sm font-medium text-gray-700">{translate(language, 'ui.room', { id: room.id.slice(0, 8) })}</p>
                       <p className="text-xs text-gray-400">
-                        {room.question_ids.length} questions | {room.time_per_question_seconds ?? DEFAULT_TIME_PER_QUESTION}s each | {profileNames[room.creator_id] ?? 'Waiting player'} | {room.wager_points.toLocaleString()} pts wager | {new Date(room.created_at).toLocaleTimeString(languageLocales[language])}
+                        {translate(language, 'ui.roomRules', { count: room.question_ids.length, seconds: room.time_per_question_seconds ?? DEFAULT_TIME_PER_QUESTION })} | {profileNames[room.creator_id] ?? translate(language, 'ui.waitingPlayer')} | {translate(language, 'ui.pointAmount', { count: room.wager_points.toLocaleString(languageLocales[language]) })} | {new Date(room.created_at).toLocaleTimeString(languageLocales[language])}
                       </p>
                     </div>
                     <button
@@ -486,7 +486,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                       disabled={loading}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white rounded-lg text-xs font-semibold hover:bg-amber-600 transition disabled:opacity-40"
                     >
-                      {room.creator_id === profile?.id || room.opponent_id === profile?.id ? 'Resume' : 'Join'} <ChevronRight className="w-3 h-3" />
+                      {room.creator_id === profile?.id || room.opponent_id === profile?.id ? translate(language, 'ui.resume') : translate(language, 'ui.join')} <ChevronRight className="w-3 h-3" />
                     </button>
                   </div>
                 ))}
@@ -495,13 +495,13 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
 
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
               <label className="block text-xs font-semibold text-gray-500">
-                Question count (1-20)
+                {translate(language, 'ui.battleCount')}
                 <input type="number" min={1} max={20} step={1} value={Number.isNaN(questionCount) ? '' : questionCount}
                   onChange={event => setQuestionCount(event.target.valueAsNumber)} disabled={loading}
                   className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm" />
               </label>
               <label className="block text-xs font-semibold text-gray-500">
-                Seconds per question (5-300)
+                {translate(language, 'ui.battleSeconds')}
                 <input type="number" min={5} max={300} step={1} value={Number.isNaN(secondsPerQuestion) ? '' : secondsPerQuestion}
                   onChange={event => setSecondsPerQuestion(event.target.valueAsNumber)} disabled={loading}
                   className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm" />
@@ -509,7 +509,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
             </div>
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
               <label className="block">
-                <span className="text-xs font-semibold text-gray-500">Wager points</span>
+                <span className="text-xs font-semibold text-gray-500">{translate(language, 'ui.wager')}</span>
                 <input
                   type="number"
                   min={0}
@@ -524,7 +524,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                 className="self-end flex items-center justify-center gap-2 px-5 py-2.5 bg-amber-500 text-white rounded-xl text-sm font-bold hover:bg-amber-600 transition disabled:opacity-50"
               >
                 <Plus className="w-4 h-4" />
-                Create Room
+                {translate(language, 'ui.createRoom')}
               </button>
             </div>
           </div>
@@ -535,28 +535,28 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
 
   if (stage === 'waiting') {
     return (
-      <Layout currentPage={currentPage} onNavigate={onNavigate} title="Waiting for Opponent" subtitle={translate(language, 'battlePage.battle')}>
+      <Layout currentPage={currentPage} onNavigate={onNavigate} title={translate(language, 'ui.waitingOpponent')} subtitle={translate(language, 'battlePage.battle')}>
         <div className="max-w-md mx-auto bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
           <RefreshCw className="w-8 h-8 text-amber-500 animate-spin mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-gray-800">Room #{activeRoom?.id.slice(0, 8)}</h2>
-          <p className="text-sm text-gray-500 mt-2">Wager locked: {activeRoom?.wager_points.toLocaleString() ?? 0} pts</p>
-          <p className="text-sm text-gray-500 mt-2">{activeRoom?.question_ids.length} questions | {roomTimeLimit} seconds per question</p>
-          <p className="text-sm text-gray-400 mt-4">Keep this page open. The battle starts when another user joins.</p>
-          {error && <p className="text-sm text-red-500 mt-4">{error}</p>}
+          <h2 className="text-xl font-bold text-gray-800">{translate(language, 'ui.room', { id: activeRoom?.id.slice(0, 8) ?? '' })}</h2>
+          <p className="text-sm text-gray-500 mt-2">{translate(language, 'ui.wagerLocked', { count: activeRoom?.wager_points.toLocaleString(languageLocales[language]) ?? 0 })}</p>
+          <p className="text-sm text-gray-500 mt-2">{translate(language, 'ui.roomRules', { count: activeRoom?.question_ids.length ?? 0, seconds: roomTimeLimit })}</p>
+          <p className="text-sm text-gray-400 mt-4">{translate(language, 'ui.keepOpen')}</p>
+          {error && <p className="text-sm text-red-500 mt-4">{translateMessage(language, error)}</p>}
           <div className="mt-6 flex flex-col sm:flex-row justify-center gap-3">
             <button
               onClick={() => void refreshActiveRoom()}
               disabled={loading}
               className="px-5 py-2.5 rounded-xl bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition disabled:opacity-50"
             >
-              Check Room
+              {translate(language, 'ui.checkRoom')}
             </button>
             <button
               onClick={() => void cancelRoom()}
               disabled={loading}
               className="px-5 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200 transition disabled:opacity-50"
             >
-              Cancel and Refund
+              {translate(language, 'ui.cancelRefund')}
             </button>
           </div>
         </div>
@@ -573,30 +573,30 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
           <div className={`rounded-2xl p-8 text-center ${won ? 'bg-amber-50 border border-amber-200' : draw ? 'bg-gray-50 border border-gray-200' : 'bg-blue-50 border border-blue-200'}`}>
             <Trophy className={`w-12 h-12 mx-auto mb-3 ${won ? 'text-amber-500' : draw ? 'text-gray-400' : 'text-blue-500'}`} />
             <h2 className={`text-2xl font-bold mb-2 ${won ? 'text-amber-600' : draw ? 'text-gray-600' : 'text-blue-600'}`}>
-              {won ? 'Victory' : draw ? 'Draw' : 'Defeat'}
+              {won ? translate(language, 'ui.victory') : draw ? translate(language, 'ui.draw') : translate(language, 'ui.defeat')}
             </h2>
             <p className="text-gray-500">
-              {draw ? 'Both wagers were refunded.' : won ? 'You won the battle wager.' : 'The opponent won this room.'}
+              {draw ? translate(language, 'ui.drawRefund') : won ? translate(language, 'ui.wonWager') : translate(language, 'ui.lostWager')}
             </p>
           </div>
 
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
             <div className="flex items-center justify-center gap-8">
               <div className="text-center">
-                <p className="text-sm font-semibold text-gray-700">{profile?.name ?? 'You'}</p>
+                <p className="text-sm font-semibold text-gray-700">{profile?.name ?? translate(language, 'ui.you')}</p>
                 <p className="text-3xl font-bold text-blue-600 mt-1">{playerScore}</p>
               </div>
-              <div className="text-2xl font-bold text-gray-300">vs</div>
+              <div className="text-2xl font-bold text-gray-300">{translate(language, 'ui.versus')}</div>
               <div className="text-center">
                 <p className="text-sm font-semibold text-gray-700">{opponentName}</p>
                 <p className="text-3xl font-bold text-amber-600 mt-1">{opponentScore}</p>
               </div>
             </div>
-            <p className="text-center text-xs text-gray-400 mt-4">Balance: {balance.toLocaleString()} pts</p>
+            <p className="text-center text-xs text-gray-400 mt-4">{translate(language, 'ui.balance', { count: balance.toLocaleString(languageLocales[language]) })}</p>
           </div>
 
           <button onClick={() => { setStage('lobby'); setActiveRoom(null); void loadRooms(); void loadBalance(); }} className="w-full py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition">
-            Back to Lobby
+            {translate(language, 'ui.backLobby')}
           </button>
         </div>
       </Layout>
@@ -606,12 +606,12 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   return (
     <Layout currentPage={currentPage} onNavigate={onNavigate} title={translate(language, 'battlePage.battleInProgress')} subtitle={translate(language, 'battlePage.battle')}>
       <div className="max-w-2xl mx-auto space-y-4">
-        {error && <div className="bg-red-50 border border-red-100 rounded-2xl p-4 text-sm text-red-600">{error}</div>}
+        {error && <div className="bg-red-50 border border-red-100 rounded-2xl p-4 text-sm text-red-600">{translateMessage(language, error)}</div>}
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-semibold text-gray-700">{profile?.name ?? 'You'}</p>
+              <p className="text-sm font-semibold text-gray-700">{profile?.name ?? translate(language, 'ui.you')}</p>
               <p className="text-xl font-bold text-blue-600">{playerScore}</p>
             </div>
             <div className="flex flex-col items-center">
@@ -634,14 +634,14 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
         {waitingForOpponent ? (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
             <RefreshCw className="w-8 h-8 text-amber-500 animate-spin mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-gray-800">Waiting for opponent to finish</h2>
-            <p className="text-sm text-gray-500 mt-2">The result will settle automatically when both players answer all questions.</p>
+            <h2 className="text-xl font-bold text-gray-800">{translate(language, 'ui.waitingFinish')}</h2>
+            <p className="text-sm text-gray-500 mt-2">{translate(language, 'ui.settleHelp')}</p>
           </div>
         ) : (
           <>
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
               <p className="text-xs text-amber-600 font-bold bg-amber-50 px-2.5 py-1 rounded-full inline-block mb-4">
-                Question {currentIndex + 1}
+                {translate(language, 'ui.questionNumber', { count: currentIndex + 1 })}
               </p>
               <p className="text-gray-800 leading-relaxed whitespace-pre-line">{question?.question_text}</p>
               <QuestionImage question={question} />
@@ -673,7 +673,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
 
             {answered && (
               <div className={`rounded-xl p-3 text-center text-sm font-semibold ${selectedCorrect ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
-                {selectedCorrect ? 'Correct' : `Incorrect. Correct answer: ${choices.find(choice => choice.is_correct)?.choice_text ?? ''}`}
+                {selectedCorrect ? translate(language, 'ui.correct') : translate(language, 'ui.incorrect', { answer: choices.find(choice => choice.is_correct)?.choice_text ?? '' })}
               </div>
             )}
           </>

@@ -1,4 +1,4 @@
-import { translate } from '../i18n';
+import { translateMessage, translate } from '../i18n';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Clock, ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertCircle, BarChart2 } from 'lucide-react';
 import Layout from '../components/Layout';
@@ -179,7 +179,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
                 </p>
               </div>
             </div>
-            {error && <p role="alert" className="text-sm text-red-600 mb-4">{error}</p>}
+            {error && <p role="alert" className="text-sm text-red-600 mb-4">{translateMessage(language, error)}</p>}
             <button
               onClick={startExam}
               disabled={loading || settingsLoading}

@@ -1,4 +1,4 @@
-import { translate, type Language } from '../i18n';
+import { translateMessage, translate, type Language } from '../i18n';
 import { useState, useEffect } from 'react';
 import {
   BookOpen,
@@ -526,7 +526,7 @@ export default function PracticeListPage({
         )}
         {progressWarning && (
           <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 text-sm text-amber-700">
-            Practice questions are available, but progress history could not be loaded: {progressWarning}
+            {translate(language, 'ui.progressWarning', { error: translateMessage(language, progressWarning) })}
           </div>
         )}
 
@@ -652,7 +652,7 @@ export default function PracticeListPage({
               {!currentResult
                 ? translate(currentLanguage, 'practiceListPage.countingMatches')
                 : currentResult.error
-                  ? currentResult.error
+                  ? translateMessage(language, currentResult.error)
                   : translate(currentLanguage, 'practiceListPage.matchingQuestions', { count: matchingQuestions.length.toLocaleString() })}
             </p>
             <button onClick={() => void startFilteredPractice()}
