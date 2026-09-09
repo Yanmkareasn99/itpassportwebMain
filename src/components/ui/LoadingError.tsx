@@ -37,7 +37,7 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
         </div>
         <div className="ml-3 flex-1">
           <h3 className="text-sm font-medium text-red-800">{error.message}</h3>
-          {process.env.NODE_ENV === 'development' && error.code && (
+          {import.meta.env.DEV && error.code && (
             <p className="text-xs text-red-600 mt-1">Code: {error.code}</p>
           )}
         </div>
