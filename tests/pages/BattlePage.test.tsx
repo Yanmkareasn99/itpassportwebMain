@@ -3,9 +3,9 @@ import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import BattlePage from '../../src/pages/BattlePage';
 
 const mocks = vi.hoisted(() => ({
-  room: { id: 'room-1', creator_id: 'me', opponent_id: 'them', status: 'active', question_ids: ['q1'], wager_points: 0, creator_score: 0, opponent_score: 0, created_at: new Date().toISOString() },
+  room: { id: 'room-1', creator_id: 'me', opponent_id: 'them', status: 'active', question_ids: ['q1'], time_per_question_seconds: 30, wager_points: 0, creator_score: 0, opponent_score: 0, created_at: new Date().toISOString() },
   answers: [] as Array<{ user_id: string; question_id: string; selected_choice_id: string | null; is_correct: boolean }>,
-  submit: vi.fn(), complete: vi.fn(), channel: vi.fn(),
+  create: vi.fn(), submit: vi.fn(), complete: vi.fn(), channel: vi.fn(),
 }));
 vi.mock('../../src/contexts/AuthContext', () => {
   const auth = { profile: { id: 'me', name: 'Me' } };
@@ -16,7 +16,7 @@ vi.mock('../../src/components/Layout', () => ({ default: ({ children }: { childr
 vi.mock('../../src/components/QuestionMedia', () => ({ QuestionImage: () => null, AnswerChoiceContent: () => <span>Answer A</span> }));
 vi.mock('../../src/lib/points', () => ({
   getPointBalance: async () => ({ balance: 100 }),
-  createOnlineBattleRoom: vi.fn(), joinOnlineBattleRoom: vi.fn(), cancelOnlineBattleRoom: vi.fn(),
+  createOnlineBattleRoom: mocks.create, joinOnlineBattleRoom: vi.fn(), cancelOnlineBattleRoom: vi.fn(),
   submitOnlineBattleAnswer: mocks.submit, completeOnlineBattleRoom: mocks.complete,
 }));
 vi.mock('../../src/lib/supabase', () => ({
@@ -51,12 +51,16 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.clearAllMocks();
   mocks.room.status = 'active';
+  mocks.room.time_per_question_seconds = 30;
+  mocks.room.creator_id = 'me';
+  mocks.room.opponent_id = 'them';
   mocks.answers = [{ user_id: 'them', question_id: 'q1', selected_choice_id: 'a1', is_correct: true }];
   mocks.channel.mockImplementation(() => { const channel = { on: () => channel, subscribe: () => channel }; return channel; });
   mocks.submit.mockImplementation(async (_room, question, choice) => {
     mocks.answers.push({ user_id: 'me', question_id: question, selected_choice_id: choice, is_correct: choice === 'a1' });
     return { ...mocks.room };
   });
+  mocks.create.mockImplementation(async () => ({ ...mocks.room }));
   mocks.complete.mockImplementation(async () => { mocks.room.status = 'completed'; return { ...mocks.room, winner_id: 'them' }; });
 });
 afterEach(() => { vi.useRealTimers(); });
@@ -109,4 +113,28 @@ describe('battle recovery', () => {
     expect(screen.getByText('Test question')).toBeTruthy();
     expect(mocks.channel).toHaveBeenCalledTimes(1);
   });
+});
+
+it('sends the chosen question count and time when creating a room', async () => {
+  mocks.room.status = 'waiting';
+  render(<BattlePage currentPage="battle" onNavigate={() => {}} />);
+  await flush();
+  fireEvent.change(screen.getByLabelText('Question count (1-20)'), { target: { value: '7' } });
+  fireEvent.change(screen.getByLabelText('Seconds per question (5-300)'), { target: { value: '45' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Create Room' }));
+  await flush();
+  expect(mocks.create).toHaveBeenCalledWith(50, 7, 45);
+});
+
+it.each(['creator', 'opponent'])('uses the room time limit for the %s', async role => {
+  mocks.room.time_per_question_seconds = 5;
+  if (role === 'opponent') {
+    mocks.room.creator_id = 'them';
+    mocks.room.opponent_id = 'me';
+  }
+  await resume();
+  await tick(4);
+  expect(mocks.submit).not.toHaveBeenCalled();
+  await tick(1);
+  expect(mocks.submit).toHaveBeenCalledWith('room-1', 'q1', null);
 });

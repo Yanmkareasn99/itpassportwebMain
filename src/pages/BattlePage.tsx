@@ -21,8 +21,8 @@ interface BattlePageProps {
   onNavigate: (page: Page) => void;
 }
 
-const BATTLE_QUESTIONS = 5;
-const TIME_PER_QUESTION = 30;
+const DEFAULT_BATTLE_QUESTIONS = 5;
+const DEFAULT_TIME_PER_QUESTION = 30;
 
 type BattleStage = 'lobby' | 'waiting' | 'battle' | 'result';
 
@@ -49,7 +49,9 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
   const [answered, setAnswered] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(TIME_PER_QUESTION);
+  const [timeLeft, setTimeLeft] = useState(DEFAULT_TIME_PER_QUESTION);
+  const [questionCount, setQuestionCount] = useState(DEFAULT_BATTLE_QUESTIONS);
+  const [secondsPerQuestion, setSecondsPerQuestion] = useState(DEFAULT_TIME_PER_QUESTION);
   const [wager, setWager] = useState(50);
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -83,7 +85,8 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     [question],
   );
   const selectedCorrect = answered && choices.find(choice => choice.id === selectedChoiceId)?.is_correct;
-  const timePct = (timeLeft / TIME_PER_QUESTION) * 100;
+  const roomTimeLimit = activeRoom?.time_per_question_seconds ?? DEFAULT_TIME_PER_QUESTION;
+  const timePct = (timeLeft / roomTimeLimit) * 100;
 
   const loadBalance = useCallback(async () => {
     if (!profile) return;
@@ -189,7 +192,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
           setSelectedChoiceId(null);
           setAnswered(false);
           setWaitingForOpponent(nextIndex < 0);
-          setTimeLeft(TIME_PER_QUESTION);
+          setTimeLeft(room.time_per_question_seconds ?? DEFAULT_TIME_PER_QUESTION);
           setStage('battle');
         } catch (questionError) {
           setError(questionError instanceof Error ? questionError.message : 'Unable to load battle questions.');
@@ -301,8 +304,8 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     setCurrentIndex(nextIndex);
     setSelectedChoiceId(null);
     setAnswered(false);
-    setTimeLeft(TIME_PER_QUESTION);
-  }, [answers, profile?.id, questions]);
+    setTimeLeft(roomTimeLimit);
+  }, [answers, profile?.id, questions, roomTimeLimit]);
 
   useEffect(() => {
     if (waitingForOpponent && activeRoom?.status === 'active') {
@@ -320,7 +323,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     setLoading(true);
     setError('');
     try {
-      const room = await createOnlineBattleRoom(Math.max(0, Math.round(wager)), BATTLE_QUESTIONS);
+      const room = await createOnlineBattleRoom(Math.max(0, Math.round(wager)), questionCount, secondsPerQuestion);
       setActiveRoom(room);
       void loadProfileNames([room.creator_id]);
       setQuestions([]);
@@ -435,8 +438,8 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
 
           <div className="grid grid-cols-3 gap-4">
             {[
-              { icon: Trophy, label: 'Questions', value: `${BATTLE_QUESTIONS}` },
-              { icon: Clock, label: 'Per question', value: `${TIME_PER_QUESTION}s` },
+              { icon: Trophy, label: 'Questions', value: `${questionCount}` },
+              { icon: Clock, label: 'Per question', value: `${secondsPerQuestion}s` },
               { icon: Coins, label: 'Default wager', value: `${wager} pts` },
             ].map(({ icon: Icon, label, value }) => (
               <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-center">
@@ -470,7 +473,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                     <div>
                       <p className="text-sm font-medium text-gray-700">Room #{room.id.slice(0, 8)}</p>
                       <p className="text-xs text-gray-400">
-                        {profileNames[room.creator_id] ?? 'Waiting player'} | {room.wager_points.toLocaleString()} pts wager | {new Date(room.created_at).toLocaleTimeString(languageLocales[language])}
+                        {room.question_ids.length} questions | {room.time_per_question_seconds ?? DEFAULT_TIME_PER_QUESTION}s each | {profileNames[room.creator_id] ?? 'Waiting player'} | {room.wager_points.toLocaleString()} pts wager | {new Date(room.created_at).toLocaleTimeString(languageLocales[language])}
                       </p>
                     </div>
                     <button
@@ -490,6 +493,20 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
               </div>
             )}
 
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label className="block text-xs font-semibold text-gray-500">
+                Question count (1-20)
+                <input type="number" min={1} max={20} step={1} value={Number.isNaN(questionCount) ? '' : questionCount}
+                  onChange={event => setQuestionCount(event.target.valueAsNumber)} disabled={loading}
+                  className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm" />
+              </label>
+              <label className="block text-xs font-semibold text-gray-500">
+                Seconds per question (5-300)
+                <input type="number" min={5} max={300} step={1} value={Number.isNaN(secondsPerQuestion) ? '' : secondsPerQuestion}
+                  onChange={event => setSecondsPerQuestion(event.target.valueAsNumber)} disabled={loading}
+                  className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm" />
+              </label>
+            </div>
             <div className="mt-4 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3">
               <label className="block">
                 <span className="text-xs font-semibold text-gray-500">Wager points</span>
@@ -503,7 +520,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
               </label>
               <button
                 onClick={() => void createRoom()}
-                disabled={loading || !isSupabaseEnabled}
+                disabled={loading || !isSupabaseEnabled || !Number.isInteger(questionCount) || questionCount < 1 || questionCount > 20 || !Number.isInteger(secondsPerQuestion) || secondsPerQuestion < 5 || secondsPerQuestion > 300}
                 className="self-end flex items-center justify-center gap-2 px-5 py-2.5 bg-amber-500 text-white rounded-xl text-sm font-bold hover:bg-amber-600 transition disabled:opacity-50"
               >
                 <Plus className="w-4 h-4" />
@@ -523,6 +540,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
           <RefreshCw className="w-8 h-8 text-amber-500 animate-spin mx-auto mb-4" />
           <h2 className="text-xl font-bold text-gray-800">Room #{activeRoom?.id.slice(0, 8)}</h2>
           <p className="text-sm text-gray-500 mt-2">Wager locked: {activeRoom?.wager_points.toLocaleString() ?? 0} pts</p>
+          <p className="text-sm text-gray-500 mt-2">{activeRoom?.question_ids.length} questions | {roomTimeLimit} seconds per question</p>
           <p className="text-sm text-gray-400 mt-4">Keep this page open. The battle starts when another user joins.</p>
           {error && <p className="text-sm text-red-500 mt-4">{error}</p>}
           <div className="mt-6 flex flex-col sm:flex-row justify-center gap-3">
