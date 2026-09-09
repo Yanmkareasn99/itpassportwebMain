@@ -5,6 +5,7 @@ import Layout from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { DEFAULT_MOCK_EXAM_SETTINGS, fetchMockExamSettings, hasPassedMockExam } from '../lib/mockExamSettings';
 import { awardLocalAnswerPoints } from '../lib/points';
 import { Question, AnswerChoice, Page } from '../types';
 import { AnswerChoiceContent, QuestionImage } from '../components/QuestionMedia';
@@ -14,59 +15,82 @@ interface MockExamPageProps {
   onNavigate: (page: Page) => void;
 }
 
-const EXAM_DURATION = 90 * 60; // 90 minutes in seconds
-
 export default function MockExamPage({ currentPage, onNavigate }: MockExamPageProps) {
   const { user } = useAuth();
   const { language } = useLanguage();
+  const [settings, setSettings] = useState(DEFAULT_MOCK_EXAM_SETTINGS);
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const examDuration = settings.duration_minutes * 60;
   const [stage, setStage] = useState<'intro' | 'exam' | 'result'>('intro');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userAnswers, setUserAnswers] = useState<Record<string, string>>({});
-  const [timeLeft, setTimeLeft] = useState(EXAM_DURATION);
+  const [timeLeft, setTimeLeft] = useState(DEFAULT_MOCK_EXAM_SETTINGS.duration_minutes * 60);
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const finishingRef = useRef(false);
 
+  useEffect(() => {
+    if (stage !== 'intro') return;
+    let cancelled = false;
+    setSettingsLoading(true);
+    fetchMockExamSettings().then(value => {
+      if (!cancelled) { setSettings(value); setError(''); }
+    }).catch(() => {
+      if (!cancelled) setError('Unable to load exam settings. Please try starting the exam again.');
+    }).finally(() => { if (!cancelled) setSettingsLoading(false); });
+    return () => { cancelled = true; };
+  }, [stage]);
+
   async function startExam() {
+    if (loading) return;
     setLoading(true);
-    finishingRef.current = false;
-    setUserAnswers({});
-    setCurrentIndex(0);
-    setTimeLeft(EXAM_DURATION);
-    setSessionId(null);
-    const { data, error } = await supabase
-      .from('questions')
-      .select('*, answer_choices(*)')
-      .order('question_number');
-    if (error) {
-      console.error('Failed to load mock exam questions:', error.message);
-      setLoading(false);
-      return;
-    }
-    if (data && data.length > 0) {
-      const shuffled = [...data].sort(() => Math.random() - 0.5).slice(0, Math.min(8, data.length));
-      setQuestions(shuffled as Question[]);
-      if (user) {
-        const { data: s, error: sessionError } = await supabase
-          .from('exam_sessions')
-          .insert({ user_id: user.id, total_questions: shuffled.length })
-          .select()
-          .single();
-        if (sessionError) console.error('Failed to create exam session:', sessionError.message);
-        if (s) setSessionId(s.id);
+    setError('');
+    try {
+      const config = await fetchMockExamSettings();
+      const { data, error: questionError } = await supabase
+        .from('questions').select('*, answer_choices(*)').order('question_number');
+      if (questionError) throw questionError;
+      if (!data || data.length < config.question_count) {
+        throw new Error(`This exam requires ${config.question_count} questions, but only ${data?.length ?? 0} are available. Please ask an administrator to add questions or reduce the exam question count.`);
       }
+      const shuffled = [...data];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      const selected = shuffled.slice(0, config.question_count) as Question[];
+      let newSessionId: string | null = null;
+      if (user) {
+        const { data: session, error: sessionError } = await supabase.from('exam_sessions')
+          .insert({ user_id: user.id, total_questions: selected.length,
+            allowed_time_seconds: config.duration_minutes * 60, passing_score_percent: config.passing_score_percent })
+          .select().single();
+        if (sessionError) throw sessionError;
+        newSessionId = session.id;
+      }
+      setSettings(config);
+      setQuestions(selected);
+      finishingRef.current = false;
+      setUserAnswers({});
+      setCurrentIndex(0);
+      setTimeLeft(config.duration_minutes * 60);
+      setSessionId(newSessionId);
       setStage('exam');
+    } catch (startError) {
+      setError(startError instanceof Error ? startError.message : 'Unable to start the exam. Please try again.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   const finishExam = useCallback(async () => {
     if (finishingRef.current) return;
     finishingRef.current = true;
     if (timerRef.current) clearInterval(timerRef.current);
-    const timeTaken = EXAM_DURATION - timeLeft;
+    const timeTaken = examDuration - timeLeft;
     let correct = 0;
     for (const q of questions) {
       const chosen = userAnswers[q.id];
@@ -96,7 +120,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
       }
     }
     setStage('result');
-  }, [questions, sessionId, timeLeft, user, userAnswers]);
+  }, [examDuration, questions, sessionId, timeLeft, user, userAnswers]);
 
   useEffect(() => {
     if (stage !== 'exam') return;
@@ -135,15 +159,15 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
             <p className="text-gray-500 mb-8">{translate(language, 'mockExamPage.checkYourAbilityInTheSameFormatAs')}</p>
             <div className="grid grid-cols-3 gap-4 mb-8">
               <div className="bg-gray-50 rounded-xl p-4">
-                <p className="text-2xl font-bold text-gray-800">8</p>
+                <p className="text-2xl font-bold text-gray-800">{settings.question_count}</p>
                 <p className="text-xs text-gray-400 mt-1">{translate(language, 'mockExamPage.questions')}</p>
               </div>
               <div className="bg-gray-50 rounded-xl p-4">
-                <p className="text-2xl font-bold text-gray-800">90</p>
+                <p className="text-2xl font-bold text-gray-800">{settings.duration_minutes}</p>
                 <p className="text-xs text-gray-400 mt-1">{translate(language, 'mockExamPage.timeLimitMin')}</p>
               </div>
               <div className="bg-gray-50 rounded-xl p-4">
-                <p className="text-2xl font-bold text-gray-800">70%</p>
+                <p className="text-2xl font-bold text-gray-800">{settings.passing_score_percent}%</p>
                 <p className="text-xs text-gray-400 mt-1">{translate(language, 'mockExamPage.passingScore')}</p>
               </div>
             </div>
@@ -155,9 +179,10 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
                 </p>
               </div>
             </div>
+            {error && <p role="alert" className="text-sm text-red-600 mb-4">{error}</p>}
             <button
               onClick={startExam}
-              disabled={loading}
+              disabled={loading || settingsLoading}
               className="px-8 py-3 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition disabled:opacity-60"
             >
               {loading ? (translate(language, 'mockExamPage.loadingQuestions')) : (translate(language, 'mockExamPage.startExam'))}
@@ -177,8 +202,8 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
       if (chosen && ch.find(c => c.id === chosen)?.is_correct) correct++;
     }
     const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
-    const passed = pct >= 70;
-    const timeTaken = EXAM_DURATION - timeLeft;
+    const passed = hasPassedMockExam(correct, total, settings.passing_score_percent);
+    const timeTaken = examDuration - timeLeft;
 
     return (
       <Layout currentPage={currentPage} onNavigate={onNavigate} title={translate(language, 'mockExamPage.examResults')} subtitle={translate(language, 'mockExamPage.mockExam')}>
@@ -219,7 +244,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
           </div>
 
           <div className="flex gap-3 justify-center">
-            <button onClick={() => { finishingRef.current = false; setStage('intro'); setUserAnswers({}); setCurrentIndex(0); setTimeLeft(EXAM_DURATION); setSessionId(null); }} className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition">
+            <button onClick={() => { finishingRef.current = false; setStage('intro'); setUserAnswers({}); setCurrentIndex(0); setTimeLeft(examDuration); setSessionId(null); }} className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition">
               {translate(language, 'mockExamPage.retake')}
             </button>
             <button onClick={() => onNavigate('home')} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition">
@@ -245,7 +270,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
             <span className="text-sm text-gray-400">{translate(language, 'mockExamPage.answeredProgress', { answered: answeredCount, total: questions.length })}</span>
           </div>
           <div className="mt-3 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-            <div className={`h-full rounded-full transition-all ${timeWarning ? 'bg-red-400' : 'bg-emerald-400'}`} style={{ width: `${(timeLeft / EXAM_DURATION) * 100}%` }} />
+            <div className={`h-full rounded-full transition-all ${timeWarning ? 'bg-red-400' : 'bg-emerald-400'}`} style={{ width: `${(timeLeft / examDuration) * 100}%` }} />
           </div>
         </div>
 

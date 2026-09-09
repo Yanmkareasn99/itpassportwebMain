@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { BarChart2, BookOpen, Layers, Users, type LucideIcon } from 'lucide-react';
 import Layout from '../components/Layout';
 import QuestionsTab from '../components/admin/tabs/QuestionsTab';
+import MockExamTab from '../components/admin/tabs/MockExamTab';
 import StatsTab from '../components/admin/tabs/StatsTab';
 import SubjectsTab from '../components/admin/tabs/SubjectsTab';
 import UsersTab from '../components/admin/tabs/UsersTab';
@@ -15,12 +16,13 @@ interface AdminPageProps {
   onNavigate: (page: Page) => void;
 }
 
-type Tab = 'questions' | 'subjects' | 'users' | 'stats';
+type Tab = 'questions' | 'subjects' | 'users' | 'stats' | 'mock-exam';
 
 const tabs: { id: Tab; labelKey: Parameters<typeof translate>[1]; icon: LucideIcon }[] = [
   { id: 'questions', labelKey: 'adminPage.questions', icon: BookOpen },
   { id: 'subjects', labelKey: 'adminPage.subjects', icon: Layers },
   { id: 'users', labelKey: 'adminPage.users', icon: Users },
+  { id: 'mock-exam', labelKey: 'mockExamPage.mockExam', icon: BookOpen },
   { id: 'stats', labelKey: 'adminPage.stats', icon: BarChart2 },
 ];
 
@@ -61,6 +63,7 @@ export default function AdminPage({ currentPage, onNavigate }: AdminPageProps) {
             {tab === 'questions' && <QuestionsTab />}
             {tab === 'subjects' && <SubjectsTab />}
             {tab === 'users' && <UsersTab />}
+            {tab === 'mock-exam' && <MockExamTab />}
             {tab === 'stats' && <StatsTab />}
           </>
         )}
