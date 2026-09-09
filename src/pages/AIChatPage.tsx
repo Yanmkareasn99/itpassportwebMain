@@ -130,7 +130,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
         });
       }
     } catch (err) {
-      console.warn('Failed to persist user message', err);
+      console.warn('Failed to persist message', err);
     }
     const reply = await getChatReply(content, {
       language,

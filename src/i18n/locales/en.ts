@@ -144,6 +144,7 @@ export const en = {
   "homePage.startPractice2": "Start practice",
   "homePage.studentsCanCheckMaterialsAnytimeMakingInformationSharing": "Students can check materials anytime, making information sharing smoother.",
   "homePage.takeExam": "Take exam",
+  "homePage.today": "Today",
   "homePage.untilExam": "Until exam",
   "homePage.viewMaterials": "View materials",
   "loginPage.alreadyHaveAnAccount": "Already have an account?",

@@ -144,6 +144,7 @@ export const vi = {
   "homePage.startPractice2": "Bắt đầu luyện tập",
   "homePage.studentsCanCheckMaterialsAnytimeMakingInformationSharing": "Sinh viên có thể xem tài liệu bất cứ lúc nào, giúp việc chia sẻ thông tin trở nên thuận tiện hơn.",
   "homePage.takeExam": "Thi thử",
+  "homePage.today": "Hôm nay",
   "homePage.untilExam": "còn",
   "homePage.viewMaterials": "Xem tài liệu",
   "loginPage.alreadyHaveAnAccount": "Đã có tài khoản?",
