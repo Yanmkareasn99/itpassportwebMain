@@ -126,7 +126,7 @@ export async function joinOnlineBattleRoom(roomId: string) {
   return data as BattleRoom;
 }
 
-export async function submitOnlineBattleAnswer(roomId: string, questionId: string, choiceId: string) {
+export async function submitOnlineBattleAnswer(roomId: string, questionId: string, choiceId: string | null) {
   const { data, error } = await supabase.rpc('submit_battle_answer', {
     target_room_id: roomId,
     target_question_id: questionId,
