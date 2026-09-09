@@ -1,6 +1,6 @@
 import { translate } from '../i18n';
 import { useEffect, useRef, useState } from 'react';
-import { Bell, Coins, RefreshCw, Search } from 'lucide-react';
+import { Bell, Coins, RefreshCw } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getPointBalance } from '../lib/points';
@@ -103,14 +103,6 @@ export default function Header({ title, subtitle }: HeaderProps) {
       </div>
 
       <div className="flex items-center justify-end gap-3">
-        <div className="relative hidden md:block">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" style={{ width: 15, height: 15 }} />
-          <input
-            type="text"
-            placeholder={translate(language, 'header.search')}
-            className="pl-8 pr-4 py-2 text-xs bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition w-48"
-          />
-        </div>
         <div ref={notificationRef} className="relative">
           <button
             type="button"
