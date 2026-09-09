@@ -72,6 +72,7 @@ export interface BattleRoom {
   opponent_score: number;
   wager_points: number;
   question_ids: string[];
+  time_per_question_seconds: number;
   winner_id: string | null;
   created_at: string;
   started_at: string | null;
