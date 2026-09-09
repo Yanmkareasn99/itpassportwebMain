@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import { createPracticeSession, loadPracticeSession, practiceErrorMessage } from './lib/practice';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import AIChatPage from './pages/AIChatPage';
@@ -73,6 +75,7 @@ function LoginRoute() {
 }
 
 function PracticeListRoute() {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const onNavigate = usePageNavigation();
 
@@ -80,8 +83,10 @@ function PracticeListRoute() {
     <PracticeListPage
       currentPage="practice-list"
       onNavigate={onNavigate}
-      onStartPractice={(subjectId: string, questions: Question[]) => {
-        navigate('/practice/session', { state: { subjectId, questions } });
+      onStartPractice={async (subjectId: string, questions: Question[]) => {
+        if (!user) return;
+        const id = await createPracticeSession(user.id, subjectId, questions);
+        navigate(`/practice/session?id=${encodeURIComponent(id)}`);
       }}
     />
   );
@@ -89,20 +94,40 @@ function PracticeListRoute() {
 
 function PracticeSessionRoute() {
   const onNavigate = usePageNavigation();
+  const { user } = useAuth();
   const location = useLocation();
-  const state = location.state as { subjectId?: string; questions?: Question[] } | null;
+  const userId = user?.id;
+  const sessionId = new URLSearchParams(location.search).get('id');
+  const [loaded, setLoaded] = useState<{ id: string; data: Awaited<ReturnType<typeof loadPracticeSession>> } | null>(null);
+  const [error, setError] = useState('');
+  const [attempt, setAttempt] = useState(0);
 
-  if (!state?.questions?.length) {
-    return <Navigate to="/practice" replace />;
-  }
+  useEffect(() => {
+    if (!userId || !sessionId) return;
+    let cancelled = false;
+    setError('');
+    setLoaded(null);
+    loadPracticeSession(userId, sessionId).then(data => {
+      if (!cancelled) setLoaded({ id: sessionId, data });
+    }).catch(error => {
+      if (!cancelled) setError(practiceErrorMessage(error, 'Unable to restore practice session.'));
+    });
+    return () => { cancelled = true; };
+  }, [userId, sessionId, attempt]);
 
+  if (!sessionId) return <Navigate to="/practice" replace />;
+  if (error) return (
+    <div className="max-w-lg mx-auto p-8 space-y-4">
+      <p role="alert">{error}</p>
+      <button className="mr-4 text-blue-600" onClick={() => setAttempt(value => value + 1)}>Retry</button>
+      <button className="text-blue-600" onClick={() => onNavigate('practice-list')}>Back to practice</button>
+    </div>
+  );
+  if (!loaded || loaded.id !== sessionId) return <LoadingScreen />;
   return (
-    <PracticeQuestionPage
-      currentPage="practice-question"
-      onNavigate={onNavigate}
-      questions={state.questions}
-      subjectId={state.subjectId ?? 'all'}
-    />
+    <PracticeQuestionPage key={sessionId} currentPage="practice-question" onNavigate={onNavigate}
+      questions={loaded.data.questions} sessionId={sessionId}
+      initialAnswers={loaded.data.answers} initiallyFinished={loaded.data.finished} />
   );
 }
 

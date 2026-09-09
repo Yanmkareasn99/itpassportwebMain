@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getLocalizedExplanation } from '../lib/localizedQuestion';
 import { getQuestionExplanation } from '../lib/aiChat';
+import { practiceErrorMessage, type PracticeAnswer } from '../lib/practice';
 import { awardLocalAnswerPoints } from '../lib/points';
 import { Question, AnswerChoice, Page } from '../types';
 import { AnswerChoiceContent, QuestionImage } from '../components/QuestionMedia';
@@ -16,13 +17,9 @@ interface PracticeQuestionPageProps {
   currentPage: Page;
   onNavigate: (page: Page) => void;
   questions: Question[];
-  subjectId: string;
-}
-
-interface PracticeAnswer {
-  questionId: string;
-  choiceId: string;
-  isCorrect: boolean;
+  sessionId: string;
+  initialAnswers?: PracticeAnswer[];
+  initiallyFinished?: boolean;
 }
 
 const QUESTION_MAP_PAGE_SIZE = 50;
@@ -53,24 +50,23 @@ function TreeDiagram() {
   );
 }
 
-export default function PracticeQuestionPage({ currentPage, onNavigate, questions, subjectId }: PracticeQuestionPageProps) {
+export default function PracticeQuestionPage({ currentPage, onNavigate, questions, sessionId, initialAnswers = [], initiallyFinished = false }: PracticeQuestionPageProps) {
   const { user, profile } = useAuth();
   const { language } = useLanguage();
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(null);
-  const [answered, setAnswered] = useState(false);
+  const initialIndex = Math.max(0, questions.findIndex(question => !initialAnswers.some(answer => answer.questionId === question.id)));
+  const initialAnswer = initialAnswers.find(answer => answer.questionId === questions[initialIndex]?.id);
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+  const [selectedChoiceId, setSelectedChoiceId] = useState<string | null>(initialAnswer?.choiceId ?? null);
+  const [answered, setAnswered] = useState(Boolean(initialAnswer));
   const [showExplanation, setShowExplanation] = useState(false);
-  const [answers, setAnswers] = useState<PracticeAnswer[]>([]);
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [finished, setFinished] = useState(false);
+  const [answers, setAnswers] = useState<PracticeAnswer[]>(initialAnswers);
+  const [finished, setFinished] = useState(initiallyFinished);
   const [questionMapPage, setQuestionMapPage] = useState(0);
   const [isLoadingAI, setIsLoadingAI] = useState(false);
   const [aiExplanation, setAiExplanation] = useState<string | null>(null);
-  const sessionCreatedRef = useRef(false);
-  const sessionIdRef = useRef<string | null>(null);
-  const sessionPromiseRef = useRef<Promise<string | null> | null>(null);
-  const pendingAnswersRef = useRef<PracticeAnswer[]>([]);
-  
+  const savingRef = useRef(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   const question = questions[currentIndex];
   const choices: AnswerChoice[] = [...(question?.answer_choices ?? [])].sort((a, b) => a.sort_order - b.sort_order);
@@ -116,74 +112,34 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
   
 
   useEffect(() => {
-    if (!user || sessionCreatedRef.current) return;
-    const currentUser = user;
-
-    async function createSession() {
-      sessionCreatedRef.current = true;
-      const { data, error } = await supabase
-        .from('practice_sessions')
-        .insert({
-          user_id: currentUser.id,
-          subject_id: subjectId === 'all' || subjectId === 'review' ? null : subjectId,
-          total_questions: totalQuestions,
-        })
-        .select()
-        .single();
-      if (error || !data?.id) return null;
-
-      const createdId = data.id as string;
-      sessionIdRef.current = createdId;
-      setSessionId(createdId);
-      const pending = pendingAnswersRef.current.splice(0);
-      await Promise.all(pending.map(answer => supabase.from('session_answers').insert({
-        session_id: createdId,
-        question_id: answer.questionId,
-        selected_choice_id: answer.choiceId,
-        is_correct: answer.isCorrect,
-      })));
-      return createdId;
-    }
-    sessionPromiseRef.current = createSession();
-  }, [subjectId, totalQuestions, user]);
-
-  useEffect(() => {
     setQuestionMapPage(Math.floor(currentIndex / QUESTION_MAP_PAGE_SIZE));
   }, [currentIndex]);
   
 
   
 
-  function handleAnswer(choiceId: string) {
-    if (answered) return;
-    setSelectedChoiceId(choiceId);
-    setAnswered(true);
-    setShowExplanation(false);
-    setAiExplanation(null);
+  async function handleAnswer(choiceId: string) {
+    if (answered || savingRef.current || !question) return;
+    savingRef.current = true;
+    setSaving(true);
+    setSaveError('');
     const correct = choices.find(c => c.id === choiceId)?.is_correct ?? false;
-    const answer = { questionId: question.id, choiceId, isCorrect: correct };
-    setAnswers(prev => [...prev.filter(item => item.questionId !== question.id), answer]);
-    if (user) {
-      void awardLocalAnswerPoints(user.id, correct, 'practice');
-    }
-    const activeSessionId = sessionIdRef.current ?? sessionId;
-    if (activeSessionId) {
-      void supabase
-        .from('session_answers')
-        .insert({
-          session_id: activeSessionId,
-          question_id: question.id,
-          selected_choice_id: choiceId,
-          is_correct: correct,
-        })
-        .then(({ error }) => {
-          if (error) console.error('Failed to save practice answer:', error.message);
-        });
-    } else {
-      pendingAnswersRef.current = [
-        ...pendingAnswersRef.current.filter(item => item.questionId !== question.id),
-        answer,
-      ];
+    try {
+      const { error } = await supabase.from('session_answers').insert({
+        session_id: sessionId, question_id: question.id, selected_choice_id: choiceId, is_correct: correct,
+      });
+      if (error) throw error;
+      setSelectedChoiceId(choiceId);
+      setAnswered(true);
+      setShowExplanation(false);
+      setAiExplanation(null);
+      setAnswers(prev => [...prev.filter(item => item.questionId !== question.id), { questionId: question.id, choiceId, isCorrect: correct }]);
+      if (user) void awardLocalAnswerPoints(user.id, correct, 'practice');
+    } catch (error) {
+      setSaveError(practiceErrorMessage(error, 'Unable to save your answer. Please try again.'));
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
   }
 
@@ -214,6 +170,7 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
   }
 
   function goToQuestion(index: number) {
+    if (savingRef.current) return;
     const priorAnswer = answers.find(answer => answer.questionId === questions[index]?.id);
     setCurrentIndex(index);
     setSelectedChoiceId(priorAnswer?.choiceId ?? null);
@@ -223,6 +180,7 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
   }
 
   async function handleNext() {
+    if (savingRef.current) return;
     if (currentIndex + 1 >= totalQuestions) {
       const firstUnanswered = questions.findIndex(candidate =>
         !answers.some(answer => answer.questionId === candidate.id));
@@ -231,12 +189,13 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
         return;
       }
       const actualCorrect = answers.filter(a => a.isCorrect).length;
-      const activeSessionId = sessionIdRef.current ?? await sessionPromiseRef.current;
-      if (activeSessionId) {
-        await supabase.from('practice_sessions').update({
-          correct_answers: actualCorrect,
-          completed_at: new Date().toISOString(),
-        }).eq('id', activeSessionId);
+      const { error } = await supabase.from('practice_sessions').update({
+        correct_answers: actualCorrect,
+        completed_at: new Date().toISOString(),
+      }).eq('id', sessionId);
+      if (error) {
+        setSaveError(practiceErrorMessage(error, 'Unable to save practice results. Please retry.'));
+        return;
       }
       setFinished(true);
     }else {
@@ -300,6 +259,9 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
 
   return (
     <Layout currentPage={currentPage} onNavigate={onNavigate} title={label.questionTitle} subtitle={label.practice}>
+      {saveError && <p role="alert" className="max-w-5xl mx-auto mb-4 p-3 rounded-xl bg-red-50 text-red-600">{saveError}</p>}
+      {saving && <p role="status" className="max-w-5xl mx-auto mb-2 text-sm text-gray-500">Saving answer...</p>}
+
       <div className="max-w-6xl mx-auto">
         {/* Progress bar */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-5">
@@ -362,7 +324,7 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
                   <button
                     key={choice.id}
                     onClick={() => setSelectedChoiceId(choice.id)}
-                    disabled={answered}
+                    disabled={answered || saving}
                     className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-center gap-3 ${stateClass} disabled:cursor-default`}
                   >
                     <span className="w-7 h-7 rounded-full border-2 border-current flex items-center justify-center text-xs font-bold shrink-0 text-gray-400">
@@ -430,7 +392,7 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
               <div className="flex gap-2">
                 {!answered && (
                   <button
-                    disabled={!selectedChoiceId}
+                    disabled={!selectedChoiceId || saving}
                     onClick={() => selectedChoiceId && handleAnswer(selectedChoiceId)}
                     className="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
                   >

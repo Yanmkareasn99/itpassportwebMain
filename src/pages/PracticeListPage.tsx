@@ -13,6 +13,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import Layout from '../components/Layout';
+import { fetchPracticeQuestions, loadLatestAnswerStatus, loadPracticeSessions, practiceErrorMessage, type DifficultyFilter, type FormatFilter, type ModeFilter } from '../lib/practice';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -21,7 +22,7 @@ import { Question, Page } from '../types';
 interface PracticeListPageProps {
   currentPage: Page;
   onNavigate: (page: Page) => void;
-  onStartPractice: (subjectId: string, questions: Question[]) => void;
+  onStartPractice: (subjectId: string, questions: Question[]) => void | Promise<void>;
 }
 
 type LanguageCode = Language;
@@ -65,8 +66,6 @@ const MAIN_CATEGORIES = [
   },
 ];
 
-const QUESTION_FETCH_PAGE_SIZE = 1000;
-
 const KNOWN_ADDITIONAL_SUBJECTS = [
   {
     id: 'aa000000-0000-0000-0000-000000000001',
@@ -91,87 +90,12 @@ interface PracticeCategory {
   subjectIds: string[];
 }
 
-async function fetchPracticeQuestions(
-  subjectIds: string[] | null,
-  diffFilter: DifficultyFilter,
-  formatFilter: FormatFilter,
-): Promise<Question[]> {
-  const questions: Question[] = [];
-
-  for (let from = 0; ; from += QUESTION_FETCH_PAGE_SIZE) {
-    let query = supabase
-      .from('questions')
-      .select('*, answer_choices(*)');
-
-    if (subjectIds) query = query.in('subject_id', subjectIds);
-
-    if (diffFilter === 'easy') {
-      query = query.eq('difficulty', 1);
-    } else if (diffFilter === 'medium') {
-      query = query.in('difficulty', [2, 3]);
-    } else if (diffFilter === 'hard') {
-      query = query.in('difficulty', [4, 5]);
-    }
-
-    if (formatFilter !== 'all') {
-      query = query.eq('question_type', formatFilter);
-    }
-
-    const { data, error } = await query
-      .order('question_number')
-      .order('id')
-      .range(from, from + QUESTION_FETCH_PAGE_SIZE - 1);
-
-    if (error) throw error;
-
-    const page = (data ?? []) as Question[];
-    questions.push(...page);
-    if (page.length < QUESTION_FETCH_PAGE_SIZE) break;
-  }
-
-  return questions;
-}
-
-type DifficultyFilter = 'all' | 'easy' | 'medium' | 'hard';
-type FormatFilter = 'all' | 'multiple_choice' | 'tree';
-type ModeFilter = 'all' | 'new' | 'review';
-
 interface CategoryStats {
   questionCount: number;
   answeredCount: number;
   correctCount: number;
   progress: number;
   accuracy: number;
-}
-
-interface AnswerStatusRow {
-  id: string;
-  question_id: string;
-  is_correct: boolean;
-  answered_at: string;
-}
-
-async function loadLatestAnswerStatus() {
-  const latest = new Map<string, boolean>();
-
-  for (let from = 0; ; from += QUESTION_FETCH_PAGE_SIZE) {
-    const { data, error } = await supabase
-      .from('session_answers')
-      .select('id, question_id, is_correct, answered_at')
-      .order('answered_at', { ascending: true })
-      .order('id')
-      .range(from, from + QUESTION_FETCH_PAGE_SIZE - 1);
-
-    if (error) throw error;
-
-    const page = (data ?? []) as AnswerStatusRow[];
-    for (const answer of page) {
-      latest.set(answer.question_id, answer.is_correct);
-    }
-    if (page.length < QUESTION_FETCH_PAGE_SIZE) break;
-  }
-
-  return latest;
 }
 
 function getCategoryLabel(category: PracticeCategory, language: LanguageCode) {
@@ -287,6 +211,7 @@ function SelectDropdown({
   return (
     <div className="relative">
       <select
+        aria-label={label}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="appearance-none pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer min-w-36"
@@ -412,16 +337,7 @@ export default function PracticeListPage({
       }
 
       try {
-        const [{ data: sessions, error: sessionError }, latestAnswers] = await Promise.all([
-          supabase
-            .from('practice_sessions')
-            .select('subject_id, correct_answers, total_questions, completed_at')
-            .eq('user_id', user.id),
-          loadLatestAnswerStatus(),
-        ]);
-
-        if (sessionError) throw sessionError;
-
+        const sessions = await loadPracticeSessions(user.id);
         const stats: Record<string, { answered: number; correct: number }> = {};
         for (const session of sessions ?? []) {
           if (!session.completed_at) continue;
@@ -434,12 +350,13 @@ export default function PracticeListPage({
         if (cancelled) return;
 
         setSessionStats(stats);
-        setIncorrectCount([...latestAnswers.values()].filter(isCorrect => !isCorrect).length);
+        // Preserve completed-session progress even if answer history fails.
+        const latestAnswers = await loadLatestAnswerStatus(user.id, sessions);
+        if (!cancelled) setIncorrectCount([...latestAnswers.values()].filter(isCorrect => !isCorrect).length);
       } catch (error) {
         if (!cancelled) {
-          setSessionStats({});
           setIncorrectCount(0);
-          setProgressWarning(error instanceof Error ? error.message : 'Unable to load practice progress.');
+          setProgressWarning(practiceErrorMessage(error, 'Unable to load practice progress.'));
         }
       }
     }
@@ -484,6 +401,7 @@ export default function PracticeListPage({
   }
 
   async function startCategory(subjectIds: string[] | null, key: string) {
+    if (!user || starting) return;
     setStarting(key);
     setError('');
 
@@ -491,34 +409,38 @@ export default function PracticeListPage({
       let selectedQuestions = await fetchPracticeQuestions(subjectIds, diffFilter, formatFilter);
 
       if (modeFilter !== 'all') {
-        const latestAnswers = await loadLatestAnswerStatus();
+        const latestAnswers = await loadLatestAnswerStatus(user!.id);
         selectedQuestions = selectedQuestions.filter(question => modeFilter === 'new'
           ? !latestAnswers.has(question.id)
           : latestAnswers.get(question.id) === false);
       }
 
       if (selectedQuestions.length > 0) {
-        onStartPractice(!subjectIds || subjectIds.length > 1 ? 'all' : subjectIds[0], selectedQuestions);
+        await onStartPractice(!subjectIds || subjectIds.length > 1 ? 'all' : subjectIds[0], selectedQuestions);
+      } else {
+        setError('No questions match these filters. Try another difficulty, question type, or learning mode.');
       }
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Unable to start practice.');
+      setError(practiceErrorMessage(error, 'Unable to start practice.'));
     } finally {
       setStarting(null);
     }
   }
 
   async function startReview() {
+    if (!user || starting) return;
     setStarting('review');
     setError('');
 
     try {
-      const latestAnswers = await loadLatestAnswerStatus();
+      const latestAnswers = await loadLatestAnswerStatus(user!.id);
       const qIds = [...latestAnswers.entries()]
         .filter(([, isCorrect]) => !isCorrect)
         .map(([questionId]) => questionId)
         .slice(0, 20);
 
       if (qIds.length === 0) {
+        setError('No mistakes are waiting for review.');
         return;
       }
 
@@ -530,10 +452,10 @@ export default function PracticeListPage({
       if (questionsError) throw questionsError;
 
       if (data && data.length > 0) {
-        onStartPractice('review', data as Question[]);
+        await onStartPractice('review', data as Question[]);
       }
     } catch (reviewError) {
-      setError(reviewError instanceof Error ? reviewError.message : 'Unable to start review.');
+      setError(practiceErrorMessage(reviewError, 'Unable to start review.'));
     } finally {
       setStarting(null);
     }
@@ -579,7 +501,7 @@ export default function PracticeListPage({
               category={cat}
               stats={getCategoryStats(cat.subjectIds)}
               onStart={() => startCategory(cat.subjectIds, cat.id)}
-              loading={starting === cat.id}
+              loading={loading || !!starting}
               language={currentLanguage}
             />
           ))}
@@ -602,7 +524,7 @@ export default function PracticeListPage({
                 translate(currentLanguage, 'practiceListPage.difficulty')
               }
               value={diffFilter}
-              onChange={(v) => setDiffFilter(v as DifficultyFilter)}
+              onChange={(v) => { setDiffFilter(v as DifficultyFilter); setError(''); }}
               options={[
                 {
                   value: 'all',
@@ -632,7 +554,7 @@ export default function PracticeListPage({
                 translate(currentLanguage, 'practiceListPage.questionType')
               }
               value={formatFilter}
-              onChange={(v) => setFormatFilter(v as FormatFilter)}
+              onChange={(v) => { setFormatFilter(v as FormatFilter); setError(''); }}
               options={[
                 {
                   value: 'all',
@@ -657,7 +579,7 @@ export default function PracticeListPage({
                 translate(currentLanguage, 'practiceListPage.learningMode')
               }
               value={modeFilter}
-              onChange={(v) => setModeFilter(v as ModeFilter)}
+              onChange={(v) => { setModeFilter(v as ModeFilter); setError(''); }}
               options={[
                 {
                   value: 'all',

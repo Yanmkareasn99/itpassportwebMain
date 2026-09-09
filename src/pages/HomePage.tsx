@@ -4,6 +4,7 @@ import { ChevronRight, ArrowRight, ChevronLeft, Layers, BarChart2, Trophy, Messa
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { loadPracticeProgress, practiceErrorMessage, type PracticeProgressSession } from '../lib/practice';
 import { supabase } from '../lib/supabase';
 import { Page, PracticeSession, ExamSession } from '../types';
 
@@ -118,10 +119,10 @@ function CalendarWidget({ daysLeft, language, sessions = [], examTargetDate }: {
   );
 }
 
-function StatsCard({ sessions, examSessions, language }: { sessions: PracticeSession[]; examSessions: ExamSession[]; language: Language }) {
+function StatsCard({ sessions, examSessions, language }: { sessions: PracticeProgressSession[]; examSessions: ExamSession[]; language: Language }) {
   const totalPractice = sessions.length;
   const totalCorrect = sessions.reduce((a, s) => a + s.correct_answers, 0);
-  const totalQuestions = sessions.reduce((a, s) => a + s.total_questions, 0);
+  const totalQuestions = sessions.reduce((a, s) => a + s.answered_count, 0);
   const accuracy = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
   const examCount = examSessions.length;
   const avgExamScore = examSessions.length > 0
@@ -223,31 +224,47 @@ function getFeatures(language: Language) {
 }
 
 export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
+  const userId = user?.id;
   const { language } = useLanguage();
-  const [practiceSessions, setPracticeSessions] = useState<PracticeSession[]>([]);
+  const [practiceSessions, setPracticeSessions] = useState<PracticeProgressSession[]>([]);
+  const [progressError, setProgressError] = useState('');
   const [examSessions, setExamSessions] = useState<ExamSession[]>([]);
   const [daysLeft, setDaysLeft] = useState(92);
   const [examTargetDate, setExamTargetDate] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    let loading = false;
     async function load() {
-      const [{ data: ps }, { data: es }] = await Promise.all([
-        supabase.from('practice_sessions').select('*').order('created_at', { ascending: false }).limit(20),
-        supabase.from('exam_sessions').select('*').order('created_at', { ascending: false }).limit(10),
-      ]);
-      if (ps) setPracticeSessions(ps);
-      if (es) setExamSessions(es);
-
-      const { data: target } = await supabase.from('exam_targets').select('target_date').maybeSingle();
-      if (target?.target_date) {
-        setExamTargetDate(target.target_date);
-        const diff = Math.ceil((new Date(target.target_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-        setDaysLeft(Math.max(0, diff));
-      }
+      if (loading) return;
+      loading = true;
+      try {
+        const [progress, exams, target] = await Promise.allSettled([
+          loadPracticeProgress(userId!),
+          supabase.from('exam_sessions').select('*').eq('user_id', userId!)
+            .order('created_at', { ascending: false }).limit(10),
+          supabase.from('exam_targets').select('target_date').eq('user_id', userId!).maybeSingle(),
+        ]);
+        if (cancelled) return;
+        if (progress.status === 'fulfilled') {
+          setPracticeSessions(progress.value);
+          setProgressError('');
+        } else setProgressError(practiceErrorMessage(progress.reason, 'Unable to load practice accuracy.'));
+        if (exams.status === 'fulfilled' && !exams.value.error && exams.value.data) setExamSessions(exams.value.data);
+        if (target.status === 'fulfilled' && target.value.data?.target_date) {
+          setExamTargetDate(target.value.data.target_date);
+          const diff = Math.ceil((new Date(target.value.data.target_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+          setDaysLeft(Math.max(0, diff));
+        }
+      } finally { loading = false; }
     }
-    load();
-  }, []);
+    void load();
+    const refresh = () => { void load(); };
+    window.addEventListener('focus', refresh);
+    return () => { cancelled = true; window.removeEventListener('focus', refresh); };
+  }, [userId]);
 
   const recentSessions = practiceSessions.slice(0, 3);
   const guest = translate(language, 'homePage.guest');
@@ -305,13 +322,13 @@ export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
               ) : (
                 <div className="space-y-3">
                   {recentSessions.map(s => {
-                    const pct = s.total_questions > 0 ? Math.round((s.correct_answers / s.total_questions) * 100) : 0;
+                    const pct = s.answered_count > 0 ? Math.round((s.correct_answers / s.answered_count) * 100) : 0;
                     return (
                       <div key={s.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-xl">
                         <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0" />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-700">
-                            {translate(language, 'homePage.practiceQuestionCount', { count: s.total_questions })}
+                            {translate(language, 'homePage.practiceQuestionCount', { count: s.answered_count })}
                           </p>
                           <p className="text-xs text-gray-400">
                             {new Date(s.created_at).toLocaleDateString(languageLocales[language])}
@@ -331,6 +348,7 @@ export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
           {/* Right column */}
           <div className="w-full lg:w-72 space-y-5 shrink-0">
             <CalendarWidget daysLeft={daysLeft} language={language} sessions={practiceSessions} examTargetDate={examTargetDate} />
+            {progressError && <p role="alert" className="text-sm text-red-600">{progressError}</p>}
             <StatsCard sessions={practiceSessions} examSessions={examSessions} language={language} />
           </div>
         </div>
