@@ -1,4 +1,8 @@
 export const en = {
+  'practiceListPage.countingMatches': 'Counting matching questions...',
+  'practiceListPage.matchingQuestions': '{count} matching questions',
+  'practiceListPage.practiceFiltered': 'Practice filtered questions',
+
   "adminPage.add": "Add",
   "adminPage.adminAccessRequired": "Administrator access is required to view this page.",
   "adminPage.addQuestion": "Add question",
