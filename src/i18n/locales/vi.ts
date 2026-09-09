@@ -1,4 +1,8 @@
 export const vi = {
+  'practiceListPage.countingMatches': 'Đang đếm câu hỏi phù hợp...',
+  'practiceListPage.matchingQuestions': '{count} câu hỏi phù hợp',
+  'practiceListPage.practiceFiltered': 'Luyện tập câu hỏi đã lọc',
+
   "adminPage.add": "Thêm",
   "adminPage.adminAccessRequired": "Bạn cần quyền quản trị viên để xem trang này.",
   "adminPage.addQuestion": "Thêm câu hỏi",

@@ -250,6 +250,42 @@ export default function PracticeListPage({
   const [diffFilter, setDiffFilter] = useState<DifficultyFilter>('all');
   const [formatFilter, setFormatFilter] = useState<FormatFilter>('all');
   const [modeFilter, setModeFilter] = useState<ModeFilter>('all');
+  const [filterResult, setFilterResult] = useState<{ key: string; questions: Question[]; error: string } | null>(null);
+  const filterKey = JSON.stringify([user?.id, diffFilter, formatFilter, modeFilter]);
+  const currentResult = filterResult?.key === filterKey ? filterResult : null;
+  const matchingQuestions = currentResult?.questions ?? [];
+  const userId = user?.id;
+
+  useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      try {
+        let questions = await fetchPracticeQuestions(null, diffFilter, formatFilter);
+        if (modeFilter !== 'all') {
+          const latest = await loadLatestAnswerStatus(userId);
+          questions = questions.filter(question => modeFilter === 'new'
+            ? !latest.has(question.id) : latest.get(question.id) === false);
+        }
+        if (!cancelled) setFilterResult({ key: filterKey, questions, error: '' });
+      } catch (error) {
+        if (!cancelled) setFilterResult({ key: filterKey, questions: [], error: practiceErrorMessage(error, 'Unable to count matching questions.') });
+      }
+    }, 200);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [userId, diffFilter, formatFilter, modeFilter, filterKey]);
+
+  async function startFilteredPractice() {
+    if (!user || starting || !currentResult || currentResult.error || !matchingQuestions.length) return;
+    setStarting('filtered');
+    setError('');
+    try {
+      await onStartPractice('all', matchingQuestions);
+    } catch (error) {
+      setError(practiceErrorMessage(error, 'Unable to start practice.'));
+    } finally { setStarting(null); }
+  }
+
 
   useEffect(() => {
     let cancelled = false;
@@ -406,9 +442,9 @@ export default function PracticeListPage({
     setError('');
 
     try {
-      let selectedQuestions = await fetchPracticeQuestions(subjectIds, diffFilter, formatFilter);
+      let selectedQuestions = await fetchPracticeQuestions(subjectIds, key === 'all' ? 'all' : diffFilter, key === 'all' ? 'all' : formatFilter);
 
-      if (modeFilter !== 'all') {
+      if (key !== 'all' && modeFilter !== 'all') {
         const latestAnswers = await loadLatestAnswerStatus(user!.id);
         selectedQuestions = selectedQuestions.filter(question => modeFilter === 'new'
           ? !latestAnswers.has(question.id)
@@ -609,6 +645,22 @@ export default function PracticeListPage({
               <Play className="w-3.5 h-3.5" />
               {translate(currentLanguage, 'practiceListPage.practiceAll')}
               {!loading && ` (${totalQuestionCount.toLocaleString()})`}
+            </button>
+          </div>
+          <div className="mt-4 pt-4 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3">
+            <p role="status" aria-live="polite" className="text-sm font-medium text-gray-600">
+              {!currentResult
+                ? translate(currentLanguage, 'practiceListPage.countingMatches')
+                : currentResult.error
+                  ? currentResult.error
+                  : translate(currentLanguage, 'practiceListPage.matchingQuestions', { count: matchingQuestions.length.toLocaleString() })}
+            </p>
+            <button onClick={() => void startFilteredPractice()}
+              disabled={!!starting || !currentResult || !!currentResult.error || matchingQuestions.length === 0}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+              <Play className="w-3.5 h-3.5" />
+              {translate(currentLanguage, 'practiceListPage.practiceFiltered')}
+              {currentResult && !currentResult.error && ` (${matchingQuestions.length.toLocaleString()})`}
             </button>
           </div>
         </div>

@@ -1,4 +1,8 @@
 export const ja = {
+  'practiceListPage.countingMatches': '該当する問題を集計中…',
+  'practiceListPage.matchingQuestions': '該当する問題：{count}問',
+  'practiceListPage.practiceFiltered': '絞り込んだ問題を練習',
+
   "adminPage.add": "追加",
   "adminPage.adminAccessRequired": "このページを表示するには管理者権限が必要です。",
   "adminPage.addQuestion": "問題を追加",
