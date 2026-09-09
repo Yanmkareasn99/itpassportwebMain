@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle, ChevronRight, Clock, Coins, Plus, RefreshCw, Trophy, Users, XCircle } from 'lucide-react';
 import Layout from '../components/Layout';
 import { supabase, isSupabaseEnabled } from '../lib/supabase';
@@ -57,6 +57,19 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   const [waitingForOpponent, setWaitingForOpponent] = useState(false);
   const [profileNames, setProfileNames] = useState<Record<string, string>>({});
 
+  const submittingAnswer = useRef(false);
+  const completingBattle = useRef(false);
+  const refreshingRoom = useRef(false);
+  const advanceTimer = useRef<ReturnType<typeof window.setTimeout>>();
+  const activeRoomId = activeRoom?.id;
+  const currentRoomId = useRef(activeRoomId);
+  currentRoomId.current = activeRoomId;
+
+  useEffect(() => () => {
+    currentRoomId.current = undefined;
+    window.clearTimeout(advanceTimer.current);
+  }, []);
+
   const isCreator = activeRoom?.creator_id === profile?.id;
   const activeCreatorId = activeRoom?.creator_id;
   const activeOpponentId = activeRoom?.opponent_id;
@@ -108,17 +121,19 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     const { data, error: roomError } = await supabase
       .from('battle_rooms')
       .select('*')
-      .eq('status', 'waiting')
+      .or(profile?.id
+        ? `status.eq.waiting,and(status.eq.active,creator_id.eq.${profile.id}),and(status.eq.active,opponent_id.eq.${profile.id})`
+        : 'status.eq.waiting')
       .order('created_at', { ascending: false })
       .limit(10);
     if (roomError) {
       setError(roomError.message);
       return;
     }
-    const waitingRooms = (data ?? []) as BattleRoom[];
-    setRooms(waitingRooms);
-    void loadProfileNames(waitingRooms.map(room => room.creator_id));
-  }, [loadProfileNames]);
+    const availableRooms = (data ?? []) as BattleRoom[];
+    setRooms(availableRooms);
+    void loadProfileNames(availableRooms.map(room => room.creator_id));
+  }, [loadProfileNames, profile?.id]);
 
   const loadRoomAnswers = useCallback(async (roomId: string) => {
     const { data, error: answerError } = await supabase
@@ -126,7 +141,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
       .select('user_id, question_id, selected_choice_id, is_correct')
       .eq('room_id', roomId);
     if (answerError) throw answerError;
-    setAnswers((data ?? []) as BattleAnswerRow[]);
+    if (currentRoomId.current === roomId) setAnswers((data ?? []) as BattleAnswerRow[]);
     return (data ?? []) as BattleAnswerRow[];
   }, []);
 
@@ -141,51 +156,70 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     if (questionError) throw questionError;
 
     const byId = new Map((data ?? []).map(item => [item.id, item as Question]));
-    setQuestions(questionIds.map(id => byId.get(id)).filter(Boolean) as Question[]);
+    if (questionIds.some(id => !byId.has(id))) throw new Error('Some battle questions are unavailable. Please retry.');
+    if (currentRoomId.current === room.id) setQuestions(questionIds.map(id => byId.get(id) as Question));
   }, []);
 
   const refreshActiveRoom = useCallback(async () => {
-    if (!activeRoom) return;
-    const { data, error: roomError } = await supabase
-      .from('battle_rooms')
-      .select('*')
-      .eq('id', activeRoom.id)
-      .single();
-    if (roomError) {
-      setError(roomError.message);
-      return;
-    }
-
-    const room = data as BattleRoom;
-    setActiveRoom(room);
-    void loadProfileNames([room.creator_id, room.opponent_id]);
-
-    if (room.status === 'active' && stage === 'waiting') {
-      try {
-        await loadQuestionsForRoom(room);
-        setCurrentIndex(0);
-        setSelectedChoiceId(null);
-        setAnswered(false);
-        setWaitingForOpponent(false);
-        setTimeLeft(TIME_PER_QUESTION);
-        setStage('battle');
-      } catch (questionError) {
-        setError(questionError instanceof Error ? questionError.message : 'Unable to load battle questions.');
+    if (!activeRoomId || refreshingRoom.current) return;
+    refreshingRoom.current = true;
+    try {
+      const { data, error: roomError } = await supabase
+        .from('battle_rooms')
+        .select('*')
+        .eq('id', activeRoomId)
+        .single();
+      if (roomError) {
+        setError(roomError.message);
         return;
       }
-    }
 
-    try {
-      await loadRoomAnswers(room.id);
-    } catch (answerError) {
-      setError(answerError instanceof Error ? answerError.message : 'Unable to load battle answers.');
-    }
+      if (currentRoomId.current !== activeRoomId) return;
+      const room = data as BattleRoom;
+      setActiveRoom(room);
+      void loadProfileNames([room.creator_id, room.opponent_id]);
 
-    if (room.status === 'completed') {
-      setStage('result');
-      await loadBalance();
+      if (room.status === 'active' && stage === 'waiting') {
+        try {
+          await loadQuestionsForRoom(room);
+          const savedAnswers = await loadRoomAnswers(room.id);
+          if (currentRoomId.current !== room.id) return;
+          const nextIndex = room.question_ids.findIndex(id => !savedAnswers.some(answer => answer.user_id === profile?.id && answer.question_id === id));
+          setCurrentIndex(nextIndex < 0 ? room.question_ids.length - 1 : nextIndex);
+          setSelectedChoiceId(null);
+          setAnswered(false);
+          setWaitingForOpponent(nextIndex < 0);
+          setTimeLeft(TIME_PER_QUESTION);
+          setStage('battle');
+        } catch (questionError) {
+          setError(questionError instanceof Error ? questionError.message : 'Unable to load battle questions.');
+          return;
+        }
+      }
+
+      try {
+        await loadRoomAnswers(room.id);
+      } catch (answerError) {
+        setError(answerError instanceof Error ? answerError.message : 'Unable to load battle answers.');
+      }
+
+      if (room.status === 'completed') {
+        if (!room.opponent_id) {
+          setActiveRoom(null);
+          setStage('lobby');
+          void loadRooms();
+        } else setStage('result');
+        await loadBalance();
+      }
+    } catch (refreshError) {
+      setError(refreshError instanceof Error ? refreshError.message : 'Unable to refresh battle room.');
+    } finally {
+      refreshingRoom.current = false;
     }
-  }, [activeRoom, loadBalance, loadProfileNames, loadQuestionsForRoom, loadRoomAnswers, stage]);
+  }, [activeRoomId, loadBalance, loadProfileNames, loadQuestionsForRoom, loadRoomAnswers, loadRooms, profile?.id, stage]);
+
+  const refreshRoomRef = useRef(refreshActiveRoom);
+  refreshRoomRef.current = refreshActiveRoom;
 
   useEffect(() => {
     void loadRooms();
@@ -205,37 +239,31 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   }, [activeCreatorId, activeOpponentId, loadProfileNames]);
 
   useEffect(() => {
-    if (!isSupabaseEnabled || !activeRoom) return;
-
-    const interval = window.setInterval(() => {
-      void refreshActiveRoom();
-    }, 2500);
-
+    if (!isSupabaseEnabled || !activeRoomId) return;
+    const refresh = () => { void refreshRoomRef.current(); };
+    refresh();
+    const interval = window.setInterval(refresh, 2500);
     const channel = supabase
-      .channel(`battle-room-${activeRoom.id}`)
+      .channel(`battle-room-${activeRoomId}`)
       .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'battle_rooms',
-        filter: `id=eq.${activeRoom.id}`,
-      }, () => {
-        void refreshActiveRoom();
-      })
+        event: '*', schema: 'public', table: 'battle_rooms', filter: `id=eq.${activeRoomId}`,
+      }, refresh)
       .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'battle_answers',
-        filter: `room_id=eq.${activeRoom.id}`,
-      }, () => {
-        void loadRoomAnswers(activeRoom.id);
-      })
+        event: '*', schema: 'public', table: 'battle_answers', filter: `room_id=eq.${activeRoomId}`,
+      }, refresh)
       .subscribe();
-
     return () => {
       window.clearInterval(interval);
+      window.clearTimeout(advanceTimer.current);
       void supabase.removeChannel(channel);
     };
-  }, [activeRoom, loadRoomAnswers, refreshActiveRoom]);
+  }, [activeRoomId]);
+
+  useEffect(() => {
+    if (stage !== 'lobby') return;
+    const interval = window.setInterval(() => { void loadRooms(); }, 5000);
+    return () => window.clearInterval(interval);
+  }, [loadRooms, stage]);
 
   const maybeCompleteBattle = useCallback(async (room: BattleRoom, answerRows: BattleAnswerRow[]) => {
     if (!profile || !room.opponent_id) return;
@@ -247,45 +275,40 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
       return;
     }
 
-    const completed = await completeOnlineBattleRoom(room.id);
-    setActiveRoom(completed);
-    setStage('result');
-    await loadBalance();
+    if (completingBattle.current || currentRoomId.current !== room.id) return;
+    completingBattle.current = true;
+    try {
+      const completed = await completeOnlineBattleRoom(room.id);
+      if (currentRoomId.current !== room.id) return;
+      setActiveRoom(completed);
+      setStage('result');
+      await loadBalance();
+    } catch (completionError) {
+      setWaitingForOpponent(true);
+      setError(completionError instanceof Error ? completionError.message : 'Unable to settle battle. Retrying...');
+    } finally {
+      completingBattle.current = false;
+    }
   }, [loadBalance, profile]);
 
   const resetQuestionState = useCallback((index: number) => {
-    const alreadyAnswered = answers.find(answer => answer.user_id === profile?.id && answer.question_id === questions[index]?.id);
-    setCurrentIndex(index);
-    setSelectedChoiceId(alreadyAnswered?.selected_choice_id ?? null);
-    setAnswered(Boolean(alreadyAnswered));
-    setTimeLeft(TIME_PER_QUESTION);
-  }, [answers, profile?.id, questions]);
-
-  const goToNextQuestion = useCallback(async () => {
-    if (!activeRoom) return;
-    if (currentIndex + 1 < questions.length) {
-      resetQuestionState(currentIndex + 1);
+    const nextIndex = questions.findIndex((item, questionIndex) => questionIndex >= index
+      && !answers.some(answer => answer.user_id === profile?.id && answer.question_id === item.id));
+    if (nextIndex < 0) {
+      setWaitingForOpponent(true);
       return;
     }
-    const latestAnswers = await loadRoomAnswers(activeRoom.id);
-    await maybeCompleteBattle(activeRoom, latestAnswers);
-  }, [activeRoom, currentIndex, loadRoomAnswers, maybeCompleteBattle, questions.length, resetQuestionState]);
+    setCurrentIndex(nextIndex);
+    setSelectedChoiceId(null);
+    setAnswered(false);
+    setTimeLeft(TIME_PER_QUESTION);
+  }, [answers, profile?.id, questions]);
 
   useEffect(() => {
     if (waitingForOpponent && activeRoom?.status === 'active') {
       void maybeCompleteBattle(activeRoom, answers);
     }
   }, [activeRoom, answers, maybeCompleteBattle, waitingForOpponent]);
-
-  useEffect(() => {
-    if (stage !== 'battle' || answered || waitingForOpponent) return;
-    if (timeLeft <= 0) {
-      void goToNextQuestion();
-      return;
-    }
-    const timer = window.setTimeout(() => setTimeLeft(value => value - 1), 1000);
-    return () => window.clearTimeout(timer);
-  }, [answered, goToNextQuestion, stage, timeLeft, waitingForOpponent]);
 
   async function createRoom() {
     if (!profile) return;
@@ -318,15 +341,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     try {
       const room = await joinOnlineBattleRoom(roomId);
       setActiveRoom(room);
-      void loadProfileNames([room.creator_id, room.opponent_id]);
-      await loadQuestionsForRoom(room);
-      await loadRoomAnswers(room.id);
-      setCurrentIndex(0);
-      setSelectedChoiceId(null);
-      setAnswered(false);
-      setWaitingForOpponent(false);
-      setTimeLeft(TIME_PER_QUESTION);
-      setStage('battle');
+      setStage('waiting');
       await loadBalance();
     } catch (joinError) {
       setError(joinError instanceof Error ? joinError.message : 'Unable to join battle room.');
@@ -352,24 +367,47 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     }
   }
 
-  async function handleAnswer(choiceId: string) {
-    if (!activeRoom || !question || answered) return;
+  const handleAnswer = useCallback(async (choiceId: string | null) => {
+    if (!activeRoom || !question || answered || submittingAnswer.current) return;
+    submittingAnswer.current = true;
+    let persisted = false;
     setSelectedChoiceId(choiceId);
     setAnswered(true);
     setError('');
     try {
       const room = await submitOnlineBattleAnswer(activeRoom.id, question.id, choiceId);
+      persisted = true;
+      if (currentRoomId.current !== room.id) return;
       setActiveRoom(room);
-      void loadProfileNames([room.creator_id, room.opponent_id]);
-      const latestAnswers = await loadRoomAnswers(room.id);
-      window.setTimeout(() => {
+      advanceTimer.current = window.setTimeout(() => {
+        if (currentRoomId.current !== room.id) return;
         if (currentIndex + 1 < questions.length) resetQuestionState(currentIndex + 1);
-        else void maybeCompleteBattle(room, latestAnswers);
+        else setWaitingForOpponent(true);
       }, 1000);
+      // Answer persistence succeeded; a failed refresh must not block progression.
+      await loadRoomAnswers(room.id);
     } catch (answerError) {
-      setError(answerError instanceof Error ? answerError.message : 'Unable to submit battle answer.');
+      if (currentRoomId.current !== activeRoom.id) return;
+      setError(answerError instanceof Error ? answerError.message : 'Unable to submit battle answer. Please retry.');
+      if (!persisted) {
+        setAnswered(false);
+        setSelectedChoiceId(null);
+        setTimeLeft(value => Math.max(value, 5));
+      }
+    } finally {
+      submittingAnswer.current = false;
     }
-  }
+  }, [activeRoom, answered, currentIndex, loadRoomAnswers, question, questions.length, resetQuestionState]);
+
+  useEffect(() => {
+    if (stage !== 'battle' || answered || waitingForOpponent) return;
+    if (timeLeft <= 0) {
+      void handleAnswer(null);
+      return;
+    }
+    const timer = window.setTimeout(() => setTimeLeft(value => value - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [answered, handleAnswer, stage, timeLeft, waitingForOpponent]);
 
   if (stage === 'lobby') {
     return (
@@ -413,7 +451,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
             <div className="flex items-center justify-between gap-3 mb-4">
               <h3 className="font-semibold text-gray-700 flex items-center gap-2">
                 <Users className="w-4 h-4 text-gray-400" />
-                Waiting Rooms
+                Available Rooms
               </h3>
               <button onClick={loadRooms} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition">
                 <RefreshCw className="w-4 h-4" />
@@ -436,11 +474,16 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                       </p>
                     </div>
                     <button
-                      onClick={() => void joinRoom(room.id)}
-                      disabled={loading || room.creator_id === profile?.id}
+                      onClick={() => {
+                        if (room.creator_id === profile?.id || room.opponent_id === profile?.id) {
+                          setActiveRoom(room);
+                          setStage('waiting');
+                        } else void joinRoom(room.id);
+                      }}
+                      disabled={loading}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white rounded-lg text-xs font-semibold hover:bg-amber-600 transition disabled:opacity-40"
                     >
-                      Join <ChevronRight className="w-3 h-3" />
+                      {room.creator_id === profile?.id || room.opponent_id === profile?.id ? 'Resume' : 'Join'} <ChevronRight className="w-3 h-3" />
                     </button>
                   </div>
                 ))}
