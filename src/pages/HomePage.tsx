@@ -57,18 +57,18 @@ function CalendarWidget({ daysLeft, language, sessions = [], examTargetDate }: {
     d !== null && practiceDates.has(`${year}-${month}-${d}`);
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 dark:bg-slate-900 dark:border-slate-700">
       {/* Countdown */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="text-xs text-gray-500">{translate(language, 'homePage.untilExam')}</p>
-          <p className="text-3xl font-bold text-blue-600">
+          <p className="text-xs text-gray-500 dark:text-slate-400">{translate(language, 'homePage.untilExam')}</p>
+          <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
             {translate(language, 'homePage.daysRemaining', { count: daysLeft })}
           </p>
         </div>
         <button 
           onClick={() => setViewDate(new Date(today.getFullYear(), today.getMonth(), 1))}
-          className="h-10 rounded-full bg-blue-50 px-4 text-sm font-semibold text-blue-600 hover:bg-blue-100 active:bg-blue-200 transition cursor-pointer"
+          className="h-10 rounded-full bg-blue-50 px-4 text-sm font-semibold text-blue-600 hover:bg-blue-100 active:bg-blue-200 transition cursor-pointer dark:bg-slate-800 dark:text-blue-300 dark:hover:bg-slate-700"
           title={translate(language, 'homePage.today')}
         >
           {translate(language, 'homePage.today')}
@@ -77,21 +77,21 @@ function CalendarWidget({ daysLeft, language, sessions = [], examTargetDate }: {
 
       {/* Calendar nav */}
       <div className="flex items-center justify-between mb-3">
-        <button onClick={() => setViewDate(new Date(year, month - 1, 1))} className="p-2 -m-1 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition">
-          <ChevronLeft className="w-4 h-4 text-gray-500" />
+        <button onClick={() => setViewDate(new Date(year, month - 1, 1))} className="p-2 -m-1 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition dark:hover:bg-slate-800">
+          <ChevronLeft className="w-4 h-4 text-gray-500 dark:text-slate-300" />
         </button>
-        <span className="text-sm font-semibold text-gray-700">
+        <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">
           {new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'long' }).format(viewDate)}
         </span>
-        <button onClick={() => setViewDate(new Date(year, month + 1, 1))} className="p-2 -m-1 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition">
-          <ChevronRight className="w-4 h-4 text-gray-500" />
+        <button onClick={() => setViewDate(new Date(year, month + 1, 1))} className="p-2 -m-1 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition dark:hover:bg-slate-800">
+          <ChevronRight className="w-4 h-4 text-gray-500 dark:text-slate-300" />
         </button>
       </div>
 
       {/* Calendar grid */}
       <div className="grid grid-cols-7 gap-0.5">
         {weekDays.map((d, index) => (
-          <div key={d} className={`text-center text-[10px] font-semibold py-1 ${index === 0 ? 'text-red-400' : index === 6 ? 'text-blue-400' : 'text-gray-400'}`}>
+          <div key={d} className={`text-center text-[10px] font-semibold py-1 ${index === 0 ? 'text-red-400' : index === 6 ? 'text-blue-400' : 'text-gray-400 dark:text-slate-400'}`}>
             {d}
           </div>
         ))}
@@ -106,8 +106,8 @@ function CalendarWidget({ daysLeft, language, sessions = [], examTargetDate }: {
                 : isExamDay(d)
                 ? 'bg-red-500 text-white font-bold border border-red-600 ring-2 ring-red-300'
                 : hasPractice(d)
-                ? 'bg-emerald-100 text-emerald-700 font-semibold border border-emerald-300'
-                : 'hover:bg-gray-50 text-gray-600 cursor-pointer'
+                ? 'bg-emerald-100 text-emerald-700 font-semibold border border-emerald-300 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-700'
+                : 'hover:bg-gray-50 text-gray-600 cursor-pointer dark:text-slate-200 dark:hover:bg-slate-800'
             }`}
             title={isExamDay(d) ? 'Exam Day 📝' : hasPractice(d) ? 'Practice session' : ''}
           >
@@ -130,23 +130,23 @@ function StatsCard({ sessions, examSessions, language }: { sessions: PracticePro
     : 0;
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-      <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 dark:bg-slate-900 dark:border-slate-700">
+      <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2 dark:text-slate-200">
         <TrendingUp className="w-4 h-4 text-blue-500" />
         {translate(language, 'homePage.learningStats')}
       </h3>
       <div className="grid grid-cols-3 gap-3">
         <div className="text-center">
-          <p className="text-2xl font-bold text-blue-600">{totalPractice}</p>
-          <p className="text-[10px] text-gray-400 mt-0.5">{translate(language, 'homePage.practice')}</p>
+          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{totalPractice}</p>
+          <p className="text-[10px] text-gray-400 mt-0.5 dark:text-slate-400">{translate(language, 'homePage.practice')}</p>
         </div>
-        <div className="text-center border-x border-gray-100">
-          <p className="text-2xl font-bold text-emerald-500">{accuracy}%</p>
-          <p className="text-[10px] text-gray-400 mt-0.5">{translate(language, 'homePage.accuracy')}</p>
+        <div className="text-center border-x border-gray-100 dark:border-slate-700">
+          <p className="text-2xl font-bold text-emerald-500 dark:text-emerald-400">{accuracy}%</p>
+          <p className="text-[10px] text-gray-400 mt-0.5 dark:text-slate-400">{translate(language, 'homePage.accuracy')}</p>
         </div>
         <div className="text-center">
-          <p className="text-2xl font-bold text-amber-500">{examCount > 0 ? `${avgExamScore}%` : '—'}</p>
-          <p className="text-[10px] text-gray-400 mt-0.5">{translate(language, 'homePage.examAvg')}</p>
+          <p className="text-2xl font-bold text-amber-500 dark:text-amber-400">{examCount > 0 ? `${avgExamScore}%` : '—'}</p>
+          <p className="text-[10px] text-gray-400 mt-0.5 dark:text-slate-400">{translate(language, 'homePage.examAvg')}</p>
         </div>
       </div>
     </div>
@@ -162,11 +162,11 @@ function getFeatures(language: Language) {
     title: translate(language, 'homePage.practice2'),
     description: translate(language, 'homePage.practiceBySubjectAndSteadilyImproveYourSkills'),
     cta: translate(language, 'homePage.startPractice'),
-    bgClass: 'from-blue-50 to-blue-100/50',
-    iconBg: 'bg-blue-100',
-    iconColor: 'text-blue-600',
-    ctaClass: 'bg-blue-600 hover:bg-blue-700',
-    badgeClass: 'bg-blue-100 text-blue-600',
+    bgClass: 'from-[#E8F0FF] to-[#F7F9FF]',
+    iconBg: 'bg-[#E8F0FF]',
+    iconColor: 'text-[#4F7DF3]',
+    ctaClass: 'bg-[#4F7DF3] hover:bg-[#3159C9]',
+    badgeClass: 'bg-[#E8F0FF] text-[#4F7DF3]',
   },
   {
     page: 'mock-exam' as Page,
@@ -175,11 +175,11 @@ function getFeatures(language: Language) {
     title: translate(language, 'homePage.mockExam'),
     description: translate(language, 'homePage.checkYourLevelWithATimedExamFormat'),
     cta: translate(language, 'homePage.takeExam'),
-    bgClass: 'from-emerald-50 to-emerald-100/50',
-    iconBg: 'bg-emerald-100',
-    iconColor: 'text-emerald-600',
-    ctaClass: 'bg-emerald-600 hover:bg-emerald-700',
-    badgeClass: 'bg-emerald-100 text-emerald-600',
+    bgClass: 'from-[#D8F4EF] to-[#F7F9FF]',
+    iconBg: 'bg-[#D8F4EF]',
+    iconColor: 'text-[#18B89A]',
+    ctaClass: 'bg-[#18B89A] hover:bg-[#0D9E82]',
+    badgeClass: 'bg-[#D8F4EF] text-[#18B89A]',
   },
   {
     page: 'battle' as Page,
@@ -188,11 +188,11 @@ function getFeatures(language: Language) {
     title: translate(language, 'homePage.battle'),
     description: translate(language, 'homePage.challengeOthersAndSharpenYourSkills'),
     cta: translate(language, 'homePage.startBattle'),
-    bgClass: 'from-amber-50 to-amber-100/50',
-    iconBg: 'bg-amber-100',
-    iconColor: 'text-amber-600',
-    ctaClass: 'bg-amber-500 hover:bg-amber-600',
-    badgeClass: 'bg-amber-100 text-amber-600',
+    bgClass: 'from-[#FFE8CF] to-[#F7F9FF]',
+    iconBg: 'bg-[#FFE8CF]',
+    iconColor: 'text-[#F5A623]',
+    ctaClass: 'bg-[#F5A623] hover:bg-[#D98B00]',
+    badgeClass: 'bg-[#FFE8CF] text-[#F5A623]',
   },
   {
     page: 'ai-chat' as Page,
@@ -201,11 +201,11 @@ function getFeatures(language: Language) {
     title: translate(language, 'homePage.aiChat'),
     description: translate(language, 'homePage.askAiAboutUnclearProblemsOrStudyPlans'),
     cta: translate(language, 'homePage.askAi'),
-    bgClass: 'from-violet-50 to-fuchsia-100/50',
-    iconBg: 'bg-violet-100',
-    iconColor: 'text-violet-600',
-    ctaClass: 'bg-violet-600 hover:bg-violet-700',
-    badgeClass: 'bg-violet-100 text-violet-600',
+    bgClass: 'from-[#E9E9FF] to-[#F7F9FF]',
+    iconBg: 'bg-[#E9E9FF]',
+    iconColor: 'text-[#A8A7F5]',
+    ctaClass: 'bg-[#A8A7F5] hover:bg-[#8D8BEF]',
+    badgeClass: 'bg-[#E9E9FF] text-[#A8A7F5]',
   },
   {
     page: 'materials' as Page,
@@ -214,11 +214,11 @@ function getFeatures(language: Language) {
     title: translate(language, 'homePage.materials'),
     description: translate(language, 'homePage.studentsCanCheckMaterialsAnytimeMakingInformationSharing'),
     cta: translate(language, 'homePage.viewMaterials'),
-    bgClass: 'from-sky-50 to-cyan-100/50',
-    iconBg: 'bg-sky-100',
-    iconColor: 'text-sky-600',
-    ctaClass: 'bg-sky-600 hover:bg-sky-700',
-    badgeClass: 'bg-sky-100 text-sky-600',
+    bgClass: 'from-[#E8F0FF] to-[#F7F9FF]',
+    iconBg: 'bg-[#E8F0FF]',
+    iconColor: 'text-[#4F7DF3]',
+    ctaClass: 'bg-[#4F7DF3] hover:bg-[#3159C9]',
+    badgeClass: 'bg-[#E8F0FF] text-[#4F7DF3]',
   },
   ];
 }
@@ -278,44 +278,49 @@ export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
           {/* Main content */}
           <div className="flex-1 space-y-5">
             {/* Feature cards */}
-            {features.map(({ page, icon: Icon, title, description, cta, bgClass, iconBg, iconColor, ctaClass }) => (
-              <div
-                key={page}
-                className={`bg-gradient-to-r ${bgClass} rounded-2xl border border-gray-100 p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 group cursor-pointer hover:shadow-md transition-all min-h-[120px] w-full items-center justify-center`}
-                onClick={() => onNavigate(page)}
-              >
-                <div className="flex flex-col items-center sm:items-start sm:flex-row sm:gap-5 gap-3 w-full sm:w-auto">
-                  <div className={`w-11 h-11 sm:w-14 sm:h-14 shrink-0 ${iconBg} rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                    <Icon className={`w-5 h-5 sm:w-7 sm:h-7 ${iconColor}`} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {features.map(({ page, icon: Icon, title, description, cta, bgClass, iconBg, iconColor, ctaClass }) => (
+                <div
+                  key={page}
+                  className={`${page === 'materials' ? 'md:col-span-2' : ''} feature-card card-soft ${page === 'practice-list' ? 'border-0 shadow-none' : ''} bg-gradient-to-r ${bgClass} rounded-2xl p-4 sm:p-6 flex items-center justify-between gap-4 group cursor-pointer hover:shadow-md transition-all ${page === 'materials' ? 'min-h-[160px]' : 'min-h-[120px]'}`}
+                  onClick={() => onNavigate(page)}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`feature-icon ${iconBg} rounded-2xl flex items-center justify-center`}>
+                      <Icon className={`w-5 h-5 sm:w-7 sm:h-7 ${iconColor}`} />
+                    </div>
+                    <div className="text-left">
+                      <h2 className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100">{title}</h2>
+                      <p className="text-xs sm:text-sm text-slate-600 mt-0.5 max-w-md dark:text-slate-300">{description}</p>
+                    </div>
                   </div>
-                  <div className="text-center sm:text-left">
-                    <h2 className="text-lg sm:text-xl font-bold text-gray-800">{title}</h2>
-                    <p className="text-xs sm:text-sm text-gray-500 mt-0.5 max-w-md">{description}</p>
+                  <div className="flex-shrink-0">
+                    <button
+                      onClick={e => { e.stopPropagation(); onNavigate(page); }}
+                      aria-label={cta}
+                      title={cta}
+                      className={`${ctaClass} feature-cta text-white px-3 py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-center`}
+                    >
+                      <ArrowRight className="w-5 h-5" />
+                    </button>
                   </div>
                 </div>
-                <button
-                  onClick={e => { e.stopPropagation(); onNavigate(page); }}
-                  className={`${ctaClass} text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 shrink-0 w-full sm:w-auto`}
-                >
-                  {cta}
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
+              ))}
+            </div>
 
             {/* Recent activity */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-              <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                <Clock className="w-4 h-4 text-gray-400" />
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 dark:bg-slate-900 dark:border-slate-700">
+              <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2 dark:text-slate-200">
+                <Clock className="w-4 h-4 text-gray-400 dark:text-slate-300" />
                 {translate(language, 'homePage.recentActivity')}
               </h3>
               {recentSessions.length === 0 ? (
                 <div className="text-center py-8">
-                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Layers className="w-6 h-6 text-gray-400" />
+                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 dark:bg-slate-800">
+                    <Layers className="w-6 h-6 text-gray-400 dark:text-slate-300" />
                   </div>
-                  <p className="text-sm text-gray-400">{translate(language, 'homePage.noStudyHistoryYet')}</p>
-                  <button onClick={() => onNavigate('practice-list')} className="mt-3 text-blue-600 text-xs font-medium hover:underline">
+                  <p className="text-sm text-gray-400 dark:text-slate-300">{translate(language, 'homePage.noStudyHistoryYet')}</p>
+                  <button onClick={() => onNavigate('practice-list')} className="mt-3 text-blue-600 text-xs font-medium hover:underline dark:text-blue-300">
                     {translate(language, 'homePage.startPractice2')} →
                   </button>
                 </div>
@@ -324,17 +329,17 @@ export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
                   {recentSessions.map(s => {
                     const pct = s.answered_count > 0 ? Math.round((s.correct_answers / s.answered_count) * 100) : 0;
                     return (
-                      <div key={s.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-xl">
+                      <div key={s.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-xl dark:bg-slate-800">
                         <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-700">
+                          <p className="text-sm font-medium text-gray-700 dark:text-slate-100">
                             {translate(language, 'homePage.practiceQuestionCount', { count: s.answered_count })}
                           </p>
-                          <p className="text-xs text-gray-400">
+                          <p className="text-xs text-gray-400 dark:text-slate-400">
                             {new Date(s.created_at).toLocaleDateString(languageLocales[language])}
                           </p>
                         </div>
-                        <span className={`text-sm font-bold ${pct >= 70 ? 'text-emerald-600' : pct >= 50 ? 'text-amber-500' : 'text-red-500'}`}>
+                        <span className={`text-sm font-bold ${pct >= 70 ? 'text-emerald-600 dark:text-emerald-400' : pct >= 50 ? 'text-amber-500 dark:text-amber-400' : 'text-red-500 dark:text-red-400'}`}>
                           {pct}%
                         </span>
                       </div>

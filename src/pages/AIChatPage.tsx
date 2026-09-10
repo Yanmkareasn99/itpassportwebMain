@@ -27,7 +27,13 @@ function ChatBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === 'user';
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm whitespace-pre-wrap break-words text-sm leading-6 ${isUser ? 'bg-blue-600 text-white' : 'bg-white border border-gray-100 text-gray-700'}`}>
+      <div
+        className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm whitespace-pre-wrap break-words text-sm leading-6 ${
+          isUser
+            ? 'bg-blue-600 text-white'
+            : 'bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 text-gray-700 dark:text-slate-100'
+        }`}
+      >
         {message.content}
       </div>
     </div>
@@ -189,20 +195,20 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
       subtitle={translate(language, 'aiChatPage.studyAssistant')}
     >
       <div className="max-w-5xl mx-auto grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col min-h-[70vh] overflow-hidden">
-          <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-violet-50">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm flex flex-col min-h-[70vh] overflow-hidden">
+          <div className="p-5 border-b border-gray-100 dark:border-slate-700 bg-gradient-to-r from-blue-50 to-violet-50 dark:from-slate-800 dark:to-slate-900">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div className="min-w-0">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/80 text-blue-600 text-xs font-semibold mb-3">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/80 dark:bg-slate-800 text-blue-600 dark:text-blue-300 text-xs font-semibold mb-3">
                   <Sparkles className="w-3.5 h-3.5" />
                   {translate(language, 'aiChatPage.studyAssistant')}
                 </div>
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{translate(language, 'aiChatPage.heroTitle')}</h2>
-                <p className="text-sm text-gray-500 mt-1">{translate(language, 'aiChatPage.heroDescription')}</p>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-slate-100">{translate(language, 'aiChatPage.heroTitle')}</h2>
+                <p className="text-sm text-gray-500 dark:text-slate-300 mt-1">{translate(language, 'aiChatPage.heroDescription')}</p>
               </div>
               <button
                 onClick={() => void resetChat()}
-                className="shrink-0 self-start inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition whitespace-nowrap"
+                className="shrink-0 self-start inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm font-medium text-gray-600 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition whitespace-nowrap"
               >
                 <RotateCcw className="w-4 h-4" />
                 {translate(language, 'aiChatPage.reset')}
@@ -210,11 +216,11 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
             </div>
           </div>
 
-          <div className="flex-1 p-5 space-y-4 bg-gray-50 overflow-y-auto">
+          <div className="flex-1 p-5 space-y-4 bg-gray-50 dark:bg-slate-950 overflow-y-auto">
             {messages.map(message => <ChatBubble key={message.id} message={message} />)}
             {sending && (
               <div className="flex justify-start">
-                <div className="bg-white border border-gray-100 rounded-2xl px-4 py-3 text-sm text-gray-400 flex items-center gap-2 shadow-sm">
+                <div className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl px-4 py-3 text-sm text-gray-400 dark:text-slate-300 flex items-center gap-2 shadow-sm">
                   <MessageCircle className="w-4 h-4 animate-pulse" />
                   {translate(language, 'aiChatPage.thinking')}
                 </div>
@@ -223,7 +229,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
             <div ref={bottomRef} />
           </div>
 
-          <div className="p-4 border-t border-gray-100 bg-white">
+          <div className="p-4 border-t border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-900">
             <form
               className="flex items-end gap-3"
               onSubmit={e => {
@@ -243,7 +249,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
                 placeholder={
                   translate(language, 'aiChatPage.exampleExplainThisQuestionCreateAStudyPlan')
                 }
-                className="flex-1 resize-none min-h-[56px] max-h-40 px-4 py-3 rounded-2xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                className="flex-1 resize-none min-h-[56px] max-h-40 px-4 py-3 rounded-2xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-gray-700 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                 rows={2}
               />
               <button
@@ -259,8 +265,8 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
         </div>
 
         <div className="space-y-4">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <div className="flex items-center gap-2 mb-3 text-gray-700 font-semibold">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm p-5">
+            <div className="flex items-center gap-2 mb-3 text-gray-700 dark:text-slate-200 font-semibold">
               <Lightbulb className="w-4 h-4 text-amber-500" />
               {translate(language, 'aiChatPage.quickQuestions')}
             </div>
@@ -269,7 +275,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
                 <button
                   key={item}
                   onClick={() => void sendMessage(item)}
-                  className="w-full text-left px-3 py-2.5 rounded-xl bg-gray-50 text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition"
+                  className="w-full text-left px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-slate-800 text-sm text-gray-600 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-slate-700 hover:text-blue-700 dark:hover:text-blue-300 transition"
                 >
                   {item}
                 </button>

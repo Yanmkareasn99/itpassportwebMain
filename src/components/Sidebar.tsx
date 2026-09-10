@@ -25,7 +25,7 @@ export default function Sidebar({
   currentPage,
   onNavigate,
 }: SidebarProps) {
-  const { profile, isAdmin, signOut } = useAuth();
+  const { isAdmin, signOut } = useAuth();
   const { language } = useLanguage();
 
   const navItems = [
@@ -72,37 +72,12 @@ export default function Sidebar({
 
       {/* Logo */}
 
-      <div className="h-16 flex items-center gap-3 px-5 border-b">
-        <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center">
-          <BookOpen className="w-5 h-5 text-white" />
-        </div>
-
-        <span className="text-xl font-bold text-blue-600">
-          マナビ
-        </span>
-      </div>
-
-      {/* User */}
-
-      <div className="px-5 py-4 border-b">
+      <div className="h-20 flex items-center justify-center border-b px-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
-            {profile?.name?.charAt(0) ?? "U"}
+          <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center">
+            <BookOpen className="w-5 h-5 text-white" />
           </div>
-
-          <div className="min-w-0">
-            <p className="font-semibold truncate">
-              {profile?.name ?? translate(language, 'sidebar.guest')}
-            </p>
-
-            <p className="text-xs text-gray-500 truncate">
-              {profile?.student_id
-                ? profile.student_id
-                : profile?.role === "teacher"
-                ? translate(language, 'sidebar.teacher')
-                : translate(language, 'sidebar.student')}
-            </p>
-          </div>
+          <span className="text-xl font-bold text-blue-600">マナビ</span>
         </div>
       </div>
 

@@ -62,7 +62,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   const submittingAnswer = useRef(false);
   const completingBattle = useRef(false);
   const refreshingRoom = useRef(false);
-  const advanceTimer = useRef<ReturnType<typeof window.setTimeout>>();
+  const advanceTimer = useRef<number | undefined>(undefined);
   const activeRoomId = activeRoom?.id;
   const currentRoomId = useRef(activeRoomId);
   currentRoomId.current = activeRoomId;

@@ -38,6 +38,7 @@ const MAIN_CATEGORIES = [
     iconColor: 'text-blue-500',
     labelColor: 'text-blue-600',
     dotColor: 'bg-blue-500',
+    borderless: true,
     subjectIds: ['cc000001-0000-0000-0000-000000000001'],
   },
   {
@@ -50,6 +51,7 @@ const MAIN_CATEGORIES = [
     iconColor: 'text-emerald-500',
     labelColor: 'text-emerald-600',
     dotColor: 'bg-emerald-500',
+    borderless: true,
     subjectIds: ['cc000002-0000-0000-0000-000000000001'],
   },
   {
@@ -62,6 +64,7 @@ const MAIN_CATEGORIES = [
     iconColor: 'text-amber-500',
     labelColor: 'text-amber-600',
     dotColor: 'bg-amber-500',
+    borderless: true,
     subjectIds: ['cc000003-0000-0000-0000-000000000001'],
   },
 ];
@@ -86,6 +89,7 @@ interface PracticeCategory {
   bgColor: string;
   iconColor: string;
   labelColor: string;
+  borderless?: boolean;
   dotColor: string;
   subjectIds: string[];
 }
@@ -122,7 +126,7 @@ function CategoryCard({
     <button
       onClick={onStart}
       disabled={loading || stats.questionCount === 0}
-      className={`w-full min-w-0 ${category.bgColor} border-2 ${category.borderColor} rounded-2xl p-4 sm:p-5 text-left hover:shadow-md transition-all group disabled:opacity-50 disabled:cursor-not-allowed`}
+      className={`w-full min-w-0 ${category.bgColor} ${category.borderless ? 'border-0 shadow-none' : `border-2 ${category.borderColor} hover:shadow-md`} rounded-2xl p-4 sm:p-5 text-left transition-all group disabled:opacity-50 disabled:cursor-not-allowed`}
     >
       <div className="flex items-center gap-2.5 mb-3">
         <div className={`w-8 h-8 rounded-full ${category.dotColor} flex items-center justify-center`}>
