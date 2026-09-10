@@ -20,16 +20,16 @@ export default function Layout({
   subtitle,
 }: LayoutProps) {
   return (
-    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 overflow-x-hidden">
       <Sidebar
         currentPage={currentPage}
         onNavigate={onNavigate}
       />
 
-      <div className="md:ml-56 min-h-screen flex flex-col">
+      <div className="md:ml-56 min-h-screen flex flex-col dark:bg-slate-950">
         <Header title={title} subtitle={subtitle} />
 
-        <main className="flex-1 p-4 sm:p-5 lg:p-6 pb-24 md:pb-6 overflow-x-hidden">
+        <main className="flex-1 p-4 sm:p-5 lg:p-6 pb-24 md:pb-6 overflow-x-hidden dark:bg-slate-950">
           {children}
         </main>
       </div>
