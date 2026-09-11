@@ -32,6 +32,14 @@ export interface PdfImportResult {
   answerCount: number;
 }
 
+export function inferQuestionDifficulty(questionNumber: number) {
+  if (questionNumber >= 80) return 5;
+  if (questionNumber >= 60) return 4;
+  if (questionNumber >= 30) return 3;
+  if (questionNumber >= 10) return 2;
+  return 1;
+}
+
 interface PageText {
   pageNumber: number;
   text: string;
@@ -351,7 +359,7 @@ export async function processExamPdfs(
         choices,
         correctChoice,
         explanation: '',
-        difficulty: 2,
+        difficulty: inferQuestionDifficulty(start.number),
         points: 1,
         warnings,
       });

@@ -1,5 +1,6 @@
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import type { PdfImportQuestion, PdfImportResult } from './pdfQuestionImport';
+import { inferQuestionDifficulty } from './pdfQuestionImport';
 
 interface OcrLine {
   text: string;
@@ -400,7 +401,7 @@ export async function processScannedExamPdfs(
         })),
         correctChoice,
         explanation: '',
-        difficulty: 2,
+        difficulty: inferQuestionDifficulty(start.number),
         points: 1,
         warnings: correctChoice ? [] : ['Correct answer not detected. Select it below.'],
       });

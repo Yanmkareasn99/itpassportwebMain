@@ -86,6 +86,19 @@ export interface ProfilePoints {
   updated_at: string;
 }
 
+export interface StudyMaterial {
+  id: string;
+  title: string;
+  description: string | null;
+  file_name: string;
+  file_path: string;
+  file_size: number;
+  mime_type: string;
+  uploaded_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PointSetting {
   key: string;
   value: number;
