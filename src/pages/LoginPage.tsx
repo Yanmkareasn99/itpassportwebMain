@@ -35,6 +35,12 @@ export default function LoginPage() {
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
   const text = {
+    brand: translate(language, 'loginPage.brand'),
+    eyebrow: translate(language, 'loginPage.eyebrow'),
+    headline: translate(language, 'loginPage.headline'),
+    featureFocusedStudy: translate(language, 'loginPage.featureFocusedStudy'),
+    featureDailyPreparation: translate(language, 'loginPage.featureDailyPreparation'),
+    featureAiReview: translate(language, 'loginPage.featureAiReview'),
     subtitle: translate(language, 'loginPage.osakaDenshiLearningSupportSystem'),
     login: translate(language, 'loginPage.signIn'),
     signup: translate(language, 'loginPage.createAccount'),
@@ -52,6 +58,8 @@ export default function LoginPage() {
     signupError: translate(language, 'loginPage.failedToCreateAccount'),
     registeredEmailError: translate(language, 'loginPage.emailAlreadyRegistered'),
     confirmationSent: translate(language, 'loginPage.confirmationEmailSentConfirmYourEmailThenSign'),
+    showPassword: translate(language, 'loginPage.showPassword'),
+    hidePassword: translate(language, 'loginPage.hidePassword'),
   };
 
   async function handleSubmit(e: React.FormEvent) {
@@ -104,13 +112,13 @@ export default function LoginPage() {
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15">
                   <BookOpen className="h-5 w-5 text-white" />
                 </div>
-                <span className="text-xl font-bold tracking-tight">マナビ</span>
+                <span className="text-xl font-bold tracking-tight">{text.brand}</span>
               </div>
 
               <div className="mt-10 space-y-6">
                 <div>
-                  <p className="text-sm font-medium uppercase tracking-[0.18em] text-blue-100">学習をもっとスマートに</p>
-                  <h1 className="mt-3 text-4xl font-black leading-tight text-white">より明確に学び、自信を育てましょう</h1>
+                  <p className="text-sm font-medium uppercase tracking-[0.18em] text-blue-100">{text.eyebrow}</p>
+                  <h1 className="mt-3 text-3xl font-black leading-tight text-white">{text.headline}</h1>
                 </div>
 
                 <p className="max-w-md text-sm leading-6 text-blue-50/90">
@@ -121,9 +129,9 @@ export default function LoginPage() {
 
             <div className="relative z-10 space-y-4">
               { [
-                '分野ごとに学習して着実に上達',
-                '毎日で試験準備を管理',
-                '弱点をAIと一緒に見直し',
+                text.featureFocusedStudy,
+                text.featureDailyPreparation,
+                text.featureAiReview,
               ].map(item => (
                 <div key={item} className="flex items-center gap-3 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 backdrop-blur-sm shadow-lg shadow-blue-950/10">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-sm font-bold">✓</div>
@@ -140,7 +148,7 @@ export default function LoginPage() {
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-500/25">
                     <BookOpen className="h-5 w-5 text-white" />
                   </div>
-                  <span className="text-2xl font-bold text-blue-600">マナビ</span>
+                  <span className="text-2xl font-bold text-blue-600">{text.brand}</span>
                 </div>
 
                 <h2 className="text-2xl font-bold text-slate-800 text-center">
@@ -227,7 +235,7 @@ export default function LoginPage() {
                     />
                     <button
                       type="button"
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      aria-label={showPassword ? text.hidePassword : text.showPassword}
                       onClick={() => setShowPassword(prev => !prev)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
                     >
