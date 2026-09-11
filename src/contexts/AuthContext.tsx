@@ -4,12 +4,16 @@ import { isSupabaseEnabled, supabase } from '../lib/supabase';
 import { claimDailyLoginPoints } from '../lib/points';
 import { Profile } from '../types';
 
+export type PasswordRecoveryState = 'idle' | 'pending' | 'valid' | 'invalid';
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
   isAdmin: boolean;
+
+  passwordRecoveryState: PasswordRecoveryState;
 
   signIn: (email: string, password: string) => Promise<void>;
 
@@ -21,6 +25,8 @@ interface AuthContextType {
 
   updatePassword: (password: string) => Promise<void>;
 
+  clearPasswordRecovery: () => void;
+
   signOut: () => Promise<void>;
 
   refreshProfile: () => Promise<void>;
@@ -28,6 +34,22 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 const LOCAL_AUTH_KEY = 'manabi-local-auth';
+
+function recoveryRequestInUrl() {
+  const search = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  return search.get('recovery') === '1'
+    || search.get('type') === 'recovery'
+    || hash.get('type') === 'recovery'
+    || hash.has('error')
+    || search.has('error');
+}
+
+function recoveryErrorInUrl() {
+  const search = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  return search.has('error') || hash.has('error') || search.has('error_code') || hash.has('error_code');
+}
 
 function makeLocalProfile(email: string, name?: string, studentId?: string | null): Profile {
   return {
@@ -79,6 +101,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [passwordRecoveryState, setPasswordRecoveryState] = useState<PasswordRecoveryState>(() => (
+    isSupabaseEnabled && recoveryRequestInUrl()
+      ? recoveryErrorInUrl() ? 'invalid' : 'pending'
+      : 'idle'
+  ));
 
   async function fetchProfile(userId: string) {
     if (!isSupabaseEnabled) {
@@ -119,6 +146,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    const recoveryRequested = recoveryRequestInUrl();
+    let recoveryValidationTimer: number | undefined;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        window.clearTimeout(recoveryValidationTimer);
+        setPasswordRecoveryState('valid');
+      } else if (event === 'INITIAL_SESSION' && recoveryRequested) {
+        // Supabase queues PASSWORD_RECOVERY immediately after initialization, while
+        // INITIAL_SESSION may reach new subscribers first. Give that event one tick.
+        recoveryValidationTimer = window.setTimeout(() => {
+          setPasswordRecoveryState(current => current === 'valid' ? current : 'invalid');
+        }, 0);
+      }
+
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        claimDailyPointsQuietly(session.user.id);
+        fetchProfile(session.user.id);
+      }
+      else setProfile(null);
+    });
+
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) throw error;
       setSession(session);
@@ -136,17 +186,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        claimDailyPointsQuietly(session.user.id);
-        fetchProfile(session.user.id);
-      }
-      else setProfile(null);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      window.clearTimeout(recoveryValidationTimer);
+      subscription.unsubscribe();
+    };
   }, []);
 
   async function signIn(email: string, password: string) {
@@ -227,9 +270,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!isSupabaseEnabled) {
       throw new Error('Password reset requires Supabase to be enabled.');
     }
+    if (passwordRecoveryState !== 'valid') {
+      throw new Error('Password recovery session is invalid or has expired.');
+    }
 
     const { error } = await supabase.auth.updateUser({ password });
     if (error) throw error;
+    setPasswordRecoveryState('idle');
+  }
+
+  function clearPasswordRecovery() {
+    setPasswordRecoveryState('idle');
   }
 
   async function signInWithGoogle() {
@@ -265,11 +316,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profile,
         loading,
         isAdmin,
+        passwordRecoveryState,
         signIn,
         signInWithGoogle,
         signUp,
         resetPassword,
         updatePassword,
+        clearPasswordRecovery,
         signOut,
         refreshProfile,
       }}

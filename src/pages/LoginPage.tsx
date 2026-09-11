@@ -26,11 +26,12 @@ export default function LoginPage() {
     };
   }, []);
 
-  const { signIn, signUp, signInWithGoogle, resetPassword, updatePassword } = useAuth();
+  const {
+    signIn, signUp, signInWithGoogle, resetPassword, updatePassword,
+    passwordRecoveryState, clearPasswordRecovery,
+  } = useAuth();
   const { language, setLanguage } = useLanguage();
-  const [mode, setMode] = useState<'login' | 'signup' | 'forgot' | 'recovery'>(
-    () => new URLSearchParams(location.search).get('recovery') === '1' ? 'recovery' : 'login',
-  );
+  const [mode, setMode] = useState<'login' | 'signup' | 'forgot' | 'recovery'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -81,7 +82,27 @@ export default function LoginPage() {
     passwordsDoNotMatch: translate(language, 'loginPage.passwordsDoNotMatch'),
     passwordMinimum: translate(language, 'loginPage.passwordMinimum'),
     backToSignIn: translate(language, 'loginPage.backToSignIn'),
+    invalidRecovery: translate(language, 'loginPage.invalidRecoveryLink'),
   };
+
+  useEffect(() => {
+    const search = new URLSearchParams(location.search);
+    const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
+    const recoveryRequested = search.get('recovery') === '1'
+      || search.get('type') === 'recovery'
+      || hash.get('type') === 'recovery'
+      || search.has('error')
+      || hash.has('error');
+
+    if (passwordRecoveryState === 'valid') {
+      setMode('recovery');
+      setError('');
+    } else if (recoveryRequested && passwordRecoveryState === 'invalid') {
+      setMode('login');
+      setError(text.invalidRecovery);
+      navigate('/login', { replace: true });
+    }
+  }, [location.hash, location.search, navigate, passwordRecoveryState, text.invalidRecovery]);
 
   const pageTitle = mode === 'login'
     ? text.login
@@ -124,6 +145,7 @@ export default function LoginPage() {
           return;
         }
         await updatePassword(password);
+        clearPasswordRecovery();
         navigate('/', { replace: true });
       } else if (mode === 'login') {
         await signIn(email, password);
@@ -391,7 +413,10 @@ export default function LoginPage() {
                   onClick={() => {
                     if (mode === 'login') setMode('signup');
                     else if (mode === 'signup' || mode === 'forgot') setMode('login');
-                    else navigate('/login', { replace: true });
+                    else {
+                      clearPasswordRecovery();
+                      navigate('/login', { replace: true });
+                    }
                     setError('');
                     setNotice('');
                   }}

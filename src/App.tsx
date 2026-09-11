@@ -68,13 +68,13 @@ function AdminRoute({ children }: { children: JSX.Element }) {
   return children;
 }
 
-function LoginRoute() {
-  const { user, loading } = useAuth();
-  const location = useLocation();
-  const isPasswordRecovery = new URLSearchParams(location.search).get('recovery') === '1';
+export function LoginRoute() {
+  const { user, loading, passwordRecoveryState } = useAuth();
 
   if (loading) return <LoadingScreen />;
-  if (user && !isPasswordRecovery) return <Navigate to="/" replace />;
+  if (user && (passwordRecoveryState === 'idle' || passwordRecoveryState === 'invalid')) {
+    return <Navigate to="/" replace />;
+  }
 
   return <LoginPage />;
 }

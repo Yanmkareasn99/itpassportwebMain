@@ -110,6 +110,9 @@ export async function updatePointSetting(key: string, value: number) {
 }
 
 export async function createOnlineBattleRoom(wager: number, questionCount: number, secondsPerQuestion = 30) {
+  if (!Number.isInteger(wager) || wager < 0) {
+    throw new Error('Wager must be a non-negative integer.');
+  }
   if (!Number.isInteger(questionCount) || questionCount < 1 || questionCount > 20) throw new Error('Question count must be between 1 and 20.');
   if (!Number.isInteger(secondsPerQuestion) || secondsPerQuestion < 5 || secondsPerQuestion > 300) throw new Error('Time per question must be between 5 and 300 seconds.');
   const { data, error } = await supabase.rpc('create_battle_room', {

@@ -5,7 +5,8 @@ import BattlePage from '../../src/pages/BattlePage';
 const mocks = vi.hoisted(() => ({
   room: { id: 'room-1', creator_id: 'me', opponent_id: 'them', status: 'active', question_ids: ['q1'], time_per_question_seconds: 30, wager_points: 0, creator_score: 0, opponent_score: 0, created_at: new Date().toISOString() },
   answers: [] as Array<{ user_id: string; question_id: string; selected_choice_id: string | null; is_correct: boolean }>,
-  create: vi.fn(), submit: vi.fn(), complete: vi.fn(), channel: vi.fn(),
+  balance: 100,
+  create: vi.fn(), cancel: vi.fn(), submit: vi.fn(), complete: vi.fn(), channel: vi.fn(),
 }));
 vi.mock('../../src/contexts/AuthContext', () => {
   const auth = { profile: { id: 'me', name: 'Me' } };
@@ -15,8 +16,8 @@ vi.mock('../../src/contexts/LanguageContext', () => ({ useLanguage: () => ({ lan
 vi.mock('../../src/components/Layout', () => ({ default: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
 vi.mock('../../src/components/QuestionMedia', () => ({ QuestionImage: () => null, AnswerChoiceContent: () => <span>Answer A</span> }));
 vi.mock('../../src/lib/points', () => ({
-  getPointBalance: async () => ({ balance: 100 }),
-  createOnlineBattleRoom: mocks.create, joinOnlineBattleRoom: vi.fn(), cancelOnlineBattleRoom: vi.fn(),
+  getPointBalance: async () => ({ balance: mocks.balance }),
+  createOnlineBattleRoom: mocks.create, joinOnlineBattleRoom: vi.fn(), cancelOnlineBattleRoom: mocks.cancel,
   submitOnlineBattleAnswer: mocks.submit, completeOnlineBattleRoom: mocks.complete,
 }));
 vi.mock('../../src/lib/supabase', () => ({
@@ -51,6 +52,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.clearAllMocks();
   mocks.room.status = 'active';
+  mocks.balance = 100;
   mocks.room.time_per_question_seconds = 30;
   mocks.room.creator_id = 'me';
   mocks.room.opponent_id = 'them';
@@ -61,6 +63,7 @@ beforeEach(() => {
     return { ...mocks.room };
   });
   mocks.create.mockImplementation(async () => ({ ...mocks.room }));
+  mocks.cancel.mockResolvedValue({ ...mocks.room, status: 'completed' });
   mocks.complete.mockImplementation(async () => { mocks.room.status = 'completed'; return { ...mocks.room, winner_id: 'them' }; });
 });
 afterEach(() => { vi.useRealTimers(); });
@@ -141,6 +144,64 @@ it('allows the wager to be cleared before entering a new value', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Create Room' }));
   await flush();
   expect(mocks.create).toHaveBeenCalledWith(100, 5, 30);
+});
+
+it('accepts a zero wager', async () => {
+  mocks.room.status = 'waiting';
+  render(<BattlePage currentPage="battle" onNavigate={() => {}} />);
+  await flush();
+  fireEvent.change(screen.getByLabelText('Wager points'), { target: { value: '0' } });
+  const button = screen.getByRole('button', { name: 'Create Room' }) as HTMLButtonElement;
+  expect(button.disabled).toBe(false);
+  fireEvent.click(button);
+  await flush();
+  expect(mocks.create).toHaveBeenCalledWith(0, 5, 30);
+});
+
+it.each(['-1', '1.5'])('rejects an invalid wager of %s', async value => {
+  mocks.room.status = 'waiting';
+  render(<BattlePage currentPage="battle" onNavigate={() => {}} />);
+  await flush();
+  fireEvent.change(screen.getByLabelText('Wager points'), { target: { value } });
+  expect((screen.getByRole('button', { name: 'Create Room' }) as HTMLButtonElement).disabled).toBe(true);
+});
+
+it('rejects a wager above the current balance with a clear message', async () => {
+  mocks.balance = 25;
+  render(<BattlePage currentPage="battle" onNavigate={() => {}} />);
+  await flush();
+  fireEvent.change(screen.getByLabelText('Wager points'), { target: { value: '26' } });
+  expect(screen.getByText('Insufficient points')).toBeTruthy();
+  expect((screen.getByRole('button', { name: 'Create Room' }) as HTMLButtonElement).disabled).toBe(true);
+});
+
+it('guards concurrent create-room submissions', async () => {
+  let resolveCreate: ((room: typeof mocks.room) => void) | undefined;
+  mocks.create.mockImplementationOnce(() => new Promise(resolve => { resolveCreate = resolve; }));
+  render(<BattlePage currentPage="battle" onNavigate={() => {}} />);
+  await flush();
+  const button = screen.getByRole('button', { name: 'Create Room' });
+  fireEvent.click(button);
+  fireEvent.click(button);
+  expect(mocks.create).toHaveBeenCalledTimes(1);
+  resolveCreate?.({ ...mocks.room });
+  await flush();
+});
+
+it('submits exactly one cancellation for repeated refund clicks', async () => {
+  mocks.room.status = 'waiting';
+  let resolveCancel: ((room: typeof mocks.room) => void) | undefined;
+  mocks.cancel.mockImplementationOnce(() => new Promise(resolve => { resolveCancel = resolve; }));
+  render(<BattlePage currentPage="battle" onNavigate={() => {}} />);
+  await flush();
+  fireEvent.click(screen.getByRole('button', { name: 'Create Room' }));
+  await flush();
+  const cancel = screen.getByRole('button', { name: 'Cancel and Refund' });
+  fireEvent.click(cancel);
+  fireEvent.click(cancel);
+  expect(mocks.cancel).toHaveBeenCalledTimes(1);
+  resolveCancel?.({ ...mocks.room, status: 'completed' });
+  await flush();
 });
 
 it.each(['creator', 'opponent'])('uses the room time limit for the %s', async role => {

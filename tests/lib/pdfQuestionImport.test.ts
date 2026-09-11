@@ -10,10 +10,32 @@ describe('PDF answer extraction', () => {
 
     const answers = extractAnswerMap([{ pageNumber: 1, text: rows.join('\n') }]);
 
-    expect(answers).toHaveLength(100);
+    expect(answers.size).toBe(100);
     expect(answers.get(1)).toBe('ア');
     expect(answers.get(26)).toBe('イ');
     expect(answers.get(51)).toBe('ウ');
     expect(answers.get(100)).toBe('エ');
+  });
+
+  it('normalizes full-width digits and accepts joined PDF text items', () => {
+    const answers = extractAnswerMap([{
+      pageNumber: 1,
+      text: '問 １ ア問２イ 問　３　ウ\n問4\nエ',
+    }]);
+
+    expect([...answers.entries()]).toEqual([[1, 'ア'], [2, 'イ'], [3, 'ウ'], [4, 'エ']]);
+  });
+
+  it('maps labels beneath a multiple-column question-number row', () => {
+    const answers = extractAnswerMap([{
+      pageNumber: 1,
+      text: '問 1   問 26   問 51   問 76\nア      イ      ウ      エ',
+    }]);
+
+    expect(answers.size).toBe(4);
+    expect(answers.get(1)).toBe('ア');
+    expect(answers.get(26)).toBe('イ');
+    expect(answers.get(51)).toBe('ウ');
+    expect(answers.get(76)).toBe('エ');
   });
 });
