@@ -79,6 +79,8 @@ export const en = {
   "ui.drawRefund": "Both wagers were refunded.",
   "ui.wonWager": "You won the battle wager.",
   "ui.lostWager": "The opponent won this room.",
+  "ui.pointsAdded": "Added",
+  "ui.pointsDeducted": "Deducted",
   "ui.balance": "Balance: {count} pts",
   "ui.backLobby": "Back to Lobby",
   "ui.waitingFinish": "Waiting for opponent to finish",

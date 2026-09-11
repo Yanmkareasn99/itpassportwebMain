@@ -79,6 +79,8 @@ export const vi = {
   "ui.drawRefund": "Điểm cược đã được hoàn cho cả hai.",
   "ui.wonWager": "Bạn đã thắng điểm cược.",
   "ui.lostWager": "Đối thủ đã thắng trận này.",
+  "ui.pointsAdded": "Cộng thêm",
+  "ui.pointsDeducted": "Bị trừ",
   "ui.balance": "Số dư: {count} điểm",
   "ui.backLobby": "Quay lại sảnh",
   "ui.waitingFinish": "Đang chờ đối thủ hoàn thành",
