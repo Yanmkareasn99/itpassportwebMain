@@ -3,12 +3,15 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { BookOpen, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 function isRegisteredEmailError(message: string) {
   return /user already registered|already registered|already exists/i.test(message);
 }
 
 export default function LoginPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
   useEffect(() => {
     const root = document.documentElement;
     const previousDarkMode = root.classList.contains('dark');
@@ -23,11 +26,14 @@ export default function LoginPage() {
     };
   }, []);
 
-  const { signIn, signUp, signInWithGoogle } = useAuth();
+  const { signIn, signUp, signInWithGoogle, resetPassword, updatePassword } = useAuth();
   const { language, setLanguage } = useLanguage();
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [mode, setMode] = useState<'login' | 'signup' | 'forgot' | 'recovery'>(
+    () => new URLSearchParams(location.search).get('recovery') === '1' ? 'recovery' : 'login',
+  );
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [studentId, setStudentId] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -46,10 +52,16 @@ export default function LoginPage() {
     signup: translate(language, 'loginPage.createAccount'),
     loginHelp: translate(language, 'loginPage.signInToContinueLearning'),
     signupHelp: translate(language, 'loginPage.createANewAccount'),
+    forgotTitle: translate(language, 'loginPage.forgotPasswordTitle'),
+    forgotHelp: translate(language, 'loginPage.forgotPasswordHelp'),
+    recoveryTitle: translate(language, 'loginPage.resetPasswordTitle'),
+    recoveryHelp: translate(language, 'loginPage.resetPasswordHelp'),
     name: translate(language, 'loginPage.name'),
     studentId: translate(language, 'loginPage.studentIdOptional'),
     email: translate(language, 'loginPage.email'),
     password: translate(language, 'loginPage.password'),
+    newPassword: translate(language, 'loginPage.newPassword'),
+    confirmPassword: translate(language, 'loginPage.confirmNewPassword'),
     processing: translate(language, 'loginPage.processing'),
     noAccount: translate(language, 'loginPage.noAccountCreateOne'),
     hasAccount: translate(language, 'loginPage.alreadyHaveAnAccount'),
@@ -60,7 +72,38 @@ export default function LoginPage() {
     confirmationSent: translate(language, 'loginPage.confirmationEmailSentConfirmYourEmailThenSign'),
     showPassword: translate(language, 'loginPage.showPassword'),
     hidePassword: translate(language, 'loginPage.hidePassword'),
+    forgotPassword: translate(language, 'loginPage.forgotPassword'),
+    sendResetLink: translate(language, 'loginPage.sendResetLink'),
+    resetEmailSent: translate(language, 'loginPage.resetEmailSent'),
+    resetEmailError: translate(language, 'loginPage.resetEmailFailed'),
+    updatePassword: translate(language, 'loginPage.updatePassword'),
+    updatePasswordError: translate(language, 'loginPage.updatePasswordFailed'),
+    passwordsDoNotMatch: translate(language, 'loginPage.passwordsDoNotMatch'),
+    passwordMinimum: translate(language, 'loginPage.passwordMinimum'),
+    backToSignIn: translate(language, 'loginPage.backToSignIn'),
   };
+
+  const pageTitle = mode === 'login'
+    ? text.login
+    : mode === 'signup'
+      ? text.signup
+      : mode === 'forgot'
+        ? text.forgotTitle
+        : text.recoveryTitle;
+  const pageHelp = mode === 'login'
+    ? text.loginHelp
+    : mode === 'signup'
+      ? text.signupHelp
+      : mode === 'forgot'
+        ? text.forgotHelp
+        : text.recoveryHelp;
+  const submitLabel = mode === 'login'
+    ? text.login
+    : mode === 'signup'
+      ? text.signup
+      : mode === 'forgot'
+        ? text.sendResetLink
+        : text.updatePassword;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -68,7 +111,21 @@ export default function LoginPage() {
     setNotice('');
     setLoading(true);
     try {
-      if (mode === 'login') {
+      if (mode === 'forgot') {
+        await resetPassword(email);
+        setNotice(text.resetEmailSent);
+      } else if (mode === 'recovery') {
+        if (password.length < 6) {
+          setError(text.passwordMinimum);
+          return;
+        }
+        if (password !== confirmPassword) {
+          setError(text.passwordsDoNotMatch);
+          return;
+        }
+        await updatePassword(password);
+        navigate('/', { replace: true });
+      } else if (mode === 'login') {
         await signIn(email, password);
       } else {
         if (!name.trim()) { setError(text.nameError); setLoading(false); return; }
@@ -81,7 +138,9 @@ export default function LoginPage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (mode === 'login') setError(text.loginError);
-      else setError(isRegisteredEmailError(msg) ? text.registeredEmailError : text.signupError + msg);
+      else if (mode === 'signup') setError(isRegisteredEmailError(msg) ? text.registeredEmailError : text.signupError + msg);
+      else if (mode === 'forgot') setError(text.resetEmailError);
+      else setError(text.updatePasswordError);
     } finally {
       setLoading(false);
     }
@@ -152,10 +211,10 @@ export default function LoginPage() {
                 </div>
 
                 <h2 className="text-2xl font-bold text-slate-800 text-center">
-                  {mode === 'login' ? text.login : text.signup}
+                  {pageTitle}
                 </h2>
                 <p className="mt-2 text-sm text-slate-500 text-center">
-                  {mode === 'login' ? text.loginHelp : text.signupHelp}
+                  {pageHelp}
                 </p>
               </div>
 
@@ -209,9 +268,11 @@ export default function LoginPage() {
                   </>
                 )}
 
+                {mode !== 'recovery' && (
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">{text.email}</label>
+                  <label htmlFor="login-email" className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">{text.email}</label>
                   <input
+                    id="login-email"
                     type="email"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
@@ -220,11 +281,16 @@ export default function LoginPage() {
                     required
                   />
                 </div>
+                )}
 
+                {mode !== 'forgot' && (
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">{text.password}</label>
+                  <label htmlFor="login-password" className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">
+                    {mode === 'recovery' ? text.newPassword : text.password}
+                  </label>
                   <div className="relative">
                     <input
+                      id="login-password"
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={e => setPassword(e.target.value)}
@@ -243,6 +309,39 @@ export default function LoginPage() {
                     </button>
                   </div>
                 </div>
+                )}
+
+                {mode === 'login' && (
+                  <div className="-mt-2 text-right">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode('forgot');
+                        setError('');
+                        setNotice('');
+                      }}
+                      className="text-xs font-semibold text-blue-600 transition hover:text-blue-700 hover:underline"
+                    >
+                      {text.forgotPassword}
+                    </button>
+                  </div>
+                )}
+
+                {mode === 'recovery' && (
+                  <div>
+                    <label htmlFor="login-confirm-password" className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">{text.confirmPassword}</label>
+                    <input
+                      id="login-confirm-password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={e => setConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-100 transition"
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                )}
 
                 {error && (
                   <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-600">
@@ -256,10 +355,11 @@ export default function LoginPage() {
                   disabled={loading}
                   className="mt-2 w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 py-3.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition hover:from-blue-500 hover:to-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {loading ? text.processing : mode === 'login' ? text.login : text.signup}
+                  {loading ? text.processing : submitLabel}
                 </button>
               </form>
 
+              {(mode === 'login' || mode === 'signup') && (
               <div className="mt-5">
                 <div className="relative my-5">
                   <div className="absolute inset-0 flex items-center">
@@ -284,16 +384,20 @@ export default function LoginPage() {
                   </button>
                 </div>
               </div>
+              )}
 
               <div className="mt-6 text-center">
                 <button
                   onClick={() => {
-                    setMode(mode === 'login' ? 'signup' : 'login');
+                    if (mode === 'login') setMode('signup');
+                    else if (mode === 'signup' || mode === 'forgot') setMode('login');
+                    else navigate('/login', { replace: true });
                     setError('');
+                    setNotice('');
                   }}
                   className="text-sm font-semibold text-blue-600 transition hover:text-blue-700"
                 >
-                  {mode === 'login' ? text.noAccount : text.hasAccount}
+                  {mode === 'login' ? text.noAccount : mode === 'signup' ? text.hasAccount : text.backToSignIn}
                 </button>
               </div>
             </div>

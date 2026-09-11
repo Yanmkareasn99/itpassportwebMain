@@ -294,6 +294,9 @@ const localSupabase = {
     async signOut() {
       return { error: null };
     },
+    async resetPasswordForEmail() {
+      return { data: {}, error: new Error('Password reset requires Supabase to be enabled.') };
+    },
     async updateUser() {
       return { data: { user: null }, error: new Error('Password changes require Supabase to be enabled.') };
     },

@@ -70,9 +70,11 @@ function AdminRoute({ children }: { children: JSX.Element }) {
 
 function LoginRoute() {
   const { user, loading } = useAuth();
+  const location = useLocation();
+  const isPasswordRecovery = new URLSearchParams(location.search).get('recovery') === '1';
 
   if (loading) return <LoadingScreen />;
-  if (user) return <Navigate to="/" replace />;
+  if (user && !isPasswordRecovery) return <Navigate to="/" replace />;
 
   return <LoginPage />;
 }

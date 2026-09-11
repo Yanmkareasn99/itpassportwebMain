@@ -17,6 +17,10 @@ interface AuthContextType {
 
   signUp: (email: string, password: string, name: string, studentId?: string) => Promise<boolean>;
 
+  resetPassword: (email: string) => Promise<void>;
+
+  updatePassword: (password: string) => Promise<void>;
+
   signOut: () => Promise<void>;
 
   refreshProfile: () => Promise<void>;
@@ -209,6 +213,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   }
 
+  async function resetPassword(email: string) {
+    if (!isSupabaseEnabled) {
+      throw new Error('Password reset requires Supabase to be enabled.');
+    }
+
+    const redirectTo = new URL('/login?recovery=1', window.location.origin).toString();
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) throw error;
+  }
+
+  async function updatePassword(password: string) {
+    if (!isSupabaseEnabled) {
+      throw new Error('Password reset requires Supabase to be enabled.');
+    }
+
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) throw error;
+  }
+
   async function signInWithGoogle() {
     if (!isSupabaseEnabled) {
       throw new Error('Supabase is not enabled.');
@@ -245,6 +268,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signIn,
         signInWithGoogle,
         signUp,
+        resetPassword,
+        updatePassword,
         signOut,
         refreshProfile,
       }}
