@@ -184,11 +184,19 @@ function detectAnswerGrid(canvas: HTMLCanvasElement) {
   return { horizontalLines, tables, rowCount };
 }
 
-function findQuestionStarts(pages: OcrPage[]) {
+export function isQuestionRangeHeading(value: string) {
+  const compact = value.normalize('NFKC').replace(/\s+/g, '');
+  return /^[問間]\d{1,4}(?:から|～|〜|~|[-－—])[問間]?\d{1,4}/.test(compact);
+}
+
+export function findQuestionStarts(pages: OcrPage[]) {
   const candidates: Array<QuestionStart & { detectedNumber: number }> = [];
   for (const page of pages) {
     for (const line of page.lines) {
       const normalized = line.text.normalize('NFKC').replace(/\s+/g, ' ').trim();
+      // Section dividers such as "問1から問34までは、ストラテジ系の問題です。"
+      // are not questions. Treating one as a start shifts every later question and answer.
+      if (isQuestionRangeHeading(normalized)) continue;
       const match = normalized.match(/^[問間]\s*(\d{1,4})(?:\D|$)/);
       if (!match) continue;
       candidates.push({
