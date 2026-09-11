@@ -79,6 +79,8 @@ export const ja = {
   "ui.drawRefund": "両者の賭けポイントが返金されました。",
   "ui.wonWager": "対戦に勝ち、賭けポイントを獲得しました。",
   "ui.lostWager": "対戦相手が勝利しました。",
+  "ui.pointsAdded": "加算",
+  "ui.pointsDeducted": "減算",
   "ui.balance": "残高：{count}ポイント",
   "ui.backLobby": "ロビーに戻る",
   "ui.waitingFinish": "相手の解答完了を待っています",

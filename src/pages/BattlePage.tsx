@@ -580,6 +580,9 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   if (stage === 'result') {
     const won = activeRoom?.winner_id === profile?.id;
     const draw = activeRoom?.winner_id === null;
+    const wagerPoints = activeRoom?.wager_points ?? 0;
+    const pointsAdded = draw ? wagerPoints : won ? wagerPoints * 2 : 0;
+    const pointsDeducted = draw || won ? 0 : wagerPoints;
     return (
       <Layout currentPage={currentPage} onNavigate={onNavigate} title={translate(language, 'battlePage.battleResult')} subtitle={translate(language, 'battlePage.battle')}>
         <div className="max-w-md mx-auto space-y-5">
@@ -603,6 +606,20 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
               <div className="text-center">
                 <p className="text-sm font-semibold text-gray-700">{opponentName}</p>
                 <p className="text-3xl font-bold text-amber-600 mt-1">{opponentScore}</p>
+              </div>
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-3">
+              <div className="rounded-xl bg-emerald-50 border border-emerald-100 px-3 py-2 text-center">
+                <p className="text-xs font-semibold text-emerald-700">{translate(language, 'ui.pointsAdded')}</p>
+                <p className="text-lg font-bold text-emerald-600 mt-0.5">
+                  +{pointsAdded.toLocaleString(languageLocales[language])}
+                </p>
+              </div>
+              <div className="rounded-xl bg-red-50 border border-red-100 px-3 py-2 text-center">
+                <p className="text-xs font-semibold text-red-700">{translate(language, 'ui.pointsDeducted')}</p>
+                <p className="text-lg font-bold text-red-600 mt-0.5">
+                  -{pointsDeducted.toLocaleString(languageLocales[language])}
+                </p>
               </div>
             </div>
             <p className="text-center text-xs text-gray-400 mt-4">{translate(language, 'ui.balance', { count: balance.toLocaleString(languageLocales[language]) })}</p>

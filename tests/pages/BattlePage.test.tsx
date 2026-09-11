@@ -54,6 +54,7 @@ beforeEach(() => {
   mocks.room.status = 'active';
   mocks.balance = 100;
   mocks.room.time_per_question_seconds = 30;
+  mocks.room.wager_points = 0;
   mocks.room.creator_id = 'me';
   mocks.room.opponent_id = 'them';
   mocks.answers = [{ user_id: 'them', question_id: 'q1', selected_choice_id: 'a1', is_correct: true }];
@@ -215,4 +216,24 @@ it.each(['creator', 'opponent'])('uses the room time limit for the %s', async ro
   expect(mocks.submit).not.toHaveBeenCalled();
   await tick(1);
   expect(mocks.submit).toHaveBeenCalledWith('room-1', 'q1', null);
+});
+
+it.each([
+  ['win', 'me', '+100', '-0'],
+  ['loss', 'them', '+0', '-50'],
+  ['draw', null, '+50', '-0'],
+])('shows battle point changes for a %s', async (_label, winnerId, added, deducted) => {
+  mocks.room.status = 'completed';
+  mocks.room.wager_points = 50;
+  mocks.room.winner_id = winnerId;
+  render(<BattlePage currentPage="battle" onNavigate={() => {}} />);
+  await flush();
+
+  fireEvent.click(screen.getByRole('button', { name: /Resume/ }));
+  await flush();
+
+  expect(screen.getByText('Added')).toBeTruthy();
+  expect(screen.getByText(added)).toBeTruthy();
+  expect(screen.getByText('Deducted')).toBeTruthy();
+  expect(screen.getByText(deducted)).toBeTruthy();
 });
