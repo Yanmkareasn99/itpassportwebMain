@@ -126,7 +126,11 @@ function CategoryCard({
     <button
       onClick={onStart}
       disabled={loading || stats.questionCount === 0}
-      className={`w-full min-w-0 ${category.bgColor} ${category.borderless ? 'border-0 shadow-none' : `border-2 ${category.borderColor} hover:shadow-md`} rounded-2xl p-4 sm:p-5 text-left transition-all group disabled:opacity-50 disabled:cursor-not-allowed`}
+      className={`w-full min-w-0 ${category.bgColor} ${
+        category.borderless
+          ? 'border border-slate-200/80 shadow-sm dark:border-slate-600/80 dark:bg-slate-900/40'
+          : `border-2 ${category.borderColor} hover:shadow-md dark:border-slate-700 dark:bg-slate-900/40`
+      } rounded-2xl p-4 sm:p-5 xl:p-6 text-left transition-all group disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 hover:shadow-lg hover:border-slate-300 dark:hover:border-slate-500 dark:hover:bg-slate-900/60`}
     >
       <div className="flex items-center gap-2.5 mb-3">
         <div className={`w-8 h-8 rounded-full ${category.dotColor} flex items-center justify-center`}>
@@ -137,12 +141,12 @@ function CategoryCard({
         </span>
       </div>
 
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-gray-500 dark:text-slate-300">
         {translate(language, 'practiceListPage.progress')}{' '}
-        <span className="font-semibold text-gray-700">{stats.progress}%</span>
+        <span className="font-semibold text-gray-700 dark:text-slate-100">{stats.progress}%</span>
         {' '}／{' '}
         {translate(language, 'practiceListPage.questions')}{' '}
-        <span className="font-semibold text-gray-700">
+        <span className="font-semibold text-gray-700 dark:text-slate-100">
           {stats.questionCount}
           {translate(language, 'practiceListPage.questionCountSuffix')}
         </span>
@@ -179,20 +183,20 @@ function ReviewCard({
     <button
       onClick={onStart}
       disabled={count === 0}
-      className="w-full min-w-0 bg-purple-50 border-2 border-purple-300 rounded-2xl p-4 sm:p-5 text-left hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+      className="w-full min-w-0 bg-purple-50 border border-slate-200 shadow-sm rounded-2xl p-4 sm:p-5 xl:p-6 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg hover:border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-slate-900/40 dark:border-slate-600/80 dark:shadow-slate-900/30 dark:hover:border-slate-500 dark:hover:bg-slate-900/60"
     >
       <div className="flex items-center gap-2.5 mb-3">
         <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center">
           <RefreshCw className="w-4 h-4 text-white" />
         </div>
-        <span className="font-bold text-base text-purple-600">
+        <span className="font-bold text-base text-purple-600 dark:text-purple-300">
           {translate(language, 'practiceListPage.reviewMistakes')}
         </span>
       </div>
 
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-gray-500 dark:text-slate-300">
         {translate(language, 'practiceListPage.notReviewed')}{' '}
-        <span className="font-semibold text-gray-700">
+        <span className="font-semibold text-gray-700 dark:text-slate-100">
           {count}
           {translate(language, 'practiceListPage.questionCountSuffix')}
         </span>
@@ -519,7 +523,7 @@ export default function PracticeListPage({
         translate(currentLanguage, 'practiceListPage.studyMenu')
       }
     >
-      <div className="max-w-5xl mx-auto space-y-6">
+      <div className="app-shell space-y-6">
         <p className="text-sm text-gray-500">
           {translate(currentLanguage, 'practiceListPage.chooseASubjectAndFiltersToBeginPractice')}
         </p>
