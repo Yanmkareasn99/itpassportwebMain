@@ -2,7 +2,7 @@
 
 Manabi IT Passport is a React and Supabase study app for the Japanese IT Passport exam. It includes practice questions, mock exams, multilingual explanations, admin content tools, and an AI study assistant with local fallback answers.
 
-Demo: https://itpassportweb-app.vercel.app
+Demo: itpassportwebapp-eta.vercel.app
 
 ## Screenshots
 
