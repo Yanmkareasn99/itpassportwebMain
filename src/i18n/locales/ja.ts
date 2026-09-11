@@ -268,6 +268,7 @@ export const ja = {
   "loginPage.createAccount": "アカウント作成",
   "loginPage.createANewAccount": "新しいアカウントを作成します",
   "loginPage.email": "メール",
+  "loginPage.emailAlreadyRegistered": "このメールアドレスはすでに登録されています。",
   "loginPage.emailOrPasswordIsIncorrect": "メールアドレスまたはパスワードが正しくありません。",
   "loginPage.failedToCreateAccount": "アカウント作成に失敗しました: ",
   "loginPage.name": "お名前",
