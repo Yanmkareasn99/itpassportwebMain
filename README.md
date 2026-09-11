@@ -2,17 +2,27 @@
 
 Manabi IT Passport is a React and Supabase study app for the Japanese IT Passport exam. It includes practice questions, mock exams, multilingual explanations, admin content tools, and an AI study assistant with local fallback answers.
 
-Demo: https://itpassportweb-app.vercel.app
+Demo: itpassportwebapp-eta.vercel.app
 
 ## Screenshots
 
-![Login screen](docs/screenshots/login.png)
+![Login screen](docs/screenshots/manabi%20login.png)
 
-![Home dashboard placeholder](docs/screenshots/home.svg)
+![Home dashboard](docs/screenshots/manabi%20home%20page.png)
 
-![Practice flow placeholder](docs/screenshots/practice.svg)
+![Practice question flow](docs/screenshots/manabi%20practice.png)
 
-The login screen is captured from the local Vite app. The authenticated dashboard and practice images are placeholders because those views require seeded browser auth/session state before headless capture.
+![Mock exam](docs/screenshots/manabi%20mock%20exam.png)
+
+![Battle mode](docs/screenshots/manabi%20battle.png)
+
+![Learning materials](docs/screenshots/manabi%20materials.png)
+
+![AI chat assistant](docs/screenshots/manabi%20ai%20chat.png)
+
+![Settings](docs/screenshots/manabi%20settings.png)
+
+![Admin page](docs/screenshots/manabi%20admin%20page.png)
 
 ## Features
 

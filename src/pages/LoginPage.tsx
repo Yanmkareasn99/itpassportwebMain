@@ -4,6 +4,10 @@ import { useAuth } from '../contexts/AuthContext';
 import { BookOpen, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
+function isRegisteredEmailError(message: string) {
+  return /user already registered|already registered|already exists/i.test(message);
+}
+
 export default function LoginPage() {
   useEffect(() => {
     const root = document.documentElement;
@@ -46,6 +50,7 @@ export default function LoginPage() {
     loginError: translate(language, 'loginPage.emailOrPasswordIsIncorrect'),
     nameError: translate(language, 'loginPage.pleaseEnterYourName'),
     signupError: translate(language, 'loginPage.failedToCreateAccount'),
+    registeredEmailError: translate(language, 'loginPage.emailAlreadyRegistered'),
     confirmationSent: translate(language, 'loginPage.confirmationEmailSentConfirmYourEmailThenSign'),
   };
 
@@ -68,7 +73,7 @@ export default function LoginPage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (mode === 'login') setError(text.loginError);
-      else setError(text.signupError + msg);
+      else setError(isRegisteredEmailError(msg) ? text.registeredEmailError : text.signupError + msg);
     } finally {
       setLoading(false);
     }
