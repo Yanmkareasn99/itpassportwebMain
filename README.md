@@ -8,7 +8,7 @@ Demo: itpassportwebapp-eta.vercel.app
 
 ![Login screen](docs/screenshots/manabi%20login.png)
 
-![Home dashboard](docs/screenshots/manabi%20home%20page.png)
+![Home dashboard](docs/screenshots/manabi%20home.png)
 
 ![Practice question flow](docs/screenshots/manabi%20practice.png)
 
@@ -21,8 +21,6 @@ Demo: itpassportwebapp-eta.vercel.app
 ![AI chat assistant](docs/screenshots/manabi%20ai%20chat.png)
 
 ![Settings](docs/screenshots/manabi%20settings.png)
-
-![Admin page](docs/screenshots/manabi%20admin%20page.png)
 
 ## Features
 
