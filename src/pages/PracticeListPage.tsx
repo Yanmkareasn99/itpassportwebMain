@@ -13,7 +13,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import Layout from '../components/Layout';
-import { fetchPracticeQuestions, loadLatestAnswerStatus, loadPracticeSessions, practiceErrorMessage, type DifficultyFilter, type FormatFilter, type ModeFilter } from '../lib/practice';
+import { fetchPracticeQuestions, loadLatestAnswerStatus, loadPracticeProgress, practiceErrorMessage, type DifficultyFilter, type FormatFilter, type ModeFilter } from '../lib/practice';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -381,20 +381,19 @@ export default function PracticeListPage({
       }
 
       try {
-        const sessions = await loadPracticeSessions(user.id);
+        const sessions = await loadPracticeProgress(user.id);
         const stats: Record<string, { answered: number; correct: number }> = {};
         for (const session of sessions ?? []) {
-          if (!session.completed_at) continue;
           const subjectId = session.subject_id ?? 'all';
           stats[subjectId] ??= { answered: 0, correct: 0 };
-          stats[subjectId].answered += session.total_questions ?? 0;
+          stats[subjectId].answered += session.answered_count;
           stats[subjectId].correct += session.correct_answers ?? 0;
         }
 
         if (cancelled) return;
 
         setSessionStats(stats);
-        // Preserve completed-session progress even if answer history fails.
+        // The same session list is reused to calculate the latest result per question.
         const latestAnswers = await loadLatestAnswerStatus(user.id, sessions);
         if (!cancelled) setIncorrectCount([...latestAnswers.values()].filter(isCorrect => !isCorrect).length);
       } catch (error) {
@@ -674,7 +673,7 @@ export default function PracticeListPage({
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <div className="min-w-0 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
               <TrendingUp className="w-4 h-4 text-blue-500" />
               {translate(currentLanguage, 'practiceListPage.progressBySubject')}
@@ -690,20 +689,26 @@ export default function PracticeListPage({
                 ))}
               </div>
             ) : (
-              <div className="overflow-x-auto -mx-5 px-5">
-              <table className="w-full text-sm min-w-[480px]">
+              <div className="w-full min-w-0 overflow-hidden">
+              <table className="w-full table-fixed text-sm">
+                <colgroup>
+                  <col className="w-[46%]" />
+                  <col className="w-[18%]" />
+                  <col className="w-[18%]" />
+                  <col className="w-[18%]" />
+                </colgroup>
                 <thead>
-                  <tr className="text-xs text-gray-400 border-b border-gray-100">
-                    <th className="pb-2 text-left font-semibold">
+                  <tr className="text-[10px] sm:text-xs text-gray-400 border-b border-gray-100">
+                    <th className="pb-2 pr-2 text-left font-semibold truncate">
                       {translate(currentLanguage, 'practiceListPage.subject')}
                     </th>
-                    <th className="pb-2 text-center font-semibold">
+                    <th className="pb-2 text-center font-semibold truncate">
                       {translate(currentLanguage, 'practiceListPage.progress2')}
                     </th>
-                    <th className="pb-2 text-center font-semibold">
+                    <th className="pb-2 text-center font-semibold truncate">
                       {translate(currentLanguage, 'practiceListPage.accuracy')}
                     </th>
-                    <th className="pb-2 text-right font-semibold">
+                    <th className="pb-2 text-right font-semibold truncate">
                       {translate(currentLanguage, 'practiceListPage.questions')}
                     </th>
                   </tr>
@@ -715,18 +720,18 @@ export default function PracticeListPage({
                       key={row.id}
                       className="group hover:bg-gray-50 transition"
                     >
-                      <td className="py-3">
-                        <div className="flex items-center gap-2">
+                      <td className="min-w-0 py-3 pr-2">
+                        <div className="flex min-w-0 items-center gap-2">
                           <div
-                            className={`w-2.5 h-2.5 rounded-full ${row.dotColor}`}
+                            className={`w-2.5 h-2.5 shrink-0 rounded-full ${row.dotColor}`}
                           />
-                          <span className="font-medium text-gray-700">
+                          <span className="block min-w-0 truncate font-medium text-gray-700" title={getCategoryLabel(row, currentLanguage)}>
                             {getCategoryLabel(row, currentLanguage)}
                           </span>
                         </div>
                       </td>
 
-                      <td className="py-3 text-center">
+                      <td className="py-3 text-center whitespace-nowrap">
                         <span
                           className={`font-bold ${
                             row.stats.progress >= 70
@@ -740,7 +745,7 @@ export default function PracticeListPage({
                         </span>
                       </td>
 
-                      <td className="py-3 text-center">
+                      <td className="py-3 text-center whitespace-nowrap">
                         <span
                           className={`font-bold ${
                             row.stats.accuracy >= 70
@@ -758,7 +763,7 @@ export default function PracticeListPage({
                         </span>
                       </td>
 
-                      <td className="py-3 text-right text-gray-500">
+                      <td className="py-3 text-right text-gray-500 whitespace-nowrap">
                         {row.stats.questionCount}
                         {translate(currentLanguage, 'practiceListPage.questionCountSuffix')}
                       </td>
@@ -770,20 +775,24 @@ export default function PracticeListPage({
             )}
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <div className="min-w-0 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
             <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
               <ChevronRight className="w-4 h-4 text-blue-500" />
               {translate(currentLanguage, 'practiceListPage.recommendedNextActions')}
             </h3>
 
-            <div className="overflow-x-auto -mx-5 px-5">
-            <table className="w-full text-sm min-w-[480px]">
+            <div className="w-full min-w-0 overflow-hidden">
+            <table className="w-full table-fixed text-sm">
+              <colgroup>
+                <col className="w-[72%]" />
+                <col className="w-[28%]" />
+              </colgroup>
               <thead>
                 <tr className="text-xs text-gray-400 border-b border-gray-100">
-                  <th className="pb-2 text-left font-semibold">
+                  <th className="pb-2 pr-2 text-left font-semibold truncate">
                     {translate(currentLanguage, 'practiceListPage.item')}
                   </th>
-                  <th className="pb-2 text-right font-semibold">
+                  <th className="pb-2 text-right font-semibold truncate">
                     {translate(currentLanguage, 'practiceListPage.action')}
                   </th>
                 </tr>
@@ -799,13 +808,13 @@ export default function PracticeListPage({
                   .slice(0, 2)
                   .map((row) => (
                     <tr key={row.id} className="hover:bg-gray-50 transition">
-                      <td className="py-3">
-                        <p className="font-semibold text-gray-700">
+                      <td className="min-w-0 py-3 pr-2">
+                        <p className="truncate font-semibold text-gray-700" title={`${getCategoryLabel(row, currentLanguage)}${translate(currentLanguage, 'practiceListPage.fundamentals')}`}>
                           {getCategoryLabel(row, currentLanguage)}
                           {translate(currentLanguage, 'practiceListPage.fundamentals')}
                         </p>
 
-                        <p className="text-xs text-gray-400">
+                        <p className="truncate text-xs text-gray-400">
                           {row.stats.answeredCount === 0
                             ? translate(currentLanguage, 'practiceListPage.notAttemptedYet')
                             : `${
@@ -814,10 +823,11 @@ export default function PracticeListPage({
                         </p>
                       </td>
 
-                      <td className="py-3 text-right">
+                      <td className="min-w-0 py-3 text-right">
                         <button
                           onClick={() => startCategory(row.subjectIds, row.id)}
-                          className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline transition"
+                          className="block w-full truncate text-right text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline transition"
+                          title={translate(currentLanguage, 'practiceListPage.solve')}
                         >
                           {translate(currentLanguage, 'practiceListPage.solve')}
                         </button>
@@ -826,19 +836,20 @@ export default function PracticeListPage({
                   ))}
 
                 <tr className="hover:bg-gray-50 transition">
-                  <td className="py-3">
-                    <p className="font-semibold text-gray-700">
+                  <td className="min-w-0 py-3 pr-2">
+                    <p className="truncate font-semibold text-gray-700" title={translate(currentLanguage, 'practiceListPage.checkYourLevelWithAMockExam')}>
                       {translate(currentLanguage, 'practiceListPage.checkYourLevelWithAMockExam')}
                     </p>
-                    <p className="text-xs text-gray-400">
+                    <p className="truncate text-xs text-gray-400">
                       {translate(currentLanguage, 'practiceListPage.takeItUnderRealExamTiming')}
                     </p>
                   </td>
 
-                  <td className="py-3 text-right">
+                  <td className="min-w-0 py-3 text-right">
                     <button
                       onClick={() => onNavigate('mock-exam')}
-                      className="text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline transition"
+                      className="block w-full truncate text-right text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline transition"
+                      title={translate(currentLanguage, 'practiceListPage.goToMockExam')}
                     >
                       {translate(currentLanguage, 'practiceListPage.goToMockExam')}
                     </button>
@@ -847,20 +858,21 @@ export default function PracticeListPage({
 
                 {incorrectCount > 0 && (
                   <tr className="hover:bg-gray-50 transition">
-                    <td className="py-3">
-                      <p className="font-semibold text-gray-700">
+                    <td className="min-w-0 py-3 pr-2">
+                      <p className="truncate font-semibold text-gray-700" title={translate(currentLanguage, 'practiceListPage.reviewMissedQuestions')}>
                         {translate(currentLanguage, 'practiceListPage.reviewMissedQuestions')}
                       </p>
 
-                      <p className="text-xs text-gray-400">
+                      <p className="truncate text-xs text-gray-400">
                         {translate(currentLanguage, 'practiceListPage.unreviewedCount', { count: incorrectCount })}
                       </p>
                     </td>
 
-                    <td className="py-3 text-right">
+                    <td className="min-w-0 py-3 text-right">
                       <button
                         onClick={startReview}
-                        className="text-xs font-semibold text-purple-600 hover:text-purple-700 hover:underline transition"
+                        className="block w-full truncate text-right text-xs font-semibold text-purple-600 hover:text-purple-700 hover:underline transition"
+                        title={translate(currentLanguage, 'practiceListPage.review2')}
                       >
                         {translate(currentLanguage, 'practiceListPage.review2')}
                       </button>

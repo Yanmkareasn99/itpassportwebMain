@@ -87,6 +87,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   const selectedCorrect = answered && choices.find(choice => choice.id === selectedChoiceId)?.is_correct;
   const roomTimeLimit = activeRoom?.time_per_question_seconds ?? DEFAULT_TIME_PER_QUESTION;
   const timePct = (timeLeft / roomTimeLimit) * 100;
+  const isValidWager = Number.isInteger(wager) && wager >= 0;
 
   const loadBalance = useCallback(async () => {
     if (!profile) return;
@@ -314,7 +315,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   }, [activeRoom, answers, maybeCompleteBattle, waitingForOpponent]);
 
   async function createRoom() {
-    if (!profile) return;
+    if (!profile || !isValidWager) return;
     if (!isSupabaseEnabled) {
       setError('Online battle rooms require Supabase to be enabled.');
       return;
@@ -440,7 +441,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
             {[
               { icon: Trophy, label: translate(language, 'ui.questions'), value: `${questionCount}` },
               { icon: Clock, label: translate(language, 'ui.perQuestion'), value: translate(language, 'ui.seconds', { count: secondsPerQuestion }) },
-              { icon: Coins, label: translate(language, 'ui.defaultWager'), value: translate(language, 'ui.pointAmount', { count: wager }) },
+              { icon: Coins, label: translate(language, 'ui.defaultWager'), value: isValidWager ? translate(language, 'ui.pointAmount', { count: wager }) : '—' },
             ].map(({ icon: Icon, label, value }) => (
               <div key={label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 text-center">
                 <Icon className="w-6 h-6 text-amber-500 mx-auto mb-2" />
@@ -513,14 +514,15 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                 <input
                   type="number"
                   min={0}
-                  value={wager}
-                  onChange={event => setWager(Number(event.target.value))}
+                  step={1}
+                  value={Number.isNaN(wager) ? '' : wager}
+                  onChange={event => setWager(event.target.valueAsNumber)}
                   className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
               </label>
               <button
                 onClick={() => void createRoom()}
-                disabled={loading || !isSupabaseEnabled || !Number.isInteger(questionCount) || questionCount < 1 || questionCount > 20 || !Number.isInteger(secondsPerQuestion) || secondsPerQuestion < 5 || secondsPerQuestion > 300}
+                disabled={loading || !isSupabaseEnabled || !isValidWager || !Number.isInteger(questionCount) || questionCount < 1 || questionCount > 20 || !Number.isInteger(secondsPerQuestion) || secondsPerQuestion < 5 || secondsPerQuestion > 300}
                 className="self-end flex items-center justify-center gap-2 px-5 py-2.5 bg-amber-500 text-white rounded-xl text-sm font-bold hover:bg-amber-600 transition disabled:opacity-50"
               >
                 <Plus className="w-4 h-4" />
