@@ -46,7 +46,7 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
 
   return (
     <Layout currentPage={currentPage} onNavigate={onNavigate} title={text.title} subtitle={text.subtitle}>
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="app-shell space-y-6">
         <section className="bg-gradient-to-r from-sky-50 to-blue-100/60 dark:from-slate-900 dark:to-slate-800 rounded-2xl border border-sky-100 dark:border-slate-700 p-5 sm:p-7">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
             <div className="flex items-start gap-4">

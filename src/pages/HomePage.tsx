@@ -57,18 +57,18 @@ function CalendarWidget({ daysLeft, language, sessions = [], examTargetDate }: {
     d !== null && practiceDates.has(`${year}-${month}-${d}`);
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 dark:bg-slate-900 dark:border-slate-700">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 dark:bg-[rgba(255,255,255,0.055)] dark:border-[rgba(255,255,255,0.10)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.15)] dark:[backdrop-filter:blur(16px)] dark:[-webkit-backdrop-filter:blur(16px)]">
       {/* Countdown */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="text-xs text-gray-500 dark:text-slate-400">{translate(language, 'homePage.untilExam')}</p>
-          <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+          <p className="text-xs text-gray-500 dark:text-[#94A3B8]">{translate(language, 'homePage.untilExam')}</p>
+          <p className="text-3xl font-bold text-blue-600 dark:text-[#7EA2F8]">
             {translate(language, 'homePage.daysRemaining', { count: daysLeft })}
           </p>
         </div>
         <button 
           onClick={() => setViewDate(new Date(today.getFullYear(), today.getMonth(), 1))}
-          className="h-10 rounded-full bg-blue-50 px-4 text-sm font-semibold text-blue-600 hover:bg-blue-100 active:bg-blue-200 transition cursor-pointer dark:bg-slate-800 dark:text-blue-300 dark:hover:bg-slate-700"
+          className="h-10 rounded-full bg-blue-50 px-4 text-sm font-semibold text-blue-600 hover:bg-blue-100 active:bg-blue-200 transition cursor-pointer dark:bg-[rgba(126,162,248,0.12)] dark:text-[#7EA2F8] dark:hover:bg-[rgba(126,162,248,0.18)]"
           title={translate(language, 'homePage.today')}
         >
           {translate(language, 'homePage.today')}
@@ -130,23 +130,23 @@ function StatsCard({ sessions, examSessions, language }: { sessions: PracticePro
     : 0;
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 dark:bg-slate-900 dark:border-slate-700">
-      <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2 dark:text-slate-200">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 dark:bg-[rgba(255,255,255,0.055)] dark:border-[rgba(255,255,255,0.10)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.15)] dark:[backdrop-filter:blur(16px)] dark:[-webkit-backdrop-filter:blur(16px)]">
+      <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2 dark:text-[#F8FAFC]">
         <TrendingUp className="w-4 h-4 text-blue-500" />
         {translate(language, 'homePage.learningStats')}
       </h3>
       <div className="grid grid-cols-3 gap-3">
         <div className="text-center">
-          <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{totalPractice}</p>
-          <p className="text-[10px] text-gray-400 mt-0.5 dark:text-slate-400">{translate(language, 'homePage.practice')}</p>
+          <p className="text-2xl font-bold text-blue-600 dark:text-[#7EA2F8]">{totalPractice}</p>
+          <p className="text-[10px] text-gray-400 mt-0.5 dark:text-[#94A3B8]">{translate(language, 'homePage.practice')}</p>
         </div>
-        <div className="text-center border-x border-gray-100 dark:border-slate-700">
-          <p className="text-2xl font-bold text-emerald-500 dark:text-emerald-400">{accuracy}%</p>
-          <p className="text-[10px] text-gray-400 mt-0.5 dark:text-slate-400">{translate(language, 'homePage.accuracy')}</p>
+        <div className="text-center border-x border-gray-100 dark:border-[rgba(255,255,255,0.10)]">
+          <p className="text-2xl font-bold text-emerald-500 dark:text-[#4CC9B0]">{accuracy}%</p>
+          <p className="text-[10px] text-gray-400 mt-0.5 dark:text-[#94A3B8]">{translate(language, 'homePage.accuracy')}</p>
         </div>
         <div className="text-center">
-          <p className="text-2xl font-bold text-amber-500 dark:text-amber-400">{examCount > 0 ? `${avgExamScore}%` : '—'}</p>
-          <p className="text-[10px] text-gray-400 mt-0.5 dark:text-slate-400">{translate(language, 'homePage.examAvg')}</p>
+          <p className="text-2xl font-bold text-amber-500 dark:text-[#FFB84D]">{examCount > 0 ? `${avgExamScore}%` : '—'}</p>
+          <p className="text-[10px] text-gray-400 mt-0.5 dark:text-[#94A3B8]">{translate(language, 'homePage.examAvg')}</p>
         </div>
       </div>
     </div>
@@ -158,67 +158,52 @@ function getFeatures(language: Language) {
   {
     page: 'practice-list' as Page,
     icon: Layers,
-    color: 'blue',
     title: translate(language, 'homePage.practice2'),
     description: translate(language, 'homePage.practiceBySubjectAndSteadilyImproveYourSkills'),
-    cta: translate(language, 'homePage.startPractice'),
-    bgClass: 'from-[#E8F0FF] to-[#F7F9FF]',
-    iconBg: 'bg-[#E8F0FF]',
-    iconColor: 'text-[#4F7DF3]',
-    ctaClass: 'bg-[#4F7DF3] hover:bg-[#3159C9]',
-    badgeClass: 'bg-[#E8F0FF] text-[#4F7DF3]',
+    cardClass: 'bg-[linear-gradient(135deg,#EAF1FF_0%,#FFFFFF_85%)] border border-[#dfeaf9] dark:bg-[linear-gradient(135deg,rgba(126,162,248,0.16)_0%,rgba(255,255,255,0.035)_100%)] dark:border-[rgba(255,255,255,0.10)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.15)] dark:[backdrop-filter:blur(16px)] dark:[-webkit-backdrop-filter:blur(16px)]',
+    iconBg: 'bg-[#E8F0FF] dark:bg-[rgba(126,162,248,0.18)]',
+    iconColor: 'text-[#4F7DF3] dark:text-[#7EA2F8]',
+    arrowBg: 'bg-[#4F7DF3] dark:bg-[#7EA2F8]',
   },
   {
     page: 'mock-exam' as Page,
     icon: BarChart2,
-    color: 'emerald',
     title: translate(language, 'homePage.mockExam'),
     description: translate(language, 'homePage.checkYourLevelWithATimedExamFormat'),
-    cta: translate(language, 'homePage.takeExam'),
-    bgClass: 'from-[#D8F4EF] to-[#F7F9FF]',
-    iconBg: 'bg-[#D8F4EF]',
-    iconColor: 'text-[#18B89A]',
-    ctaClass: 'bg-[#18B89A] hover:bg-[#0D9E82]',
-    badgeClass: 'bg-[#D8F4EF] text-[#18B89A]',
+    cardClass: 'bg-[linear-gradient(135deg,#E2F8F4_0%,#FFFFFF_85%)] border border-[#dbeeea] dark:bg-[linear-gradient(135deg,rgba(76,201,176,0.16)_0%,rgba(255,255,255,0.035)_100%)] dark:border-[rgba(255,255,255,0.10)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.15)] dark:[backdrop-filter:blur(16px)] dark:[-webkit-backdrop-filter:blur(16px)]',
+    iconBg: 'bg-[#D8F4EF] dark:bg-[rgba(76,201,176,0.18)]',
+    iconColor: 'text-[#18B89A] dark:text-[#4CC9B0]',
+    arrowBg: 'bg-[#18B89A] dark:bg-[#4CC9B0]',
   },
   {
     page: 'battle' as Page,
     icon: Trophy,
-    color: 'amber',
     title: translate(language, 'homePage.battle'),
     description: translate(language, 'homePage.challengeOthersAndSharpenYourSkills'),
-    cta: translate(language, 'homePage.startBattle'),
-    bgClass: 'from-[#FFE8CF] to-[#F7F9FF]',
-    iconBg: 'bg-[#FFE8CF]',
-    iconColor: 'text-[#F5A623]',
-    ctaClass: 'bg-[#F5A623] hover:bg-[#D98B00]',
-    badgeClass: 'bg-[#FFE8CF] text-[#F5A623]',
+    cardClass: 'bg-[linear-gradient(135deg,#FFF0DD_0%,#FFFFFF_85%)] border border-[#f5e2c2] dark:bg-[linear-gradient(135deg,rgba(255,184,77,0.16)_0%,rgba(255,255,255,0.035)_100%)] dark:border-[rgba(255,255,255,0.10)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.15)] dark:[backdrop-filter:blur(16px)] dark:[-webkit-backdrop-filter:blur(16px)]',
+    iconBg: 'bg-[#FFE8CF] dark:bg-[rgba(255,184,77,0.18)]',
+    iconColor: 'text-[#F5A623] dark:text-[#FFB84D]',
+    arrowBg: 'bg-[#F5A623] dark:bg-[#FFB84D]',
   },
   {
     page: 'ai-chat' as Page,
     icon: MessageCircle,
-    color: 'violet',
     title: translate(language, 'homePage.aiChat'),
     description: translate(language, 'homePage.askAiAboutUnclearProblemsOrStudyPlans'),
-    cta: translate(language, 'homePage.askAi'),
-    bgClass: 'from-[#E9E9FF] to-[#F7F9FF]',
-    iconBg: 'bg-[#E9E9FF]',
-    iconColor: 'text-[#A8A7F5]',
-    ctaClass: 'bg-[#A8A7F5] hover:bg-[#8D8BEF]',
-    badgeClass: 'bg-[#E9E9FF] text-[#A8A7F5]',
+    cardClass: 'bg-[linear-gradient(135deg,#EFEEFF_0%,#FFFFFF_85%)] border border-[#e7e4ff] dark:bg-[linear-gradient(135deg,rgba(170,166,248,0.16)_0%,rgba(255,255,255,0.035)_100%)] dark:border-[rgba(255,255,255,0.10)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.15)] dark:[backdrop-filter:blur(16px)] dark:[-webkit-backdrop-filter:blur(16px)]',
+    iconBg: 'bg-[#E9E9FF] dark:bg-[rgba(170,166,248,0.18)]',
+    iconColor: 'text-[#A8A7F5] dark:text-[#AAA6F8]',
+    arrowBg: 'bg-[#A8A7F5] dark:bg-[#AAA6F8]',
   },
   {
     page: 'materials' as Page,
     icon: FileText,
-    color: 'sky',
     title: translate(language, 'homePage.materials'),
     description: translate(language, 'homePage.studentsCanCheckMaterialsAnytimeMakingInformationSharing'),
-    cta: translate(language, 'homePage.viewMaterials'),
-    bgClass: 'from-[#E8F0FF] to-[#F7F9FF]',
-    iconBg: 'bg-[#E8F0FF]',
-    iconColor: 'text-[#4F7DF3]',
-    ctaClass: 'bg-[#4F7DF3] hover:bg-[#3159C9]',
-    badgeClass: 'bg-[#E8F0FF] text-[#4F7DF3]',
+    cardClass: 'bg-[linear-gradient(135deg,#EAF1FF_0%,#FFFFFF_85%)] border border-[#dfeaf9] dark:bg-[linear-gradient(135deg,rgba(126,162,248,0.14)_0%,rgba(255,255,255,0.035)_100%)] dark:border-[rgba(255,255,255,0.10)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.15)] dark:[backdrop-filter:blur(16px)] dark:[-webkit-backdrop-filter:blur(16px)]',
+    iconBg: 'bg-[#E8F0FF] dark:bg-[rgba(126,162,248,0.18)]',
+    iconColor: 'text-[#4F7DF3] dark:text-[#7EA2F8]',
+    arrowBg: 'bg-[#4F7DF3] dark:bg-[#7EA2F8]',
   },
   ];
 }
@@ -273,54 +258,51 @@ export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
 
   return (
     <Layout currentPage={currentPage} onNavigate={onNavigate} title={`${profile?.name ?? guest}${greeting}`}>
-      <div className="max-w-6xl mx-auto">
+      <div className="app-shell">
         <div className="flex flex-col-reverse lg:flex-row gap-6">
-          {/* Main content */}
           <div className="flex-1 space-y-5">
-            {/* Feature cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {features.map(({ page, icon: Icon, title, description, cta, bgClass, iconBg, iconColor, ctaClass }) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 xl:gap-6">
+              {features.map(({ page, icon: Icon, title, description, cardClass, iconBg, iconColor, arrowBg }) => (
                 <div
                   key={page}
-                  className={`${page === 'materials' ? 'md:col-span-2' : ''} feature-card card-soft ${page === 'practice-list' ? 'border-0 shadow-none' : ''} bg-gradient-to-r ${bgClass} rounded-2xl p-4 sm:p-6 flex items-center justify-between gap-4 group cursor-pointer hover:shadow-md transition-all ${page === 'materials' ? 'min-h-[160px]' : 'min-h-[120px]'}`}
+                  className={`${page === 'materials' ? 'md:col-span-2' : ''} ${cardClass} rounded-2xl p-4 sm:p-5 xl:p-6 flex items-center justify-between gap-4 xl:gap-5 cursor-pointer transition-all hover:shadow-md`} 
                   onClick={() => onNavigate(page)}
                 >
-                  <div className="flex items-center gap-4">
-                    <div className={`feature-icon ${iconBg} rounded-2xl flex items-center justify-center`}>
-                      <Icon className={`w-5 h-5 sm:w-7 sm:h-7 ${iconColor}`} />
+                  <div className="flex items-center gap-4 xl:gap-5 min-w-0">
+                    <div className={`${iconBg} w-12 h-12 xl:w-14 xl:h-14 rounded-xl flex items-center justify-center shrink-0`}>
+                      <Icon className={`w-5 h-5 xl:w-6 xl:h-6 ${iconColor}`} />
                     </div>
-                    <div className="text-left">
-                      <h2 className="text-lg sm:text-xl font-bold text-slate-800 dark:text-slate-100">{title}</h2>
-                      <p className="text-xs sm:text-sm text-slate-600 mt-0.5 max-w-md dark:text-slate-300">{description}</p>
+
+                    <div className="min-w-0">
+                      <h2 className="text-xl xl:text-[1.45rem] font-bold text-slate-950 dark:text-[#F8FAFC] leading-tight">{title}</h2>
+                      <p className="text-sm xl:text-base text-slate-700 dark:text-[#CBD5E1] mt-1 max-w-lg leading-snug">{description}</p>
                     </div>
                   </div>
-                  <div className="flex-shrink-0">
-                    <button
-                      onClick={e => { e.stopPropagation(); onNavigate(page); }}
-                      aria-label={cta}
-                      title={cta}
-                      className={`${ctaClass} feature-cta text-white px-3 py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-center`}
-                    >
-                      <ArrowRight className="w-5 h-5" />
-                    </button>
-                  </div>
+
+                  <button
+                    onClick={e => { e.stopPropagation(); onNavigate(page); }}
+                    aria-label={title}
+                    className={`${arrowBg} w-12 h-12 xl:w-[3.25rem] xl:h-[3.25rem] rounded-xl flex items-center justify-center text-white shadow-lg shadow-black/10 transition hover:opacity-90 shrink-0`}
+                  >
+                    <ArrowRight className="w-5 h-5 xl:w-6 xl:h-6" />
+                  </button>
                 </div>
               ))}
             </div>
 
-            {/* Recent activity */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 dark:bg-slate-900 dark:border-slate-700">
-              <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2 dark:text-slate-200">
-                <Clock className="w-4 h-4 text-gray-400 dark:text-slate-300" />
+            <div className="bg-white border border-gray-100 dark:bg-[rgba(255,255,255,0.055)] dark:border-[rgba(255,255,255,0.10)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.15)] dark:[backdrop-filter:blur(16px)] dark:[-webkit-backdrop-filter:blur(16px)] rounded-2xl p-5 sm:p-6">
+              <h3 className="text-[1.05rem] font-bold text-slate-800 dark:text-[#F8FAFC] mb-5 flex items-center gap-2">
+                <Clock className="w-5 h-5 text-slate-500 dark:text-[#CBD5E1]" />
                 {translate(language, 'homePage.recentActivity')}
               </h3>
+
               {recentSessions.length === 0 ? (
-                <div className="text-center py-8">
-                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 dark:bg-slate-800">
-                    <Layers className="w-6 h-6 text-gray-400 dark:text-slate-300" />
+                <div className="flex flex-col items-center justify-center text-center py-8">
+                  <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 dark:bg-[rgba(126,162,248,0.12)] dark:border-[rgba(255,255,255,0.10)] flex items-center justify-center mb-3">
+                    <Layers className="w-6 h-6 text-blue-600 dark:text-[#7EA2F8]" />
                   </div>
-                  <p className="text-sm text-gray-400 dark:text-slate-300">{translate(language, 'homePage.noStudyHistoryYet')}</p>
-                  <button onClick={() => onNavigate('practice-list')} className="mt-3 text-blue-600 text-xs font-medium hover:underline dark:text-blue-300">
+                  <p className="text-base text-slate-500 dark:text-[#CBD5E1]">{translate(language, 'homePage.noStudyHistoryYet')}</p>
+                  <button onClick={() => onNavigate('practice-list')} className="mt-4 text-blue-600 dark:text-[#7EA2F8] text-sm font-medium hover:underline">
                     {translate(language, 'homePage.startPractice2')} →
                   </button>
                 </div>
@@ -329,17 +311,17 @@ export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
                   {recentSessions.map(s => {
                     const pct = s.answered_count > 0 ? Math.round((s.correct_answers / s.answered_count) * 100) : 0;
                     return (
-                      <div key={s.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-xl dark:bg-slate-800">
-                        <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0" />
+                      <div key={s.id} className="flex items-center gap-4 p-3 bg-slate-50 border border-slate-200 rounded-xl dark:bg-[rgba(255,255,255,0.04)] dark:border-[rgba(255,255,255,0.08)]">
+                        <CheckCircle className="w-5 h-5 text-emerald-500 dark:text-[#4CC9B0] shrink-0" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-700 dark:text-slate-100">
+                          <p className="text-sm font-medium text-slate-700 dark:text-[#F8FAFC]">
                             {translate(language, 'homePage.practiceQuestionCount', { count: s.answered_count })}
                           </p>
-                          <p className="text-xs text-gray-400 dark:text-slate-400">
+                          <p className="text-xs text-slate-500 dark:text-[#94A3B8]">
                             {new Date(s.created_at).toLocaleDateString(languageLocales[language])}
                           </p>
                         </div>
-                        <span className={`text-sm font-bold ${pct >= 70 ? 'text-emerald-600 dark:text-emerald-400' : pct >= 50 ? 'text-amber-500 dark:text-amber-400' : 'text-red-500 dark:text-red-400'}`}>
+                        <span className={`text-sm font-bold ${pct >= 70 ? 'text-emerald-600 dark:text-[#4CC9B0]' : pct >= 50 ? 'text-amber-500 dark:text-[#FFB84D]' : 'text-red-500 dark:text-[#F87171]'}`}>
                           {pct}%
                         </span>
                       </div>
@@ -350,7 +332,6 @@ export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
             </div>
           </div>
 
-          {/* Right column */}
           <div className="w-full lg:w-72 space-y-5 shrink-0">
             <CalendarWidget daysLeft={daysLeft} language={language} sessions={practiceSessions} examTargetDate={examTargetDate} />
             {progressError && <p role="alert" className="text-sm text-red-600">{translateMessage(language, progressError)}</p>}

@@ -68,11 +68,11 @@ export default function Sidebar({
   ];
 
   return (
-    <aside className="hidden md:flex md:fixed md:inset-y-0 md:left-0 w-56 bg-white border-r border-gray-200 flex-col z-50">
+    <aside className="hidden md:flex md:fixed md:inset-y-0 md:left-0 w-56 bg-white border-r border-gray-200 flex-col z-50 dark:bg-[#111827] dark:border-slate-700">
 
       {/* Logo */}
 
-      <div className="h-20 flex items-center justify-center border-b px-4">
+      <div className="h-20 flex items-center justify-center border-b px-4 dark:border-slate-700">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center">
             <BookOpen className="w-5 h-5 text-white" />
@@ -99,8 +99,8 @@ export default function Sidebar({
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition
               ${
                 active
-                  ? "bg-blue-50 text-blue-600"
-                  : "text-gray-600 hover:bg-gray-100"
+                  ? "bg-blue-50 text-blue-600 dark:bg-slate-700 dark:text-blue-300"
+                  : "text-gray-600 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-800"
               }`}
             >
               <Icon size={20} />
@@ -119,12 +119,12 @@ export default function Sidebar({
 
       {/* Bottom */}
 
-      <div className="border-t p-3 space-y-1">
+      <div className="border-t p-3 space-y-1 dark:border-slate-700">
 
         {isAdmin && (
           <button
             onClick={() => onNavigate("admin")}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-amber-50"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-amber-50 dark:hover:bg-slate-800"
           >
             <ShieldCheck size={20} />
             <span>{translate(language, 'adminPage.admin')}</span>
@@ -133,7 +133,7 @@ export default function Sidebar({
 
         <button
           onClick={() => onNavigate("settings")}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800"
         >
           <Settings size={20} />
           <span>
@@ -143,7 +143,7 @@ export default function Sidebar({
 
         <button
           onClick={signOut}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
         >
           <LogOut size={20} />
           <span>

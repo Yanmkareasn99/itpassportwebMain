@@ -194,7 +194,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
       title={translate(language, 'aiChatPage.aiChat')}
       subtitle={translate(language, 'aiChatPage.studyAssistant')}
     >
-      <div className="max-w-5xl mx-auto grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
+      <div className="app-shell grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm flex flex-col min-h-[70vh] overflow-hidden">
           <div className="p-5 border-b border-gray-100 dark:border-slate-700 bg-gradient-to-r from-blue-50 to-violet-50 dark:from-slate-800 dark:to-slate-900">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">

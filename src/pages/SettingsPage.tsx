@@ -224,7 +224,7 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
       title={translate(language, 'settingsPage.settings')}
       subtitle={translate(language, 'settingsPage.account')}
     >
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="app-shell max-w-3xl mx-auto space-y-6">
 
         {view === 'home' && (
           <div className={`rounded-[28px] shadow-[0_20px_40px_rgba(15,23,42,0.06)] ring-1 p-7 space-y-8 ${panelClass}`}>

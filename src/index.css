@@ -40,7 +40,7 @@ body {
 }
 
 html.dark body {
-  background: #020817;
+  background: #0F172A;
   color: #e2e8f0;
 }
 
@@ -112,7 +112,7 @@ html.dark .bg-gray-50,
 html.dark .bg-slate-50,
 html.dark .bg-gray-100,
 html.dark .bg-slate-100 {
-  background-color: #0f172a !important;
+  background-color: #1E293B !important;
 }
 
 html.dark .text-gray-800,
@@ -137,7 +137,7 @@ html.dark .bg-violet-50,
 html.dark .bg-amber-50,
 html.dark .bg-emerald-50,
 html.dark .bg-red-50 {
-  background-color: rgba(15, 23, 42, 0.9) !important;
+  background-color: rgba(30, 41, 59, 0.9) !important;
 }
 
 html.dark input,
@@ -278,4 +278,45 @@ html.dark .profile-gradient {
 
 html.dark .profile-avatar-gradient {
   background: linear-gradient(135deg, rgba(79,125,243,0.9) 0%, rgba(167,139,250,0.9) 100%);
+}
+
+.app-shell {
+  width: 100%;
+  max-width: 1400px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+@media (max-width: 767px) {
+  .app-shell {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1023px) {
+  .app-shell {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .app-shell {
+    max-width: 1500px;
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+}
+
+@media (min-width: 1600px) {
+  .app-shell {
+    max-width: 1560px;
+  }
+
+  html body {
+    font-size: 16px;
+  }
 }

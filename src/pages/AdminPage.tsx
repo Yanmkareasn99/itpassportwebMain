@@ -38,7 +38,7 @@ export default function AdminPage({ currentPage, onNavigate }: AdminPageProps) {
       title={translate(language, 'adminPage.admin')}
       subtitle={translate(language, 'adminPage.admin')}
     >
-      <div className="max-w-6xl mx-auto">
+      <div className="app-shell">
         {!isAdmin ? (
           <div className="bg-white rounded-2xl border border-red-100 shadow-sm p-6 text-sm text-red-600">
             {translate(language, 'adminPage.adminAccessRequired')}
