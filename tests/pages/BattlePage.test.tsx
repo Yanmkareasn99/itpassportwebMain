@@ -126,6 +126,23 @@ it('sends the chosen question count and time when creating a room', async () => 
   expect(mocks.create).toHaveBeenCalledWith(50, 7, 45);
 });
 
+it('allows the wager to be cleared before entering a new value', async () => {
+  mocks.room.status = 'waiting';
+  render(<BattlePage currentPage="battle" onNavigate={() => {}} />);
+  await flush();
+
+  const wagerInput = screen.getByLabelText('Wager points') as HTMLInputElement;
+  fireEvent.change(wagerInput, { target: { value: '' } });
+  expect(wagerInput.value).toBe('');
+  expect((screen.getByRole('button', { name: 'Create Room' }) as HTMLButtonElement).disabled).toBe(true);
+
+  fireEvent.change(wagerInput, { target: { value: '100' } });
+  expect(wagerInput.value).toBe('100');
+  fireEvent.click(screen.getByRole('button', { name: 'Create Room' }));
+  await flush();
+  expect(mocks.create).toHaveBeenCalledWith(100, 5, 30);
+});
+
 it.each(['creator', 'opponent'])('uses the room time limit for the %s', async role => {
   mocks.room.time_per_question_seconds = 5;
   if (role === 'opponent') {

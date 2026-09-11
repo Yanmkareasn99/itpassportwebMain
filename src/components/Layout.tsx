@@ -27,7 +27,7 @@ export default function Layout({
       />
 
       <div className="md:ml-56 min-h-screen flex flex-col dark:bg-slate-950">
-        <Header title={title} subtitle={subtitle} />
+        <Header title={title} subtitle={subtitle} onNavigate={onNavigate} />
 
         <main className="flex-1 p-4 sm:p-5 lg:p-6 pb-24 md:pb-6 overflow-x-hidden dark:bg-slate-950">
           {children}
