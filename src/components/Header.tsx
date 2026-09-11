@@ -4,16 +4,23 @@ import { Bell, Coins } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getPointBalance } from '../lib/points';
+import type { Page } from '../types';
 
 interface HeaderProps {
   title: string;
   subtitle?: string;
+  onNavigate: (page: Page) => void;
 }
 
-export default function Header({ title, subtitle }: HeaderProps) {
+const DEFAULT_READ_NOTIFICATION_IDS = [3];
+
+export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
   const { profile } = useAuth();
   const { language } = useLanguage();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [readNotificationIds, setReadNotificationIds] = useState<Set<number>>(
+    () => new Set(DEFAULT_READ_NOTIFICATION_IDS),
+  );
   const [pointBalance, setPointBalance] = useState<number | null>(null);
   
   const notificationRef = useRef<HTMLDivElement | null>(null);
@@ -27,7 +34,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
         'header.takeOneMockExamAndReviewWeakAreas'
       ),
       time: translate(language, 'header.5MinAgo'),
-      unread: true,
+      destination: 'mock-exam' as Page,
     },
     {
       id: 2,
@@ -37,7 +44,7 @@ export default function Header({ title, subtitle }: HeaderProps) {
         'header.studentsCanCheckMaterialsAnytimeMakingInformationSharing'
       ),
       time: translate(language, 'header.1HourAgo'),
-      unread: true,
+      destination: 'materials' as Page,
     },
     {
       id: 3,
@@ -47,11 +54,38 @@ export default function Header({ title, subtitle }: HeaderProps) {
         'header.reviewTheQuestionsYouMissedLastTime'
       ),
       time: translate(language, 'header.yesterday'),
-      unread: false,
+      destination: 'practice-list' as Page,
     },
   ];
 
-  const unreadCount = notifications.filter(item => item.unread).length;
+  const unreadCount = notifications.filter(item => !readNotificationIds.has(item.id)).length;
+  const notificationStorageKey = `manabi-notifications-read:${profile?.id ?? 'guest'}`;
+
+  useEffect(() => {
+    try {
+      const savedIds = window.localStorage.getItem(notificationStorageKey);
+      setReadNotificationIds(new Set(savedIds ? JSON.parse(savedIds) as number[] : DEFAULT_READ_NOTIFICATION_IDS));
+    } catch {
+      setReadNotificationIds(new Set(DEFAULT_READ_NOTIFICATION_IDS));
+    }
+  }, [notificationStorageKey]);
+
+  function saveReadNotificationIds(ids: Set<number>) {
+    setReadNotificationIds(ids);
+    window.localStorage.setItem(notificationStorageKey, JSON.stringify([...ids]));
+  }
+
+  function openNotification(id: number, destination: Page) {
+    const nextIds = new Set(readNotificationIds);
+    nextIds.add(id);
+    saveReadNotificationIds(nextIds);
+    setIsNotificationsOpen(false);
+    onNavigate(destination);
+  }
+
+  function markAllNotificationsAsRead() {
+    saveReadNotificationIds(new Set(notifications.map(item => item.id)));
+  }
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
@@ -82,9 +116,8 @@ export default function Header({ title, subtitle }: HeaderProps) {
     try {
       const points = await getPointBalance(profile.id);
       setPointBalance(points.balance);
-    } catch (error) {
-      // swallow error; keep pointBalance null and avoid showing UI error here
-    } finally {
+    } catch {
+      setPointBalance(null);
     }
   }
 
@@ -152,45 +185,61 @@ export default function Header({ title, subtitle }: HeaderProps) {
                     </p>
                   </div>
 
-                  <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-200 px-2 py-1 rounded-full">
-                    {translate(language, 'header.new')}
-                  </span>
+                  {unreadCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={markAllNotificationsAsRead}
+                      className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-100 bg-blue-50 dark:bg-blue-900/30 dark:text-blue-200 dark:hover:bg-blue-900/50 px-2 py-1 rounded-full transition"
+                    >
+                      {translate(language, 'header.markAllAsRead')}
+                    </button>
+                  )}
                 </div>
 
                 <div className="max-h-80 overflow-y-auto">
-                  {notifications.map(item => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-slate-800 transition border-b border-gray-50 dark:border-slate-800 last:border-b-0"
-                    >
-                      <div className="flex items-start gap-3">
-                        <span
-                          className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${
-                            item.unread
-                              ? 'bg-blue-500'
-                              : 'bg-gray-200 dark:bg-slate-600'
-                          }`}
-                        />
+                  {notifications.map(item => {
+                    const isUnread = !readNotificationIds.has(item.id);
 
-                        <div className="min-w-0">
-                          <div className="flex items-center justify-between gap-3">
-                            <p className="text-sm font-semibold text-gray-800 dark:text-slate-100 truncate">
-                              {item.title}
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => openNotification(item.id, item.destination)}
+                        aria-label={`${item.title}. ${translate(language, isUnread ? 'header.unread' : 'header.read')}`}
+                        className={`w-full text-left px-4 py-3 transition border-b border-gray-50 dark:border-slate-800 last:border-b-0 ${
+                          isUnread
+                            ? 'bg-blue-50/60 hover:bg-blue-50 dark:bg-blue-950/20 dark:hover:bg-blue-950/30'
+                            : 'bg-gray-50/60 hover:bg-gray-100/80 dark:bg-slate-900 dark:hover:bg-slate-800 opacity-70'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <span
+                            className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${
+                              isUnread
+                                ? 'bg-blue-500'
+                                : 'bg-gray-200 dark:bg-slate-600'
+                            }`}
+                          />
+
+                          <div className="min-w-0">
+                            <div className="flex items-center justify-between gap-3">
+                              <p className={`text-sm text-gray-800 dark:text-slate-100 truncate ${isUnread ? 'font-semibold' : 'font-medium'}`}>
+                                {item.title}
+                              </p>
+
+                              <span className="text-[10px] text-gray-400 dark:text-slate-400 shrink-0">
+                                {item.time}
+                              </span>
+                            </div>
+
+                            <p className="text-xs text-gray-500 dark:text-slate-300 leading-5 mt-1">
+                              {item.body}
                             </p>
-
-                            <span className="text-[10px] text-gray-400 dark:text-slate-400 shrink-0">
-                              {item.time}
-                            </span>
                           </div>
-
-                          <p className="text-xs text-gray-500 dark:text-slate-300 leading-5 mt-1">
-                            {item.body}
-                          </p>
                         </div>
-                      </div>
-                    </button>
-                  ))}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
