@@ -268,6 +268,7 @@ export const vi = {
   "loginPage.createAccount": "Tạo tài khoản",
   "loginPage.createANewAccount": "Tạo tài khoản mới.",
   "loginPage.email": "Email",
+  "loginPage.emailAlreadyRegistered": "Email này đã được đăng ký.",
   "loginPage.emailOrPasswordIsIncorrect": "Email hoặc mật khẩu không chính xác.",
   "loginPage.failedToCreateAccount": "Tạo tài khoản thất bại: ",
   "loginPage.name": "Họ tên",

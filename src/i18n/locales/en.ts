@@ -268,6 +268,7 @@ export const en = {
   "loginPage.createAccount": "Create account",
   "loginPage.createANewAccount": "Create a new account.",
   "loginPage.email": "Email",
+  "loginPage.emailAlreadyRegistered": "This email is already registered.",
   "loginPage.emailOrPasswordIsIncorrect": "Email or password is incorrect.",
   "loginPage.failedToCreateAccount": "Failed to create account: ",
   "loginPage.name": "Name",
