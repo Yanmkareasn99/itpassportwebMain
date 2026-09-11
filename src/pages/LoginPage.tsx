@@ -274,21 +274,7 @@ export default function LoginPage() {
                     <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700">G</span>
                     {translate(language, 'loginPage.signInWithGoogle')}
                   </button>
-
-                  <button
-                    type="button"
-                    onClick={() => void handleGoogleAuth()}
-                    disabled={loading}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700 shadow-sm transition hover:bg-blue-100 disabled:opacity-60"
-                  >
-                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-blue-700">G</span>
-                    {translate(language, 'loginPage.signUpWithGoogle')}
-                  </button>
                 </div>
-
-                <p className="mt-3 text-center text-xs text-slate-500">
-                  {translate(language, 'loginPage.chooseAnotherGoogleAccount')}
-                </p>
               </div>
 
               <div className="mt-6 text-center">
