@@ -1,5 +1,9 @@
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import type { PdfImportQuestion, PdfImportResult } from './pdfQuestionImport';
+import { extractAnswerMap, extractPages } from './pdfAnswerText';
+import {
+  type PdfImportQuestion,
+  type PdfImportResult,
+} from './pdfQuestionImport';
 
 interface OcrLine {
   text: string;
@@ -385,9 +389,21 @@ export async function processScannedExamPdfs(
       throw new Error('This scanned PDF could not be segmented into questions. Make sure the pages show headings such as “問1”.');
     }
 
-    const answers = answerDocument
-      ? extractAnswers(await ocrAnswerPages(answerDocument, worker, PSM, onProgress))
-      : new Map<number, string>();
+    let answers = new Map<number, string>();
+    if (answerDocument) {
+      // An exam can have scanned question pages and a searchable answer PDF.
+      // Prefer its exact text layer over OCR, which is less reliable for dense grids.
+      onProgress?.('Reading embedded answer text…');
+      answers = extractAnswerMap(await extractPages(answerDocument));
+
+      if (answers.size < starts.length) {
+        onProgress?.(`OCR: looking for ${starts.length - answers.size} missing answers…`);
+        const ocrAnswers = extractAnswers(await ocrAnswerPages(answerDocument, worker, PSM, onProgress));
+        for (const [number, label] of ocrAnswers) {
+          if (!answers.has(number)) answers.set(number, label);
+        }
+      }
+    }
 
     const questions: PdfImportQuestion[] = [];
     for (let index = 0; index < starts.length; index += 1) {
