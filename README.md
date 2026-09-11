@@ -2,7 +2,7 @@
 
 Manabi IT Passport is a React and Supabase study app for the Japanese IT Passport exam. It includes practice questions, mock exams, multilingual explanations, admin content tools, and an AI study assistant with local fallback answers.
 
-Demo: itpassportwebapp-eta.vercel.app
+Demo: [https://itpassportwebapp-eta.vercel.app](https://itpassportwebapp-eta.vercel.app)
 
 ## Screenshots
 
@@ -24,13 +24,13 @@ Demo: itpassportwebapp-eta.vercel.app
 
 ## Features
 
-- Authenticated learning dashboard with Supabase Auth and local demo-mode fallback.
+- Authenticated learning dashboard with Supabase Auth, secure email password recovery, and local demo-mode fallback.
 - Practice by subject, difficulty, question type, new questions, or missed-question review.
 - Mock exam and battle-mode screens for timed and competitive study workflows.
 - AI chat and per-question explanations through a Supabase Edge Function.
 - Local AI fallback explanations when Supabase or Gemini is unavailable.
 - Japanese, English, and Vietnamese localization.
-- Admin tools for questions, subjects, users, stats, CSV import, and PDF question import.
+- Admin tools for questions, subjects, users, mock-exam settings, stats, CSV import, and searchable/scanned PDF question import with OCR fallback.
 - Real browser URLs with route guards for signed-in and admin-only pages.
 - Standardized CSV, scoring, auth, rate-limit, error, and data helper modules.
 
@@ -66,23 +66,26 @@ supabase/
   functions/ai-chat/         Authenticated, rate-limited AI proxy
 tests/
   lib/                       Auth and AI fallback tests
+  pages/                     Route-level and interaction regression tests
+  contexts/                  Provider and authentication lifecycle tests
   utils/                     CSV, scoring, and localization tests
 ```
 
 Routing is handled in `src/App.tsx`. Signed-in pages are wrapped by `ProtectedRoute`; `/admin` is additionally wrapped by `AdminRoute`. The existing page components still receive `currentPage` and `onNavigate` so navigation UI remains simple while browser back/forward works.
 
-Admin code is split into four tabs:
+Admin code is split into five tabs:
 
 - `QuestionsTab`
 - `SubjectsTab`
 - `UsersTab`
+- `MockExamTab`
 - `StatsTab`
 
 Shared admin form state lives in `src/components/admin/forms.ts`, and CSV parsing lives in `src/lib/csv.ts`.
 
 ## Setup
 
-1. Install Node.js 18 or newer.
+1. Install Node.js 20 or newer.
 2. Install dependencies:
 
 ```bash
@@ -94,6 +97,7 @@ npm install
 ```bash
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_USE_SUPABASE=true
 VITE_ALLOWED_ORIGINS=https://itpassportweb-app.vercel.app
 ```
 
@@ -111,7 +115,15 @@ npm run build
 
 ## Supabase
 
-Apply migrations from `supabase/migrations` to create the Manabi schema, authorization policies, admin helpers, AI chat message storage, and question import support.
+Apply every migration in `supabase/migrations` in filename order. With the Supabase CLI linked to the target project, run:
+
+```bash
+supabase db push
+```
+
+The migrations create the Manabi schema, authorization policies, password-recovery-compatible profiles, admin helpers, AI chat storage, practice-session persistence, points, battle RPCs, and question import support. Configure the Supabase Auth redirect allow list with the deployed `/login?recovery=1` URL so emailed password-reset links return to this application.
+
+The unit tests validate the TypeScript wager boundary and duplicate UI submissions. Before production deployment, run Supabase integration checks confirming that invalid or insufficient wagers leave balances unchanged, concurrent create requests produce only one waiting room and one wager lock, and repeated cancellation requests produce exactly one refund ledger entry.
 
 The AI Edge Function expects:
 
@@ -133,6 +145,20 @@ Run all tests:
 npm test
 ```
 
+Run the same non-watch test command used by CI:
+
+```bash
+npm test -- --run
+```
+
+Run static checks and a production build:
+
+```bash
+npm run typecheck
+npm run lint
+npm run build
+```
+
 Run coverage:
 
 ```bash
@@ -146,6 +172,10 @@ Current focused coverage includes:
 - Localization helpers
 - AI fallback behavior and client-side rate limiting
 - Auth token helpers
+- Password recovery lifecycle and login-page validation
+- Searchable PDF answer parsing and scanned-PDF OCR reconciliation
+- Battle wager validation and duplicate-submit protection
+- Page and component interaction regressions
 
 ## Data And Errors
 

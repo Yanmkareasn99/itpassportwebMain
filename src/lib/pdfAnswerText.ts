@@ -67,7 +67,7 @@ export function extractAnswerMap(pages: PageText[]) {
   const answers = new Map<number, string>();
   const labels = 'アイウエオカキクケコ';
   const directPattern = new RegExp(
-    `問\\s*(\\d{1,3})\\s*(?:[:：=\\-]\\s*)?([${labels}])(?=\\s|$)`,
+    `問\\s*(\\d{1,3})\\s*(?:[:：=\\-]\\s*)?([${labels}])(?=\\s|問|$)`,
     'g',
   );
   const standaloneLabelPattern = new RegExp(`(?<!\\S)([${labels}])(?!\\S)`, 'g');

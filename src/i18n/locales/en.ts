@@ -306,6 +306,7 @@ export const en = {
   "loginPage.studentIdOptional": "Student ID (optional)",
   "loginPage.updatePassword": "Update password",
   "loginPage.updatePasswordFailed": "Unable to update your password. The reset link may have expired.",
+  "loginPage.invalidRecoveryLink": "This password reset link is invalid, expired, or has already been used. Please request a new link.",
   "materialsPage.download": "Download",
   "materialsPage.goToPractice": "Go to practice",
   "materialsPage.materials": "Materials",

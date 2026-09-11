@@ -306,6 +306,7 @@ export const ja = {
   "loginPage.studentIdOptional": "学籍番号（任意）",
   "loginPage.updatePassword": "パスワードを更新",
   "loginPage.updatePasswordFailed": "パスワードを更新できませんでした。再設定リンクの有効期限が切れている可能性があります。",
+  "loginPage.invalidRecoveryLink": "このパスワード再設定リンクは無効、有効期限切れ、または使用済みです。新しいリンクをリクエストしてください。",
   "materialsPage.download": "ダウンロード",
   "materialsPage.goToPractice": "問題演習へ",
   "materialsPage.materials": "教材",

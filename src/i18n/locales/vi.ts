@@ -306,6 +306,7 @@ export const vi = {
   "loginPage.studentIdOptional": "Mã sinh viên (tùy chọn)",
   "loginPage.updatePassword": "Cập nhật mật khẩu",
   "loginPage.updatePasswordFailed": "Không thể cập nhật mật khẩu. Liên kết đặt lại có thể đã hết hạn.",
+  "loginPage.invalidRecoveryLink": "Liên kết đặt lại mật khẩu không hợp lệ, đã hết hạn hoặc đã được sử dụng. Vui lòng yêu cầu liên kết mới.",
   "materialsPage.download": "Tải xuống",
   "materialsPage.goToPractice": "rèn luyện",
   "materialsPage.materials": "Tài liệu",

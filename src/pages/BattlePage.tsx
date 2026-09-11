@@ -62,6 +62,8 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   const submittingAnswer = useRef(false);
   const completingBattle = useRef(false);
   const refreshingRoom = useRef(false);
+  const creatingRoom = useRef(false);
+  const cancellingRoom = useRef(false);
   const advanceTimer = useRef<number | undefined>(undefined);
   const activeRoomId = activeRoom?.id;
   const currentRoomId = useRef(activeRoomId);
@@ -87,7 +89,8 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   const selectedCorrect = answered && choices.find(choice => choice.id === selectedChoiceId)?.is_correct;
   const roomTimeLimit = activeRoom?.time_per_question_seconds ?? DEFAULT_TIME_PER_QUESTION;
   const timePct = (timeLeft / roomTimeLimit) * 100;
-  const isValidWager = Number.isInteger(wager) && wager >= 0;
+  const isValidWager = Number.isInteger(wager) && wager >= 0 && wager <= balance;
+  const hasInsufficientBalance = Number.isFinite(wager) && wager > balance;
 
   const loadBalance = useCallback(async () => {
     if (!profile) return;
@@ -315,16 +318,17 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   }, [activeRoom, answers, maybeCompleteBattle, waitingForOpponent]);
 
   async function createRoom() {
-    if (!profile || !isValidWager) return;
+    if (!profile || !isValidWager || creatingRoom.current) return;
     if (!isSupabaseEnabled) {
       setError('Online battle rooms require Supabase to be enabled.');
       return;
     }
 
+    creatingRoom.current = true;
     setLoading(true);
     setError('');
     try {
-      const room = await createOnlineBattleRoom(Math.max(0, Math.round(wager)), questionCount, secondsPerQuestion);
+      const room = await createOnlineBattleRoom(wager, questionCount, secondsPerQuestion);
       setActiveRoom(room);
       void loadProfileNames([room.creator_id]);
       setQuestions([]);
@@ -335,6 +339,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : 'Unable to create battle room.');
     } finally {
+      creatingRoom.current = false;
       setLoading(false);
     }
   }
@@ -355,7 +360,8 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   }
 
   async function cancelRoom() {
-    if (!activeRoom) return;
+    if (!activeRoom || cancellingRoom.current) return;
+    cancellingRoom.current = true;
     setLoading(true);
     setError('');
     try {
@@ -367,6 +373,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     } catch (cancelError) {
       setError(cancelError instanceof Error ? cancelError.message : 'Unable to cancel battle room.');
     } finally {
+      cancellingRoom.current = false;
       setLoading(false);
     }
   }
@@ -513,12 +520,16 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                 <span className="text-xs font-semibold text-gray-500">{translate(language, 'ui.wager')}</span>
                 <input
                   type="number"
+                  aria-label={translate(language, 'ui.wager')}
                   min={0}
                   step={1}
                   value={Number.isNaN(wager) ? '' : wager}
                   onChange={event => setWager(event.target.valueAsNumber)}
                   className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
+                {hasInsufficientBalance && (
+                  <span className="mt-1 block text-xs text-red-500">{translate(language, 'ui.insufficientPoints')}</span>
+                )}
               </label>
               <button
                 onClick={() => void createRoom()}
