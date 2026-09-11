@@ -1,10 +1,24 @@
 import { supportedLanguages, translate } from '../i18n';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { BookOpen, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 export default function LoginPage() {
+  useEffect(() => {
+    const root = document.documentElement;
+    const previousDarkMode = root.classList.contains('dark');
+    const previousColorScheme = root.style.colorScheme;
+
+    root.classList.remove('dark');
+    root.style.colorScheme = 'light';
+
+    return () => {
+      root.style.colorScheme = previousColorScheme;
+      root.classList.toggle('dark', previousDarkMode);
+    };
+  }, []);
+
   const { signIn, signUp, signInWithGoogle } = useAuth();
   const { language, setLanguage } = useLanguage();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
@@ -75,166 +89,217 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-3">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-              <BookOpen className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-3xl font-bold text-blue-600 tracking-tight">マナビ</span>
-          </div>
-          <p className="text-sm text-gray-500">{text.subtitle}</p>
-          <div className="flex justify-center gap-2 mt-4">
-            {supportedLanguages.map(code => (
-              <button
-                key={code}
-                type="button"
-                onClick={() => setLanguage(code)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold border ${language === code ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-500 border-gray-200'}`}
-              >
-                {code.toUpperCase()}
-              </button>
-            ))}
-          </div>
-        </div>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(96,165,250,0.22),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(168,139,250,0.18),_transparent_35%),linear-gradient(135deg,#eff6ff_0%,#f8fafc_45%,#eef2ff_100%)] flex items-center justify-center p-4 sm:p-6 lg:p-8">
+      <div className="w-full max-w-5xl overflow-hidden rounded-[32px] border border-blue-100/70 bg-white/80 shadow-[0_30px_80px_rgba(30,41,59,0.12)] backdrop-blur-md">
+        <div className="grid lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-gradient-to-br from-[#1d4ed8] via-[#3b82f6] to-[#7c3aed] p-10 text-white">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.22),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.08),_transparent_35%)]" />
+            <div className="relative z-10">
+              <div className="inline-flex items-center gap-3 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 backdrop-blur-sm">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15">
+                  <BookOpen className="h-5 w-5 text-white" />
+                </div>
+                <span className="text-xl font-bold tracking-tight">マナビ</span>
+              </div>
 
-        {/* Card */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
-          <h2 className="text-xl font-bold text-gray-800 mb-1">
-            {mode === 'login' ? text.login : text.signup}
-          </h2>
-          <p className="text-sm text-gray-500 mb-6">
-            {mode === 'login' ? text.loginHelp : text.signupHelp}
-          </p>
-
-          {notice && (
-            <div className="mb-4 rounded-lg border border-emerald-100 bg-emerald-50 p-3 text-sm text-emerald-700">
-              {notice}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {mode === 'signup' && (
-              <>
+              <div className="mt-10 space-y-6">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">{text.name}</label>
+                  <p className="text-sm font-medium uppercase tracking-[0.18em] text-blue-100">学習をもっとスマートに</p>
+                  <h1 className="mt-3 text-4xl font-black leading-tight text-white">より明確に学び、自信を育てましょう</h1>
+                </div>
+
+                <p className="max-w-md text-sm leading-6 text-blue-50/90">
+                  {text.subtitle}
+                </p>
+              </div>
+            </div>
+
+            <div className="relative z-10 space-y-4">
+              { [
+                '分野ごとに学習して着実に上達',
+                '毎日で試験準備を管理',
+                '弱点をAIと一緒に見直し',
+              ].map(item => (
+                <div key={item} className="flex items-center gap-3 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 backdrop-blur-sm shadow-lg shadow-blue-950/10">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-sm font-bold">✓</div>
+                  <span className="text-sm text-blue-50">{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-center px-4 py-8 sm:px-8 lg:px-10">
+            <div className="w-full max-w-md">
+              <div className="mb-6 mt-8 text-center">
+                <div className="mb-4 hidden items-center justify-center lg:justify-start gap-2">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-500/25">
+                    <BookOpen className="h-5 w-5 text-white" />
+                  </div>
+                  <span className="text-2xl font-bold text-blue-600">マナビ</span>
+                </div>
+
+                <h2 className="text-2xl font-bold text-slate-800 text-center">
+                  {mode === 'login' ? text.login : text.signup}
+                </h2>
+                <p className="mt-2 text-sm text-slate-500 text-center">
+                  {mode === 'login' ? text.loginHelp : text.signupHelp}
+                </p>
+              </div>
+
+              <div className="mb-6 flex justify-center gap-2 rounded-full bg-slate-100 p-1">
+                {supportedLanguages.map(code => (
+                  <button
+                    key={code}
+                    type="button"
+                    onClick={() => setLanguage(code)}
+                    className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition ${
+                      language === code
+                        ? 'bg-white text-blue-700 shadow-sm ring-1 ring-blue-100'
+                        : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    {code.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+
+              {notice && (
+                <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700">
+                  {notice}
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {mode === 'signup' && (
+                  <>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">{text.name}</label>
+                      <input
+                        type="text"
+                        value={name}
+                        onChange={e => setName(e.target.value)}
+                        placeholder={translate(language, 'loginPage.namePlaceholder')}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-100 transition"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">{text.studentId}</label>
+                      <input
+                        type="text"
+                        value={studentId}
+                        onChange={e => setStudentId(e.target.value)}
+                        placeholder={translate(language, 'loginPage.studentIdPlaceholder')}
+                        className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-100 transition"
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div>
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">{text.email}</label>
                   <input
-                    type="text"
-                    value={name}
-                    onChange={e => setName(e.target.value)}
-                    placeholder={translate(language, 'loginPage.namePlaceholder')}
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="example@osaka-denshi.ac.jp"
+                    className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-100 transition"
                     required
                   />
                 </div>
+
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">{text.studentId}</label>
-                  <input
-                    type="text"
-                    value={studentId}
-                    onChange={e => setStudentId(e.target.value)}
-                    placeholder={translate(language, 'loginPage.studentIdPlaceholder')}
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                  />
+                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">{text.password}</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 pr-11 text-sm text-slate-700 placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-100 transition"
+                      required
+                      minLength={6}
+                    />
+                    <button
+                      type="button"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      onClick={() => setShowPassword(prev => !prev)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
-              </>
-            )}
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-                {text.email}
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="example@osaka-denshi.ac.jp"
-                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                required
-              />
-            </div>
+                {error && (
+                  <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-600">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                )}
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5">{text.password}</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full px-4 py-2.5 pr-10 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                  required
-                  minLength={6}
-                />
                 <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                  type="submit"
+                  disabled={loading}
+                  className="mt-2 w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 py-3.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition hover:from-blue-500 hover:to-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {loading ? text.processing : mode === 'login' ? text.login : text.signup}
+                </button>
+              </form>
+
+              <div className="mt-5">
+                <div className="relative my-5">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-slate-200" />
+                  </div>
+                  <div className="relative flex justify-center">
+                    <span className="bg-white px-3 text-[11px] font-medium uppercase tracking-[0.2em] text-slate-400">
+                      {translate(language, 'loginPage.or')}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50/40 hover:text-blue-700 disabled:opacity-60"
+                    onClick={() => void handleGoogleAuth()}
+                    disabled={loading}
+                  >
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700">G</span>
+                    {translate(language, 'loginPage.signInWithGoogle')}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => void handleGoogleAuth()}
+                    disabled={loading}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700 shadow-sm transition hover:bg-blue-100 disabled:opacity-60"
+                  >
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-blue-700">G</span>
+                    {translate(language, 'loginPage.signUpWithGoogle')}
+                  </button>
+                </div>
+
+                <p className="mt-3 text-center text-xs text-slate-500">
+                  {translate(language, 'loginPage.chooseAnotherGoogleAccount')}
+                </p>
+              </div>
+
+              <div className="mt-6 text-center">
+                <button
+                  onClick={() => {
+                    setMode(mode === 'login' ? 'signup' : 'login');
+                    setError('');
+                  }}
+                  className="text-sm font-semibold text-blue-600 transition hover:text-blue-700"
+                >
+                  {mode === 'login' ? text.noAccount : text.hasAccount}
                 </button>
               </div>
             </div>
-
-            {error && (
-              <div className="flex items-start gap-2 p-3 bg-red-50 rounded-lg border border-red-100">
-                <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
-                <p className="text-xs text-red-600">{error}</p>
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 active:bg-blue-800 transition disabled:opacity-60 disabled:cursor-not-allowed shadow-sm mt-2"
-            >
-              {loading ? text.processing : mode === 'login' ? text.login : text.signup}
-            </button>
-          </form>
-
-          <div className="mt-4">
-            <div className="oauth-divider text-center my-3">
-              <span>{translate(language, 'loginPage.or')}</span>
-            </div>
-
-            <button
-              type="button"
-              className={`google-login-button w-full py-2 px-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-sm font-medium flex items-center justify-center gap-2 shadow-sm`}
-              onClick={() => void handleGoogleAuth()}
-              disabled={loading}
-            >
-              <span className="google-icon mr-2">G</span>
-              {translate(language, 'loginPage.signInWithGoogle')}
-            </button>
-            <button
-              type="button"
-              onClick={() => void handleGoogleAuth()}
-              disabled={loading}
-              className="google-login-button mt-3 w-full py-2 px-3 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-medium flex items-center justify-center gap-2 shadow-sm disabled:opacity-60"
-            >
-              <span aria-hidden="true" className="google-icon mr-2">G</span>
-              {translate(language, 'loginPage.signUpWithGoogle')}
-            </button>
-            <p className="mt-2 text-xs text-gray-500 text-center">
-              {translate(language, 'loginPage.chooseAnotherGoogleAccount')}
-            </p>
-          </div>
-
-          <div className="mt-5 text-center">
-            <button
-              onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); }}
-              className="text-xs text-blue-600 hover:text-blue-700 font-medium transition"
-            >
-              {mode === 'login' ? text.noAccount : text.hasAccount}
-            </button>
           </div>
         </div>
-
-        <p className="text-center text-xs text-gray-400 mt-6">
-          {translate(language, 'loginPage.copyright')}
-        </p>
       </div>
     </div>
   );
