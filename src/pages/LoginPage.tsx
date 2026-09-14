@@ -190,11 +190,7 @@ export default function LoginPage() {
           <div className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-gradient-to-br from-[#1d4ed8] via-[#3b82f6] to-[#7c3aed] p-10 text-white">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.22),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.08),_transparent_35%)]" />
             <div className="relative z-10">
-              <div className="inline-flex items-center rounded-2xl border border-white/30 bg-white px-3 shadow-lg shadow-blue-950/15">
-                <BrandLogo alt={text.brand} />
-              </div>
-
-              <div className="mt-10 space-y-6">
+              <div className="space-y-6">
                 <div>
                   <p className="text-sm font-medium uppercase tracking-[0.18em] text-blue-100">{text.eyebrow}</p>
                   <h1 className="mt-3 text-3xl font-black leading-tight text-white">{text.headline}</h1>
@@ -223,7 +219,7 @@ export default function LoginPage() {
           <div className="flex items-center justify-center px-4 py-8 sm:px-8 lg:px-10">
             <div className="w-full max-w-md">
               <div className="mb-6 mt-8 text-center">
-                <div className="mb-4 flex items-center justify-center lg:hidden">
+                <div className="mb-4 flex items-center justify-center">
                   <BrandLogo alt={text.brand} />
                 </div>
 
