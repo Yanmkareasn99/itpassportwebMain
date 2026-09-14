@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getPointBalance } from '../lib/points';
 import type { Page } from '../types';
+import BrandLogo from './BrandLogo';
 
 interface HeaderProps {
   title: string;
@@ -135,6 +136,9 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
   return (
     <header className="sm:h-20 header-gradient border-b border-gray-100 dark:border-slate-700 flex flex-row items-center gap-2 sm:gap-3 py-2 sm:py-0 sticky top-0 z-10">
       <div className="app-shell w-full flex items-center gap-2 sm:gap-3">
+        <button type="button" onClick={() => onNavigate('home')} aria-label={translate(language, 'sidebar.home')} className="md:hidden shrink-0">
+          <BrandLogo variant="mark" alt="" />
+        </button>
         <div className="flex-1 min-w-0">
           {subtitle && (
             <p className="text-xs text-gray-400 dark:text-slate-400">
