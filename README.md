@@ -30,6 +30,7 @@ Demo: [https://itpassportwebapp-eta.vercel.app](https://itpassportwebapp-eta.ver
 - AI chat and per-question explanations through a Supabase Edge Function.
 - Local AI fallback explanations when Supabase or Gemini is unavailable.
 - Japanese, English, and Vietnamese localization.
+- Shared materials: signed-in users can upload PDFs, images, plain text, and MP4 files (up to 20 MB), then view or download files uploaded by others.
 - Admin tools for questions, subjects, users, mock-exam settings, stats, CSV import, and searchable/scanned PDF question import with OCR fallback.
 - Real browser URLs with route guards for signed-in and admin-only pages.
 - Standardized CSV, scoring, auth, rate-limit, error, and data helper modules.
@@ -121,7 +122,7 @@ Apply every migration in `supabase/migrations` in filename order. With the Supab
 supabase db push
 ```
 
-The migrations create the Manabi schema, authorization policies, password-recovery-compatible profiles, admin helpers, AI chat storage, practice-session persistence, points, battle RPCs, and question import support. Configure the Supabase Auth redirect allow list with the deployed `/login?recovery=1` URL so emailed password-reset links return to this application.
+The migrations create the Manabi schema, authorization policies, password-recovery-compatible profiles, admin helpers, AI chat storage, practice-session persistence, points, battle RPCs, question import support, and the private shared-materials bucket. Apply `20260914000000_add_shared_materials.sql` before using the Materials tab. Shared files require Supabase; local demo mode cannot share files between users. Configure the Supabase Auth redirect allow list with the deployed `/login?recovery=1` URL so emailed password-reset links return to this application.
 
 The unit tests validate the TypeScript wager boundary and duplicate UI submissions. Before production deployment, run Supabase integration checks confirming that invalid or insufficient wagers leave balances unchanged, concurrent create requests produce only one waiting room and one wager lock, and repeated cancellation requests produce exactly one refund ledger entry.
 
