@@ -2,25 +2,27 @@
 
 Manabi IT Passport is a React and Supabase study app for the Japanese IT Passport exam. It includes practice questions, mock exams, multilingual explanations, admin content tools, and an AI study assistant with local fallback answers.
 
-Demo: [https://itpassportwebapp-eta.vercel.app](https://itpassportwebapp-eta.vercel.app)
+Website: [https://manabi-app.jp](https://manabi-app.jp)
 
 ## Screenshots
 
-![Login screen](docs/screenshots/manabi%20login.png)
+![Login screen](docs/screenshots/manabi.login.png)
 
-![Home dashboard](docs/screenshots/manabi%20home.png)
+![Home dashboard](docs/screenshots/manabi.home.png)
 
-![Practice question flow](docs/screenshots/manabi%20practice.png)
+![Practice question flow](docs/screenshots/manabi.practice.png)
 
-![Mock exam](docs/screenshots/manabi%20mock%20exam.png)
+![Mock exam](docs/screenshots/manabi.mockexam.png)
 
-![Battle mode](docs/screenshots/manabi%20battle.png)
+![Battle mode](docs/screenshots/manabi.battle.png)
 
-![Learning materials](docs/screenshots/manabi%20materials.png)
+![Learning materials](docs/screenshots/manabi.materials.png)
 
-![AI chat assistant](docs/screenshots/manabi%20ai%20chat.png)
+![AI chat assistant](docs/screenshots/manabi.aichat.png)
 
-![Settings](docs/screenshots/manabi%20settings.png)
+![Settings](docs/screenshots/manabi.settings.png)
+
+![Admin dashboard](docs/screenshots/manabi.admin.png)
 
 ## Features
 
@@ -99,7 +101,7 @@ npm install
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 VITE_USE_SUPABASE=true
-VITE_ALLOWED_ORIGINS=https://itpassportweb-app.vercel.app
+VITE_ALLOWED_ORIGINS=https://manabi-app.jp
 ```
 
 4. Start the app:
@@ -122,7 +124,7 @@ Apply every migration in `supabase/migrations` in filename order. With the Supab
 supabase db push
 ```
 
-The migrations create the Manabi schema, authorization policies, password-recovery-compatible profiles, admin helpers, AI chat storage, practice-session persistence, points, battle RPCs, question import support, and the private shared-materials bucket. Apply `20260914000000_add_shared_materials.sql` before using the Materials tab. Shared files require Supabase; local demo mode cannot share files between users. Configure the Supabase Auth redirect allow list with the deployed `/login?recovery=1` URL so emailed password-reset links return to this application.
+The migrations create the Manabi schema, authorization policies, password-recovery-compatible profiles, admin helpers, AI chat storage, practice-session persistence, points, battle RPCs, question import support, and the private shared-materials bucket. Apply `20260914000000_add_shared_materials.sql` before using the Materials tab. Shared files require Supabase; local demo mode cannot share files between users. Configure the Supabase Auth redirect allow list with `https://manabi-app.jp/login?recovery=1` so emailed password-reset links return to this application.
 
 The unit tests validate the TypeScript wager boundary and duplicate UI submissions. Before production deployment, run Supabase integration checks confirming that invalid or insufficient wagers leave balances unchanged, concurrent create requests produce only one waiting room and one wager lock, and repeated cancellation requests produce exactly one refund ledger entry.
 
@@ -132,11 +134,12 @@ The AI Edge Function expects:
 SUPABASE_URL=your_supabase_project_url
 SUPABASE_ANON_KEY=your_supabase_anon_key
 GEMINI_API_KEY=your_gemini_key
-ALLOWED_ORIGIN=https://itpassportweb-app.vercel.app
+ALLOWED_ORIGIN=https://manabi-app.jp
 GEMINI_MODEL=gemini-3.5-flash-lite
 ```
 
 `ALLOWED_ORIGIN` is exact-match only. Multiple production origins can be comma-separated.
+If these variables are already configured in Vercel or Supabase, update the deployed values to `https://manabi-app.jp` as well; changing the defaults in this repository does not override deployed environment settings.
 
 ## Tests
 

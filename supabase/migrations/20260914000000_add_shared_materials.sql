@@ -37,6 +37,7 @@ ON CONFLICT (id) DO UPDATE SET
 
 drop POLICY IF EXISTS "authenticated_read_material_files" ON storage.objects;
 drop POLICY IF EXISTS "users_upload_material_files" ON storage.objects;
+DROP POLICY IF EXISTS "users_remove_material_files" ON storage.objects;
 CREATE POLICY "authenticated_read_material_files" ON storage.objects
   FOR SELECT TO authenticated USING (bucket_id = 'materials');
 CREATE POLICY "users_upload_material_files" ON storage.objects

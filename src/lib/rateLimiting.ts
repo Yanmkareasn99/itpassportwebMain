@@ -143,7 +143,7 @@ export function isAllowed(userId: string, config: RateLimitConfig = AI_CONFIG): 
  * Check if origin is allowed for production
  */
 const ALLOWED_ORIGINS: string[] = import.meta.env.PROD
-  ? (import.meta.env.VITE_ALLOWED_ORIGINS || 'https://itpassportweb-app.vercel.app').split(',')
+  ? (import.meta.env.VITE_ALLOWED_ORIGINS || 'https://manabi-app.jp').split(',')
   : ['http://localhost:5173', 'http://localhost:3000'];
 
 export function isAllowedOrigin(origin: string): boolean {
