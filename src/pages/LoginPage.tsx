@@ -1,7 +1,8 @@
 import { supportedLanguages, translate } from '../i18n';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { BookOpen, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle } from 'lucide-react';
+import BrandLogo from '../components/BrandLogo';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -189,11 +190,8 @@ export default function LoginPage() {
           <div className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-gradient-to-br from-[#1d4ed8] via-[#3b82f6] to-[#7c3aed] p-10 text-white">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.22),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.08),_transparent_35%)]" />
             <div className="relative z-10">
-              <div className="inline-flex items-center gap-3 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 backdrop-blur-sm">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15">
-                  <BookOpen className="h-5 w-5 text-white" />
-                </div>
-                <span className="text-xl font-bold tracking-tight">{text.brand}</span>
+              <div className="inline-flex items-center rounded-2xl border border-white/30 bg-white px-3 shadow-lg shadow-blue-950/15">
+                <BrandLogo alt={text.brand} />
               </div>
 
               <div className="mt-10 space-y-6">
@@ -225,11 +223,8 @@ export default function LoginPage() {
           <div className="flex items-center justify-center px-4 py-8 sm:px-8 lg:px-10">
             <div className="w-full max-w-md">
               <div className="mb-6 mt-8 text-center">
-                <div className="mb-4 hidden items-center justify-center lg:justify-start gap-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-500/25">
-                    <BookOpen className="h-5 w-5 text-white" />
-                  </div>
-                  <span className="text-2xl font-bold text-blue-600">{text.brand}</span>
+                <div className="mb-4 flex items-center justify-center lg:hidden">
+                  <BrandLogo alt={text.brand} />
                 </div>
 
                 <h2 className="text-2xl font-bold text-slate-800 text-center">
