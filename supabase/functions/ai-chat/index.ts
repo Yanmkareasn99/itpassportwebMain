@@ -11,7 +11,7 @@ interface ChatRequest {
   systemPrompt?: unknown;
 }
 
-const DEFAULT_ALLOWED_ORIGIN = 'https://itpassportweb-app.vercel.app';
+const DEFAULT_ALLOWED_ORIGIN = 'https://manabi-app.jp';
 const RATE_LIMIT_MAX_REQUESTS = 10;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const rateBuckets = new Map<string, { count: number; resetTime: number }>();
