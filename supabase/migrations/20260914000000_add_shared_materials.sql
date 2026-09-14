@@ -34,6 +34,9 @@ ON CONFLICT (id) DO UPDATE SET
   file_size_limit = EXCLUDED.file_size_limit,
   allowed_mime_types = EXCLUDED.allowed_mime_types;
 
+
+drop POLICY IF EXISTS "authenticated_read_material_files" ON storage.objects;
+drop POLICY IF EXISTS "users_upload_material_files" ON storage.objects;
 CREATE POLICY "authenticated_read_material_files" ON storage.objects
   FOR SELECT TO authenticated USING (bucket_id = 'materials');
 CREATE POLICY "users_upload_material_files" ON storage.objects
