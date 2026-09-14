@@ -15,7 +15,6 @@ export default function LoginPage() {
   const navigate = useNavigate();
   useEffect(() => {
     const root = document.documentElement;
-    const previousDarkMode = root.classList.contains('dark');
     const previousColorScheme = root.style.colorScheme;
 
     root.classList.remove('dark');
@@ -23,7 +22,7 @@ export default function LoginPage() {
 
     return () => {
       root.style.colorScheme = previousColorScheme;
-      root.classList.toggle('dark', previousDarkMode);
+      root.classList.toggle('dark', window.localStorage.getItem('manabi-theme') === 'dark');
     };
   }, []);
 

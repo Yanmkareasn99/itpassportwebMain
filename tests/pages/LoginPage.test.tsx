@@ -26,11 +26,31 @@ vi.mock('../../src/contexts/LanguageContext', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  window.localStorage.removeItem('manabi-theme');
+  document.documentElement.classList.remove('dark');
   mocks.signUp.mockResolvedValue(false);
   mocks.resetPassword.mockResolvedValue(undefined);
   mocks.updatePassword.mockResolvedValue(undefined);
   mocks.passwordRecoveryState = 'idle';
   mocks.user = null;
+});
+
+it.each([null, 'light'])('keeps light mode after leaving login with saved theme %s', savedTheme => {
+  if (savedTheme) window.localStorage.setItem('manabi-theme', savedTheme);
+  document.documentElement.classList.add('dark');
+  const { unmount } = render(<MemoryRouter><LoginPage /></MemoryRouter>);
+
+  expect(document.documentElement.classList.contains('dark')).toBe(false);
+  unmount();
+  expect(document.documentElement.classList.contains('dark')).toBe(false);
+});
+
+it('restores an explicitly saved dark theme after leaving login', () => {
+  window.localStorage.setItem('manabi-theme', 'dark');
+  const { unmount } = render(<MemoryRouter><LoginPage /></MemoryRouter>);
+
+  unmount();
+  expect(document.documentElement.classList.contains('dark')).toBe(true);
 });
 
 it('requests a password reset email from the login form', async () => {
