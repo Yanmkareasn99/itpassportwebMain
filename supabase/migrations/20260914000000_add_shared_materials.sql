@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS public.materials (
 
 ALTER TABLE public.materials ENABLE ROW LEVEL SECURITY;
 
+Drop POLICY IF EXISTS "authenticated_read_materials" ON public.materials;
+Drop POLICY IF EXISTS "users_insert_materials" ON public.materials;
 CREATE POLICY "authenticated_read_materials" ON public.materials
   FOR SELECT TO authenticated USING (true);
 CREATE POLICY "users_insert_materials" ON public.materials
