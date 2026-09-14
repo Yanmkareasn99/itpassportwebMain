@@ -73,7 +73,7 @@ export default function Sidebar({
       {/* Logo */}
 
       <div className="h-20 flex items-center justify-center border-b px-4 dark:border-slate-700">
-        <BrandLogo />
+        <BrandLogo compact />
       </div>
 
       {/* Menu */}
