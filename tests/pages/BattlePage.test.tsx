@@ -111,12 +111,27 @@ describe('battle recovery', () => {
   it('starts a waiting room through polling without recreating its subscription', async () => {
     mocks.room.status = 'waiting';
     await resume();
-    expect(screen.getByText(/Keep this page open/)).toBeTruthy();
+    expect(screen.getByText(/The battle starts automatically/)).toBeTruthy();
     mocks.room.status = 'active';
     await tick(3);
     expect(screen.getByText('Test question')).toBeTruthy();
     expect(mocks.channel).toHaveBeenCalledTimes(1);
   });
+});
+
+it('opens the room list without cancelling the waiting room', async () => {
+  mocks.room.status = 'waiting';
+  render(<BattlePage currentPage="battle" onNavigate={() => {}} />);
+  await flush();
+  fireEvent.click(screen.getByRole('button', { name: 'Create Room' }));
+  await flush();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Check Rooms' }));
+  await flush();
+
+  expect(screen.getByText('Available Rooms')).toBeTruthy();
+  expect(screen.getByRole('button', { name: /Resume/ })).toBeTruthy();
+  expect(mocks.cancel).not.toHaveBeenCalled();
 });
 
 it('sends the chosen question count and time when creating a room', async () => {

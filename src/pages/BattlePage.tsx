@@ -558,11 +558,15 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
           {error && <p className="text-sm text-red-500 mt-4">{translateMessage(language, error)}</p>}
           <div className="mt-6 flex flex-col sm:flex-row justify-center gap-3">
             <button
-              onClick={() => void refreshActiveRoom()}
+              onClick={() => {
+                setActiveRoom(null);
+                setStage('lobby');
+                void loadRooms();
+              }}
               disabled={loading}
               className="px-5 py-2.5 rounded-xl bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600 transition disabled:opacity-50"
             >
-              {translate(language, 'ui.checkRoom')}
+              {translate(language, 'ui.checkRooms')}
             </button>
             <button
               onClick={() => void cancelRoom()}
