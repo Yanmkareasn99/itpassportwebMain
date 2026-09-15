@@ -1,5 +1,5 @@
-import { useEffect, useState, type FormEvent } from 'react';
-import { BookOpen, Download, FileText, Image, PlayCircle, RefreshCw, Trash2, Upload } from 'lucide-react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { AlertTriangle, BookOpen, Download, FileText, Image, PlayCircle, RefreshCw, Trash2, Upload, X } from 'lucide-react';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -25,6 +25,9 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
   const [loading, setLoading] = useState(isSupabaseEnabled);
   const [busy, setBusy] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Material | null>(null);
+  const cancelDeleteRef = useRef<HTMLButtonElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -58,6 +61,19 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
   // Reloading is only needed on mount or after a successful upload.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!pendingDelete) return;
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    cancelDeleteRef.current?.focus();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      if (previousFocusRef.current?.isConnected) previousFocusRef.current.focus();
+      previousFocusRef.current = null;
+    };
+  }, [pendingDelete]);
 
   async function handleUpload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -110,8 +126,9 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
     }
   }
 
-  async function handleDelete(material: Material) {
-    if (deletingId || !window.confirm(t('materialsPage.deleteConfirm'))) return;
+  async function handleDelete() {
+    if (deletingId || !pendingDelete) return;
+    const material = pendingDelete;
     setError('');
     setMessage('');
     setDeletingId(material.id);
@@ -123,6 +140,7 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
       setError(cause instanceof Error ? cause.message : t('materialsPage.deleteFailed'));
     } finally {
       setDeletingId(null);
+      setPendingDelete(null);
     }
   }
 
@@ -187,7 +205,7 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
                     <button onClick={() => openMaterial(material, false)} className="px-3 py-2 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200 text-xs font-semibold hover:bg-gray-200 dark:hover:bg-slate-700">{t('materialsPage.open')}</button>
                     <button onClick={() => openMaterial(material, true)} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 flex items-center justify-center gap-1"><Download className="w-3.5 h-3.5" />{t('materialsPage.download')}</button>
                     {(user?.id === material.uploader_id || isAdmin) && <button
-                      onClick={() => handleDelete(material)}
+                      onClick={() => setPendingDelete(material)}
                       disabled={deletingId !== null}
                       className="col-span-2 px-3 py-2 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 text-xs font-semibold hover:bg-red-100 dark:hover:bg-red-900/50 disabled:opacity-50 flex items-center justify-center gap-1"
                     >
@@ -201,6 +219,80 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
           </section>
         </>}
       </div>
+      {pendingDelete && <div
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm"
+        onMouseDown={event => {
+          if (event.target === event.currentTarget && !deletingId) setPendingDelete(null);
+        }}
+      >
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-material-title"
+          aria-describedby="delete-material-description"
+          onKeyDown={event => {
+            if (event.key === 'Escape' && !deletingId) setPendingDelete(null);
+            if (event.key === 'Tab') {
+              const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'));
+              const first = buttons[0];
+              const last = buttons[buttons.length - 1];
+              if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last?.focus();
+              } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first?.focus();
+              }
+            }
+          }}
+          className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+        >
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-300">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 id="delete-material-title" className="text-lg font-bold text-gray-900 dark:text-slate-100">{t('materialsPage.deleteDialogTitle')}</h2>
+                <p id="delete-material-description" className="mt-1 text-sm leading-6 text-gray-600 dark:text-slate-300">{t('materialsPage.deleteConfirm')}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPendingDelete(null)}
+              disabled={deletingId !== null}
+              aria-label={t('materialsPage.cancel')}
+              className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="mt-5 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800">
+            <p className="break-words text-sm font-semibold text-gray-800 dark:text-slate-100">{pendingDelete.title}</p>
+            <p className="mt-1 break-all text-xs text-gray-500 dark:text-slate-400">{pendingDelete.file_name}</p>
+          </div>
+          <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button
+              ref={cancelDeleteRef}
+              type="button"
+              onClick={() => setPendingDelete(null)}
+              disabled={deletingId !== null}
+              className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+            >
+              {t('materialsPage.cancel')}
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deletingId !== null}
+              className="flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+            >
+              <Trash2 className="h-4 w-4" />
+              {deletingId ? t('materialsPage.deleting') : t('materialsPage.delete')}
+            </button>
+          </div>
+        </div>
+      </div>}
     </Layout>
   );
 }
