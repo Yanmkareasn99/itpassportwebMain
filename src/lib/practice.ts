@@ -94,6 +94,23 @@ export async function fetchPracticeQuestions(
   examDateFilter: ExamDateFilter,
   formatFilter: FormatFilter,
 ): Promise<Question[]> {
+  if (Array.isArray(examDateFilter)) {
+    const includesUncategorized = examDateFilter.includes(UNCATEGORIZED_EXAM_DATE);
+    const selectedDates = examDateFilter.filter(value => value !== UNCATEGORIZED_EXAM_DATE);
+
+    // The local Supabase-compatible query adapter does not expose PostgREST's
+    // `.or()` method. Load these two disjoint groups separately so mixed date
+    // and null selections behave the same in local and hosted environments.
+    if (includesUncategorized && selectedDates.length > 0) {
+      const [datedQuestions, uncategorizedQuestions] = await Promise.all([
+        fetchPracticeQuestions(subjectIds, selectedDates, formatFilter),
+        fetchPracticeQuestions(subjectIds, UNCATEGORIZED_EXAM_DATE, formatFilter),
+      ]);
+      return [...datedQuestions, ...uncategorizedQuestions].sort((left, right) =>
+        left.question_number - right.question_number || left.id.localeCompare(right.id));
+    }
+  }
+
   const questions: Question[] = [];
 
   for (let from = 0; ; from += 500) {
@@ -103,7 +120,15 @@ export async function fetchPracticeQuestions(
 
     if (subjectIds) query = query.in('subject_id', subjectIds);
 
-    if (examDateFilter === UNCATEGORIZED_EXAM_DATE) {
+    if (Array.isArray(examDateFilter) && examDateFilter.length > 0) {
+      const includesUncategorized = examDateFilter.includes(UNCATEGORIZED_EXAM_DATE);
+      const selectedDates = examDateFilter.filter(value => value !== UNCATEGORIZED_EXAM_DATE);
+      if (includesUncategorized) {
+        query = query.is('exam_date', null);
+      } else {
+        query = query.in('exam_date', selectedDates);
+      }
+    } else if (examDateFilter === UNCATEGORIZED_EXAM_DATE) {
       query = query.is('exam_date', null);
     } else if (examDateFilter !== 'all') {
       query = query.eq('exam_date', examDateFilter);
@@ -144,7 +169,7 @@ export async function loadExamDates(): Promise<string[]> {
   return [...dates].sort((left, right) => right.localeCompare(left));
 }
 
-export type ExamDateFilter = 'all' | string;
+export type ExamDateFilter = 'all' | string | string[];
 export type FormatFilter = 'all' | 'multiple_choice' | 'tree';
 export type ModeFilter = 'all' | 'new' | 'review';
 
