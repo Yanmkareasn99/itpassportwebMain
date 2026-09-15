@@ -18,6 +18,7 @@
     "export:dashboard-sql": "node scripts/export_dashboard_sql.mjs",
     "export:questions:csv": "node scripts/export_questions_csv.mjs",
     "import:questions": "node scripts/import_questions.mjs",
+    "backfill:exam-dates": "node scripts/backfill_question_exam_dates.mjs",
     "prepare:pdf-import": "python scripts/prepare_question_import.py"
   },
   "dependencies": {

@@ -133,3 +133,23 @@ order by q.question_number;
 
 Every result should show `has_question_image = true` and
 `correct_choices = 1`.
+
+## Backfill dates for existing questions
+
+Older imports discarded the `year` value embedded in the historical JSON.
+After applying `20260915010000_add_question_exam_dates.sql`, set a service-role
+connection locally and run the automatic matcher:
+
+```powershell
+$env:SUPABASE_URL = "https://your-project.supabase.co"
+$env:SUPABASE_SERVICE_ROLE_KEY = "your-secret-service-role-key"
+npm run backfill:exam-dates
+npm run backfill:exam-dates -- --apply
+```
+
+The first command is a dry run. The second updates only rows whose `exam_date`
+is currently null. Annual source values such as `2025` become `2025-01-01`, and
+monthly values such as `202507` become `2025-07-01`; these dates represent the
+start of the known exam period because the source files do not contain an exact
+day. Generic questions from `questions.json` and `category_questions.json` are
+left undated because they are not associated with an exam.
