@@ -1,19 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  upload: vi.fn(),
-  remove: vi.fn(),
-  insert: vi.fn(),
   signedUrl: vi.fn(),
   order: vi.fn(),
+  getSession: vi.fn(),
 }));
 
 vi.mock('../../src/lib/supabase', () => ({
   isSupabaseEnabled: true,
   supabase: {
-    storage: { from: () => ({ upload: mocks.upload, remove: mocks.remove, createSignedUrl: mocks.signedUrl }) },
+    auth: { getSession: mocks.getSession },
+    storage: { from: () => ({ createSignedUrl: mocks.signedUrl }) },
     from: () => ({
-      insert: mocks.insert,
       select: () => ({ order: mocks.order }),
     }),
   },
@@ -25,12 +23,10 @@ const pdf = () => new File(['%PDF-1.7'], 'guide.pdf', { type: 'application/pdf' 
 
 describe('shared materials', () => {
   beforeEach(() => {
-    vi.stubGlobal('crypto', { randomUUID: () => '0f869a7d-c645-49d8-8204-41382b6f0c91' });
-    mocks.upload.mockResolvedValue({ error: null });
-    mocks.insert.mockResolvedValue({ error: null });
-    mocks.remove.mockResolvedValue({ error: null });
+    mocks.getSession.mockResolvedValue({ data: { session: { access_token: 'access-token' } }, error: null });
     mocks.order.mockResolvedValue({ data: [], error: null });
     mocks.signedUrl.mockResolvedValue({ data: { signedUrl: 'https://example.test/guide' }, error: null });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ material: {} }) }));
   });
 
   afterEach(() => {
@@ -41,31 +37,52 @@ describe('shared materials', () => {
   it('rejects unsupported, empty, and oversized files', () => {
     expect(validateMaterialFile(new File(['<html>'], 'page.html', { type: 'text/html' }))).toBeTruthy();
     expect(validateMaterialFile(new File([], 'empty.pdf', { type: 'application/pdf' }))).toBeTruthy();
-    expect(validateMaterialFile({ type: 'application/pdf', size: MATERIAL_MAX_BYTES + 1 } as File)).toBeTruthy();
+    expect(validateMaterialFile({ name: 'large.pdf', type: 'application/pdf', size: MATERIAL_MAX_BYTES + 1 } as File)).toBeTruthy();
     expect(validateMaterialFile(pdf())).toBeNull();
+    expect(validateMaterialFile(new File(['doc'], 'lesson.docx', {
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    }))).toBeNull();
+    expect(validateMaterialFile(new File(['zip'], 'lesson.docx', { type: 'application/zip' }))).toBeNull();
+    expect(validateMaterialFile(new File(['zip'], 'lesson.zip', { type: 'application/zip' }))).toBeTruthy();
   });
 
-  it('uploads the file and publishes its metadata under the user folder', async () => {
-    await uploadMaterial('user-1', pdf(), ' Guide ', ' For beginners ');
-    expect(mocks.upload).toHaveBeenCalledWith('user-1/0f869a7d-c645-49d8-8204-41382b6f0c91', expect.any(File), {
-      contentType: 'application/pdf', upsert: false,
-    });
-    expect(mocks.insert).toHaveBeenCalledWith(expect.objectContaining({
-      title: 'Guide', description: 'For beginners', uploader_id: 'user-1', file_name: 'guide.pdf',
+  it('uploads the file to the material server with the user access token', async () => {
+    const file = pdf();
+    await uploadMaterial(file, ' Guide ', ' For beginners ');
+
+    expect(fetch).toHaveBeenCalledWith('https://files.manabi-app.jp/upload.php', expect.objectContaining({
+      method: 'POST',
+      headers: { Authorization: 'Bearer access-token' },
+      body: expect.any(FormData),
     }));
+    const body = vi.mocked(fetch).mock.calls[0][1]?.body as FormData;
+    expect(body.get('file')).toBe(file);
+    expect(body.get('title')).toBe('Guide');
+    expect(body.get('description')).toBe('For beginners');
   });
 
-  it('removes an uploaded file if publishing its metadata fails', async () => {
-    mocks.insert.mockResolvedValueOnce({ error: new Error('database unavailable') });
-    await expect(uploadMaterial('user-1', pdf(), 'Guide', '')).rejects.toThrow('database unavailable');
-    expect(mocks.remove).toHaveBeenCalledWith(['user-1/0f869a7d-c645-49d8-8204-41382b6f0c91']);
+  it('shows an error returned by the material server', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({ error: 'Only material managers can upload files.' }),
+    } as Response);
+    await expect(uploadMaterial(pdf(), 'Guide', '')).rejects.toThrow('Only material managers can upload files.');
   });
 
   it('lists shared records and signs a download with its original name', async () => {
-    const material = { storage_path: 'user-1/file-id', file_name: 'guide.pdf' } as Material;
+    const material = {
+      storage_path: '0f869a7d-c645-49d8-8204-41382b6f0c91/860f290e-9530-449d-b18f-fbb78f6a2134',
+      file_name: 'guide.pdf',
+    } as Material;
     mocks.order.mockResolvedValueOnce({ data: [material], error: null });
     expect(await listMaterials()).toEqual([material]);
     expect(await materialUrl(material, true)).toBe('https://example.test/guide');
-    expect(mocks.signedUrl).toHaveBeenCalledWith('user-1/file-id', 60, { download: 'guide.pdf' });
+    expect(mocks.signedUrl).toHaveBeenCalledWith(material.storage_path, 60, { download: 'guide.pdf' });
+  });
+
+  it('opens files stored on the material server directly', async () => {
+    const material = { storage_path: '2026/09/file name.pdf', file_name: 'guide.pdf' } as Material;
+    expect(await materialUrl(material)).toBe('https://files.manabi-app.jp/2026/09/file%20name.pdf');
+    expect(mocks.signedUrl).not.toHaveBeenCalled();
   });
 });
