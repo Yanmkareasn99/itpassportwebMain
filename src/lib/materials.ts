@@ -96,7 +96,7 @@ export async function uploadMaterial(file: File, title: string, description: str
   body.append('title', cleanTitle);
   body.append('description', cleanDescription);
 
-  const response = await fetch(`${materialFilesUrl}/upload.php`, {
+  const response = await fetch(`${materialFilesUrl}/api/upload.php`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${session.access_token}` },
     body,
