@@ -105,7 +105,7 @@ VITE_ALLOWED_ORIGINS=https://manabi-app.jp
 VITE_MATERIAL_FILES_URL=https://files.manabi-app.jp
 ```
 
-The separately deployed file server must provide `${VITE_MATERIAL_FILES_URL}/api/upload.php` and `${VITE_MATERIAL_FILES_URL}/api/download.php`.
+The separately deployed file server must provide `${VITE_MATERIAL_FILES_URL}/api/upload.php`, `${VITE_MATERIAL_FILES_URL}/api/download.php`, and `${VITE_MATERIAL_FILES_URL}/api/delete.php`. Upload `file-server/api/delete.php` beside the other API scripts; it allows uploaders to delete their own materials and administrators to delete any material.
 
 4. Start the app:
 

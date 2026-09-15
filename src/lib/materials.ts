@@ -105,6 +105,23 @@ export async function uploadMaterial(file: File, title: string, description: str
   if (!response.ok) throw new Error(result?.error || 'The material could not be uploaded.');
 }
 
+export async function deleteMaterial(materialId: string): Promise<void> {
+  requireSharedStorage();
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+  if (!session?.access_token) throw new Error('Sign in again before deleting a material.');
+
+  const response = await fetch(
+    `${materialFilesUrl}/api/delete.php?id=${encodeURIComponent(materialId)}`,
+    {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    },
+  );
+  const result = await response.json().catch(() => null) as { error?: string } | null;
+  if (!response.ok) throw new Error(result?.error || 'The material could not be deleted.');
+}
+
 export async function materialUrl(material: Material, download = false): Promise<string> {
   requireSharedStorage();
   // New files live on files.manabi-app.jp. UUID-prefixed paths are legacy

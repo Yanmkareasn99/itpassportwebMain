@@ -17,7 +17,7 @@ vi.mock('../../src/lib/supabase', () => ({
   },
 }));
 
-import { MATERIAL_MAX_BYTES, listMaterials, materialUrl, uploadMaterial, validateMaterialFile, type Material } from '../../src/lib/materials';
+import { deleteMaterial, MATERIAL_MAX_BYTES, listMaterials, materialUrl, uploadMaterial, validateMaterialFile, type Material } from '../../src/lib/materials';
 
 const pdf = () => new File(['%PDF-1.7'], 'guide.pdf', { type: 'application/pdf' });
 
@@ -93,5 +93,17 @@ describe('shared materials', () => {
     );
     expect(URL.createObjectURL).toHaveBeenCalledWith(fileBlob);
     expect(mocks.signedUrl).not.toHaveBeenCalled();
+  });
+
+  it('deletes a material through the authenticated material server', async () => {
+    await deleteMaterial('material-id');
+
+    expect(fetch).toHaveBeenCalledWith(
+      'https://files.manabi-app.jp/api/delete.php?id=material-id',
+      {
+        method: 'DELETE',
+        headers: { Authorization: 'Bearer access-token' },
+      },
+    );
   });
 });

@@ -1,10 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { BookOpen, Download, FileText, Image, PlayCircle, RefreshCw, Upload } from 'lucide-react';
+import { BookOpen, Download, FileText, Image, PlayCircle, RefreshCw, Trash2, Upload } from 'lucide-react';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { languageLocales, translate } from '../i18n';
-import { listMaterials, materialUrl, uploadMaterial, validateMaterialFile, type Material } from '../lib/materials';
+import { deleteMaterial, listMaterials, materialUrl, uploadMaterial, validateMaterialFile, type Material } from '../lib/materials';
 import { isSupabaseEnabled } from '../lib/supabase';
 import { Page } from '../types';
 
@@ -18,12 +18,13 @@ function fileSize(bytes: number) {
 }
 
 export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPageProps) {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { language } = useLanguage();
   const t = (key: Parameters<typeof translate>[1]) => translate(language, key);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(isSupabaseEnabled);
   const [busy, setBusy] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -109,6 +110,22 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
     }
   }
 
+  async function handleDelete(material: Material) {
+    if (deletingId || !window.confirm(t('materialsPage.deleteConfirm'))) return;
+    setError('');
+    setMessage('');
+    setDeletingId(material.id);
+    try {
+      await deleteMaterial(material.id);
+      setMaterials(current => current.filter(item => item.id !== material.id));
+      setMessage(t('materialsPage.deleted'));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t('materialsPage.deleteFailed'));
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   return (
     <Layout currentPage={currentPage} onNavigate={onNavigate} title={t('materialsPage.materials')} subtitle={t('materialsPage.studyMenu')}>
       <div className="app-shell space-y-6">
@@ -169,6 +186,14 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
                   <div className="grid grid-cols-2 gap-2 mt-4">
                     <button onClick={() => openMaterial(material, false)} className="px-3 py-2 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200 text-xs font-semibold hover:bg-gray-200 dark:hover:bg-slate-700">{t('materialsPage.open')}</button>
                     <button onClick={() => openMaterial(material, true)} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 flex items-center justify-center gap-1"><Download className="w-3.5 h-3.5" />{t('materialsPage.download')}</button>
+                    {(user?.id === material.uploader_id || isAdmin) && <button
+                      onClick={() => handleDelete(material)}
+                      disabled={deletingId !== null}
+                      className="col-span-2 px-3 py-2 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 text-xs font-semibold hover:bg-red-100 dark:hover:bg-red-900/50 disabled:opacity-50 flex items-center justify-center gap-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      {deletingId === material.id ? t('materialsPage.deleting') : t('materialsPage.delete')}
+                    </button>}
                   </div>
                 </article>;
               })}
