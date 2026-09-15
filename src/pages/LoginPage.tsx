@@ -1,7 +1,17 @@
 import { supportedLanguages, translate } from '../i18n';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Eye, EyeOff, AlertCircle } from 'lucide-react';
+import {
+  AlertCircle,
+  BookOpen,
+  BrainCircuit,
+  Calculator,
+  Eye,
+  EyeOff,
+  FileQuestion,
+  GraduationCap,
+  Pencil,
+} from 'lucide-react';
 import BrandLogo from '../components/BrandLogo';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -183,8 +193,17 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(96,165,250,0.22),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(168,139,250,0.18),_transparent_35%),linear-gradient(135deg,#eff6ff_0%,#f8fafc_45%,#eef2ff_100%)] flex items-center justify-center p-4 sm:p-6 lg:p-8">
-      <div className="w-full max-w-5xl overflow-hidden rounded-[32px] border border-blue-100/70 bg-white/80 shadow-[0_30px_80px_rgba(30,41,59,0.12)] backdrop-blur-md">
+    <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(96,165,250,0.22),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(168,139,250,0.18),_transparent_35%),linear-gradient(135deg,#eff6ff_0%,#f8fafc_45%,#eef2ff_100%)] flex items-center justify-center p-4 sm:p-6 lg:p-8">
+      <div className="login-exam-background" aria-hidden="true">
+        <span className="login-exam-float login-exam-float--book"><BookOpen /></span>
+        <span className="login-exam-float login-exam-float--calculator"><Calculator /></span>
+        <span className="login-exam-float login-exam-float--pencil"><Pencil /></span>
+        <span className="login-exam-float login-exam-float--question"><FileQuestion /></span>
+        <span className="login-exam-float login-exam-float--cap"><GraduationCap /></span>
+        <span className="login-exam-float login-exam-float--brain"><BrainCircuit /></span>
+      </div>
+
+      <div className="relative z-10 w-full max-w-5xl overflow-hidden rounded-[32px] border border-blue-100/70 bg-white/80 shadow-[0_30px_80px_rgba(30,41,59,0.12)] backdrop-blur-md">
         <div className="grid lg:grid-cols-[1.1fr_0.9fr]">
           <div className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-gradient-to-br from-[#1d4ed8] via-[#3b82f6] to-[#7c3aed] p-10 text-white">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.22),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.08),_transparent_35%)]" />
