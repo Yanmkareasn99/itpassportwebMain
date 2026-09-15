@@ -96,8 +96,10 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
         document.body.appendChild(link);
         link.click();
         link.remove();
+        if (url.startsWith('blob:')) window.setTimeout(() => URL.revokeObjectURL(url), 0);
       } else if (preview) {
         preview.location.href = url;
+        if (url.startsWith('blob:')) window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
       } else {
         window.location.href = url;
       }

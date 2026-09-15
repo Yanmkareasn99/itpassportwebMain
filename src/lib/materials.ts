@@ -110,7 +110,20 @@ export async function materialUrl(material: Material, download = false): Promise
   // New files live on files.manabi-app.jp. UUID-prefixed paths are legacy
   // objects that still need a Supabase signed URL.
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\//i.test(material.storage_path)) {
-    return `${materialFilesUrl}/${material.storage_path.split('/').map(encodeURIComponent).join('/')}`;
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) throw sessionError;
+    if (!session?.access_token) throw new Error('Sign in again before opening a material.');
+
+    const params = new URLSearchParams({ id: material.id });
+    if (download) params.set('download', '1');
+    const response = await fetch(`${materialFilesUrl}/api/download.php?${params}`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (!response.ok) {
+      const result = await response.json().catch(() => null) as { error?: string } | null;
+      throw new Error(result?.error || 'Unable to open this material.');
+    }
+    return URL.createObjectURL(await response.blob());
   }
   const { data, error } = await supabase.storage.from('materials').createSignedUrl(
     material.storage_path,

@@ -27,6 +27,7 @@ describe('shared materials', () => {
     mocks.order.mockResolvedValue({ data: [], error: null });
     mocks.signedUrl.mockResolvedValue({ data: { signedUrl: 'https://example.test/guide' }, error: null });
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ material: {} }) }));
+    vi.stubGlobal('URL', { ...URL, createObjectURL: vi.fn(() => 'blob:material-file') });
   });
 
   afterEach(() => {
@@ -80,9 +81,17 @@ describe('shared materials', () => {
     expect(mocks.signedUrl).toHaveBeenCalledWith(material.storage_path, 60, { download: 'guide.pdf' });
   });
 
-  it('opens files stored on the material server directly', async () => {
-    const material = { storage_path: '2026/09/file name.pdf', file_name: 'guide.pdf' } as Material;
-    expect(await materialUrl(material)).toBe('https://files.manabi-app.jp/2026/09/file%20name.pdf');
+  it('fetches files from the authenticated material download API', async () => {
+    const fileBlob = new Blob(['file']);
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, blob: async () => fileBlob } as Response);
+    const material = { id: 'material-id', storage_path: '2026/09/file.png', file_name: 'guide.png' } as Material;
+
+    expect(await materialUrl(material)).toBe('blob:material-file');
+    expect(fetch).toHaveBeenCalledWith(
+      'https://files.manabi-app.jp/api/download.php?id=material-id',
+      { headers: { Authorization: 'Bearer access-token' } },
+    );
+    expect(URL.createObjectURL).toHaveBeenCalledWith(fileBlob);
     expect(mocks.signedUrl).not.toHaveBeenCalled();
   });
 });

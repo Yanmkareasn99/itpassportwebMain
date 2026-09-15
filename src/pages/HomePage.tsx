@@ -263,9 +263,10 @@ export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
           <div className="flex-1 space-y-5">
             <div className="motion-stagger grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 xl:gap-6">
               {features.map(({ page, icon: Icon, title, description, cardClass, iconBg, iconColor, arrowBg }) => (
-                <div
+                <button
+                  type="button"
                   key={page}
-                  className={`motion-lift ${page === 'materials' ? 'md:col-span-2' : ''} ${cardClass} rounded-2xl p-4 sm:p-5 xl:p-6 flex items-center justify-between gap-4 xl:gap-5 cursor-pointer transition-all hover:shadow-md`}
+                  className={`motion-lift ${page === 'materials' ? 'md:col-span-2' : ''} ${cardClass} w-full rounded-2xl p-4 sm:p-5 xl:p-6 flex items-center justify-between gap-4 xl:gap-5 text-left transition-all hover:shadow-md`}
                   onClick={() => onNavigate(page)}
                 >
                   <div className="flex items-center gap-4 xl:gap-5 min-w-0">
@@ -279,14 +280,13 @@ export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
                     </div>
                   </div>
 
-                  <button
-                    onClick={e => { e.stopPropagation(); onNavigate(page); }}
-                    aria-label={title}
+                  <span
+                    aria-hidden="true"
                     className={`${arrowBg} w-12 h-12 xl:w-[3.25rem] xl:h-[3.25rem] rounded-xl flex items-center justify-center text-white shadow-lg shadow-black/10 transition hover:opacity-90 shrink-0`}
                   >
                     <ArrowRight className="w-5 h-5 xl:w-6 xl:h-6" />
-                  </button>
-                </div>
+                  </span>
+                </button>
               ))}
             </div>
 

@@ -13,11 +13,13 @@
   --soft-pink: #F6DDF0;
   --mint: #D8F4EF;
   --soft-orange: #FFE8CF;
-  --background: #F7F9FF;
+  --background: #EEF3FA;
   --card: #FFFFFF;
+  --surface-subtle: #F7F9FD;
+  --surface-muted: #EAF0F8;
   --text: #172B5B;
   --text-secondary: #7183A6;
-  --border: #E3E9F5;
+  --border: #C9D4E5;
   --success: #18B89A;
   --warning: #F5A623;
   --error: #F06A7A;
@@ -45,15 +47,21 @@ html.dark body {
 }
 
 html:not(.dark) body {
-  background: linear-gradient(180deg, #F7F9FF 0%, #F3F7FF 100%);
+  background: linear-gradient(180deg, #F1F5FB 0%, #E8EFF8 100%);
 }
 
-html:not(.dark) .bg-white,
+html:not(.dark) .bg-white {
+  background-color: var(--card) !important;
+}
+
 html:not(.dark) .bg-gray-50,
-html:not(.dark) .bg-slate-50,
+html:not(.dark) .bg-slate-50 {
+  background-color: var(--surface-subtle) !important;
+}
+
 html:not(.dark) .bg-gray-100,
 html:not(.dark) .bg-slate-100 {
-  background-color: var(--card) !important;
+  background-color: var(--surface-muted) !important;
 }
 
 html:not(.dark) .text-gray-800,
@@ -529,14 +537,49 @@ html.dark .profile-avatar-gradient {
     transform: translateY(-3px);
   }
 
+  button:not(:disabled):hover,
+  [role="button"]:not([aria-disabled="true"]):hover {
+    filter: brightness(0.96);
+    box-shadow: 0 5px 14px rgba(49, 89, 201, 0.14);
+  }
+
+  html.dark button:not(:disabled):hover,
+  html.dark [role="button"]:not([aria-disabled="true"]):hover {
+    filter: brightness(1.12);
+    box-shadow: 0 5px 16px rgba(0, 0, 0, 0.28);
+  }
+
+  a[href]:hover {
+    filter: brightness(0.88);
+    text-decoration-thickness: 2px;
+  }
+
   button:not(:disabled):hover svg:not(.animate-spin) {
     transform: scale(1.06);
   }
 }
 
 button,
-[role="button"] {
+[role="button"],
+a[href],
+summary,
+label[for],
+select,
+input[type="checkbox"],
+input[type="radio"],
+input[type="file"]::file-selector-button {
+  cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+}
+
+button:disabled,
+[role="button"][aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+:where(button, [role="button"], a[href], summary):focus-visible {
+  outline: 3px solid rgba(79, 125, 243, 0.42);
+  outline-offset: 3px;
 }
 
 button svg,
