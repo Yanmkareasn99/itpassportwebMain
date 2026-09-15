@@ -12,6 +12,20 @@ edit extracted text and choices, and select any answers that were not detected.
 Click **Import/update all** to upload the images to Supabase Storage and sync all
 questions and choices. Reusing the same exam key updates the existing exam.
 
+This Storage workflow is also the recommended image-delivery path for bundle
+performance. New question and answer-choice images should keep an HTTPS
+Supabase Storage URL in `image_url`; the student app uses those URLs directly,
+so the browser can cache and deliver them through the Storage CDN without a new
+frontend deployment.
+
+Historical images under `src/data/img` remain a compatibility fallback and are
+loaded only when their question is displayed. To remove them from frontend
+builds completely, upload them to the `question-images` bucket, update the
+matching `questions.image_url` and `answer_choices.image_url` rows, verify that
+no rows still use `img/...` paths, and then remove the corresponding bundled
+files. Run `npm run generate:image-metadata` whenever historical source JSON or
+fallback image paths change; production builds run it automatically.
+
 No terminal command or CSV upload is needed for this Admin-panel workflow.
 
 Image-only scanned PDFs are handled automatically with Japanese OCR in the

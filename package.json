@@ -8,6 +8,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite",
+    "prebuild": "npm run generate:image-metadata",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
@@ -19,6 +20,7 @@
     "export:questions:csv": "node scripts/export_questions_csv.mjs",
     "import:questions": "node scripts/import_questions.mjs",
     "backfill:exam-dates": "node scripts/backfill_question_exam_dates.mjs",
+    "generate:image-metadata": "node scripts/generate_question_image_metadata.mjs",
     "prepare:pdf-import": "python scripts/prepare_question_import.py"
   },
   "dependencies": {
