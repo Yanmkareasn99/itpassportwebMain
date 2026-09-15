@@ -586,4 +586,7 @@ export const ja = {
   "aiChat.systemSubject": "対象科目: {subject}",
   "aiChat.systemLearner": "学習者: {name}",
   "aiChat.systemRecentQuestions": "最近の問題データ:\n{questions}"
+  , "practiceListPage.examDate": "試験日"
+  , "adminPage.examDate": "試験日"
+  , "adminPage.examDateRequired": "試験日を選択してください。"
 } as const;

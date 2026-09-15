@@ -120,6 +120,7 @@ export default function QuestionsTab() {
       explanation: q.explanation ?? '',
       explanation_en: q.explanation_en ?? '',
       explanation_vi: q.explanation_vi ?? '',
+      exam_date: q.exam_date ?? '',
       difficulty: q.difficulty ?? 3,
       points: q.points ?? 1,
       image_url: q.image_url ?? '',
@@ -145,6 +146,7 @@ export default function QuestionsTab() {
       explanation: q.explanation ?? '',
       explanation_en: q.explanation_en ?? '',
       explanation_vi: q.explanation_vi ?? '',
+      exam_date: q.exam_date ?? '',
       difficulty: q.difficulty ?? 3,
       points: q.points ?? 1,
       image_url: q.image_url ?? '',
@@ -174,6 +176,7 @@ export default function QuestionsTab() {
         explanation_ja: form.explanation.trim() || null,
         explanation_en: form.explanation_en.trim() || null,
         explanation_vi: form.explanation_vi.trim() || null,
+        exam_date: form.exam_date || null,
         difficulty: form.difficulty,
         points: form.points,
         image_url: form.image_url.trim() || null,
@@ -400,6 +403,15 @@ export default function QuestionsTab() {
               <option value="true_false">{translate(language, 'adminPage.trueFalse')}</option>
               <option value="tree">{translate(language, 'adminPage.tree')}</option>
             </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1">{translate(language, 'adminPage.examDate')}</label>
+            <input
+              type="date"
+              value={form.exam_date}
+              onChange={e => setForm(f => ({ ...f, exam_date: e.target.value }))}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+            />
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1">{translate(language, 'adminPage.difficulty')} ({form.difficulty})</label>
@@ -679,6 +691,11 @@ export default function QuestionsTab() {
                         {sub && (
                           <span className="text-xs font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: `${sub.color}20`, color: sub.color }}>
                             {sub.name}
+                          </span>
+                        )}
+                        {q.exam_date && (
+                          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                            {q.exam_date}
                           </span>
                         )}
                         <DiffBadge d={q.difficulty ?? 3} />

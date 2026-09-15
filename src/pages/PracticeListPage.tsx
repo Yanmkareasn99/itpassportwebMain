@@ -13,7 +13,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import Layout from '../components/Layout';
-import { fetchPracticeQuestions, loadLatestAnswerStatus, loadPracticeProgress, practiceErrorMessage, type DifficultyFilter, type FormatFilter, type ModeFilter } from '../lib/practice';
+import { fetchPracticeQuestions, loadExamDates, loadLatestAnswerStatus, loadPracticeProgress, practiceErrorMessage, type ExamDateFilter, type FormatFilter, type ModeFilter } from '../lib/practice';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -104,6 +104,16 @@ interface CategoryStats {
 
 function getCategoryLabel(category: PracticeCategory, language: LanguageCode) {
   return category.name ?? translate(language, category.labelKey!);
+}
+
+function formatExamDate(date: string, language: LanguageCode) {
+  const locale = language === 'ja' ? 'ja-JP' : language === 'vi' ? 'vi-VN' : 'en-US';
+  return new Intl.DateTimeFormat(locale, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(`${date}T00:00:00Z`));
 }
 
 function CategoryCard({
@@ -255,11 +265,12 @@ export default function PracticeListPage({
   const [error, setError] = useState('');
   const [progressWarning, setProgressWarning] = useState('');
 
-  const [diffFilter, setDiffFilter] = useState<DifficultyFilter>('all');
+  const [examDateFilter, setExamDateFilter] = useState<ExamDateFilter>('all');
+  const [examDates, setExamDates] = useState<string[]>([]);
   const [formatFilter, setFormatFilter] = useState<FormatFilter>('all');
   const [modeFilter, setModeFilter] = useState<ModeFilter>('all');
   const [filterResult, setFilterResult] = useState<{ key: string; questions: Question[]; error: string } | null>(null);
-  const filterKey = JSON.stringify([user?.id, diffFilter, formatFilter, modeFilter]);
+  const filterKey = JSON.stringify([user?.id, examDateFilter, formatFilter, modeFilter]);
   const currentResult = filterResult?.key === filterKey ? filterResult : null;
   const matchingQuestions = currentResult?.questions ?? [];
   const userId = user?.id;
@@ -269,7 +280,7 @@ export default function PracticeListPage({
     let cancelled = false;
     const timer = window.setTimeout(async () => {
       try {
-        let questions = await fetchPracticeQuestions(null, diffFilter, formatFilter);
+        let questions = await fetchPracticeQuestions(null, examDateFilter, formatFilter);
         if (modeFilter !== 'all') {
           const latest = await loadLatestAnswerStatus(userId);
           questions = questions.filter(question => modeFilter === 'new'
@@ -281,7 +292,7 @@ export default function PracticeListPage({
       }
     }, 200);
     return () => { cancelled = true; window.clearTimeout(timer); };
-  }, [userId, diffFilter, formatFilter, modeFilter, filterKey]);
+  }, [userId, examDateFilter, formatFilter, modeFilter, filterKey]);
 
   async function startFilteredPractice() {
     if (!user || starting || !currentResult || currentResult.error || !matchingQuestions.length) return;
@@ -323,8 +334,9 @@ export default function PracticeListPage({
           ]),
         ];
 
-        const [totalResult, ...countResults] = await Promise.all([
+        const [totalResult, availableExamDates, ...countResults] = await Promise.all([
           supabase.from('questions').select('id', { count: 'exact', head: true }),
+          loadExamDates(),
           ...subjectIds.map(subjectId =>
             supabase
               .from('questions')
@@ -344,6 +356,7 @@ export default function PracticeListPage({
         if (cancelled) return;
 
         setQuestionCounts(counts);
+        setExamDates(availableExamDates);
         setTotalQuestionCount(
           totalResult.count ?? Object.values(counts).reduce((sum, count) => sum + count, 0),
         );
@@ -449,7 +462,7 @@ export default function PracticeListPage({
     setError('');
 
     try {
-      let selectedQuestions = await fetchPracticeQuestions(subjectIds, key === 'all' ? 'all' : diffFilter, key === 'all' ? 'all' : formatFilter);
+      let selectedQuestions = await fetchPracticeQuestions(subjectIds, key === 'all' ? 'all' : examDateFilter, key === 'all' ? 'all' : formatFilter);
 
       if (key !== 'all' && modeFilter !== 'all') {
         const latestAnswers = await loadLatestAnswerStatus(user!.id);
@@ -461,7 +474,7 @@ export default function PracticeListPage({
       if (selectedQuestions.length > 0) {
         await onStartPractice(!subjectIds || subjectIds.length > 1 ? 'all' : subjectIds[0], selectedQuestions);
       } else {
-        setError('No questions match these filters. Try another difficulty, question type, or learning mode.');
+        setError(translate(currentLanguage, 'ui.noMatches'));
       }
     } catch (error) {
       setError(practiceErrorMessage(error, 'Unable to start practice.'));
@@ -564,31 +577,20 @@ export default function PracticeListPage({
 
             <SelectDropdown
               label={
-                translate(currentLanguage, 'practiceListPage.difficulty')
+                translate(currentLanguage, 'practiceListPage.examDate')
               }
-              value={diffFilter}
-              onChange={(v) => { setDiffFilter(v as DifficultyFilter); setError(''); }}
+              value={examDateFilter}
+              onChange={(v) => { setExamDateFilter(v as ExamDateFilter); setError(''); }}
               options={[
                 {
                   value: 'all',
                   label:
                     translate(currentLanguage, 'practiceListPage.all'),
                 },
-                {
-                  value: 'easy',
-                  label:
-                    translate(currentLanguage, 'practiceListPage.easy'),
-                },
-                {
-                  value: 'medium',
-                  label:
-                    translate(currentLanguage, 'practiceListPage.medium'),
-                },
-                {
-                  value: 'hard',
-                  label:
-                    translate(currentLanguage, 'practiceListPage.hard'),
-                },
+                ...examDates.map(date => ({
+                  value: date,
+                  label: formatExamDate(date, currentLanguage),
+                })),
               ]}
             />
 

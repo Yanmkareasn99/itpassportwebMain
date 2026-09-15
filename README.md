@@ -27,7 +27,7 @@ Website: [https://manabi-app.jp](https://manabi-app.jp)
 ## Features
 
 - Authenticated learning dashboard with Supabase Auth, secure email password recovery, and local demo-mode fallback.
-- Practice by subject, difficulty, question type, new questions, or missed-question review.
+- Practice by subject, source exam date, question type, new questions, or missed-question review.
 - Mock exam and battle-mode screens for timed and competitive study workflows.
 - AI chat and per-question explanations through a Supabase Edge Function.
 - Local AI fallback explanations when Supabase or Gemini is unavailable.

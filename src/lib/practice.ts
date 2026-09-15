@@ -90,7 +90,7 @@ export async function loadPracticeSession(userId: string, sessionId: string) {
 
 export async function fetchPracticeQuestions(
   subjectIds: string[] | null,
-  diffFilter: DifficultyFilter,
+  examDateFilter: ExamDateFilter,
   formatFilter: FormatFilter,
 ): Promise<Question[]> {
   const questions: Question[] = [];
@@ -102,13 +102,7 @@ export async function fetchPracticeQuestions(
 
     if (subjectIds) query = query.in('subject_id', subjectIds);
 
-    if (diffFilter === 'easy') {
-      query = query.eq('difficulty', 1);
-    } else if (diffFilter === 'medium') {
-      query = query.in('difficulty', [2, 3]);
-    } else if (diffFilter === 'hard') {
-      query = query.in('difficulty', [4, 5]);
-    }
+    if (examDateFilter !== 'all') query = query.eq('exam_date', examDateFilter);
 
     if (formatFilter !== 'all') {
       query = query.eq('question_type', formatFilter);
@@ -129,7 +123,23 @@ export async function fetchPracticeQuestions(
   return questions;
 }
 
-export type DifficultyFilter = 'all' | 'easy' | 'medium' | 'hard';
+export async function loadExamDates(): Promise<string[]> {
+  const dates = new Set<string>();
+  for (let from = 0; ; from += 500) {
+    const { data, error } = await supabase.from('questions')
+      .select('exam_date')
+      .order('exam_date', { ascending: false })
+      .range(from, from + 499);
+    if (error) throw error;
+    for (const question of data ?? []) {
+      if (question.exam_date) dates.add(question.exam_date as string);
+    }
+    if (!data || data.length < 500) break;
+  }
+  return [...dates].sort((left, right) => right.localeCompare(left));
+}
+
+export type ExamDateFilter = 'all' | string;
 export type FormatFilter = 'all' | 'multiple_choice' | 'tree';
 export type ModeFilter = 'all' | 'new' | 'review';
 
