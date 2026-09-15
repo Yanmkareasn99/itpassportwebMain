@@ -30,7 +30,9 @@ export default function Layout({
         <Header title={title} subtitle={subtitle} onNavigate={onNavigate} />
 
         <main className="flex-1 p-4 sm:p-5 lg:p-6 pb-24 md:pb-6 overflow-x-hidden dark:bg-slate-950">
-          {children}
+          <div key={currentPage} className="page-transition">
+            {children}
+          </div>
         </main>
       </div>
 

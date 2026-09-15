@@ -296,7 +296,7 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
 
         <div className="flex flex-col lg:flex-row gap-5">
           {/* Question panel */}
-          <div className="flex-1 space-y-4">
+          <div key={question.id} className="question-swap flex-1 space-y-4">
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">

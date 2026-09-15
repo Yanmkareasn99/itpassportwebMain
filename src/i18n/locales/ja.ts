@@ -303,7 +303,7 @@ export const ja = {
   "loginPage.resetPasswordTitle": "パスワードの再設定",
   "loginPage.sendResetLink": "再設定リンクを送信",
   "loginPage.signIn": "ログイン",
-  "loginPage.signInToContinueLearning": "パスワードを受け取ろう！",
+  "loginPage.signInToContinueLearning": "ログインして学習を続けましょう！",
   "loginPage.showPassword": "パスワードを表示",
   "loginPage.studentIdOptional": "学籍番号（任意）",
   "loginPage.updatePassword": "パスワードを更新",
