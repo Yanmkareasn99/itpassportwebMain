@@ -53,6 +53,16 @@ const SUBJECT_IDS = {
 
 const OPTION_KEYS = ['ア', 'イ', 'ウ', 'エ'];
 
+function examDateFromPeriod(period) {
+  const value = String(period ?? '');
+  if (/^\d{6}$/.test(value)) {
+    const month = Number(value.slice(4));
+    if (month >= 1 && month <= 12) return `${value.slice(0, 4)}-${value.slice(4)}-01`;
+  }
+  if (/^\d{4}$/.test(value)) return `${value}-01-01`;
+  return null;
+}
+
 async function verifySubjects() {
   const requiredIds = [...new Set(Object.values(SUBJECT_IDS))];
   const { data, error } = await supabase
@@ -101,7 +111,7 @@ async function loadExistingQuestions() {
   while (true) {
     const { data, error } = await supabase
       .from('questions')
-      .select('id, question_text, image_url')
+      .select('id, question_text, image_url, exam_date, source_key')
       .range(from, from + 999);
     if (error) throw new Error(`Unable to read existing questions: ${error.message}`);
     if (!data || data.length === 0) break;
@@ -208,6 +218,7 @@ async function importKakomonExam(examData, answers, subjectKey, existing) {
 
   for (const session of examData) {
     const yearKey = String(session.year);
+    const examDate = examDateFromPeriod(session.year);
     const sessionAnswers = answers?.[yearKey] ?? {};
     const questions = [], choices = [];
 
@@ -221,19 +232,38 @@ async function importKakomonExam(examData, answers, subjectKey, existing) {
       const questionImageUrl = normalizeImagePath(session.year, subjectKey, q.image_file, q.id);
       const existingQuestion = existing.get(text);
       if (existingQuestion) {
-        if (questionImageUrl && !existingQuestion.image_url) {
+        const patch = {};
+        if (questionImageUrl && !existingQuestion.image_url) patch.image_url = questionImageUrl;
+        if (examDate && (!existingQuestion.exam_date
+          || (existingQuestion.source_key?.startsWith('kakomon_') && examDate > existingQuestion.exam_date))) {
+          patch.exam_date = examDate;
+          patch.source_key = `${subjectKey}:${yearKey}:Q${q.id}`;
+        }
+        if (Object.keys(patch).length > 0) {
           const { error } = await supabase
             .from('questions')
-            .update({ image_url: questionImageUrl })
+            .update(patch)
             .eq('id', existingQuestion.id);
-          if (error) throw new Error(`Question image update failed: ${error.message}`);
-          existingQuestion.image_url = questionImageUrl;
+          if (error) throw new Error(`Question metadata update failed: ${error.message}`);
+          Object.assign(existingQuestion, patch);
         }
         continue;
       }
 
       const qId = randomUUID();
-      questions.push({ id: qId, subject_id: subjectId, question_number: q.id, question_text: text, question_type: 'multiple_choice', image_url: questionImageUrl, explanation: null, difficulty: 2, points: 1 });
+      questions.push({
+        id: qId,
+        source_key: `${subjectKey}:${yearKey}:Q${q.id}`,
+        exam_date: examDate,
+        subject_id: subjectId,
+        question_number: q.id,
+        question_text: text,
+        question_type: 'multiple_choice',
+        image_url: questionImageUrl,
+        explanation: null,
+        difficulty: 2,
+        points: 1,
+      });
 
       OPTION_KEYS.forEach((key, idx) => {
         const optText = q.options[key];
@@ -255,7 +285,13 @@ async function importKakomonExam(examData, answers, subjectKey, existing) {
         });
       });
 
-      existing.set(text, { id: qId, question_text: text, image_url: questionImageUrl });
+      existing.set(text, {
+        id: qId,
+        question_text: text,
+        image_url: questionImageUrl,
+        exam_date: examDate,
+        source_key: `${subjectKey}:${yearKey}:Q${q.id}`,
+      });
     }
 
     const n = await insertBatch(questions, choices);
