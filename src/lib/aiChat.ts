@@ -87,32 +87,26 @@ async function tryRemoteAnswer(prompt: string, context: ChatContext) {
   const userMessages = context.history.slice(-12).map(turn => ({ role: turn.role, content: turn.content }));
 
   console.log('[AI] Attempting remote answer with Supabase function...');
-  try {
-    const { data, error } = await supabase.functions.invoke('ai-chat', {
-      body: { prompt, messages: userMessages, systemPrompt },
-    });
+  const { data, error } = await supabase.functions.invoke('ai-chat', {
+    body: { prompt, messages: userMessages, systemPrompt },
+  });
 
-    if (error) {
-      console.error('[AI] Supabase function error:', error);
-      return null;
-    }
-    
-    if (!data || typeof data !== 'object' || !('reply' in data)) {
-      console.error('[AI] Invalid response format from Supabase:', data);
-      return null;
-    }
-    
-    const reply = (data as { reply?: unknown }).reply;
-    if (typeof reply === 'string' && reply.trim()) {
-      console.log('[AI] Got valid reply from Supabase function');
-      return reply.trim();
-    }
-    console.log('[AI] Empty reply from Supabase');
-    return null;
-  } catch (err) {
-    console.error('[AI] Supabase function invocation failed:', err);
-    return null;
+  if (error) {
+    console.error('[AI] Supabase function error:', error);
+    throw error;
   }
+    
+  if (!data || typeof data !== 'object' || !('reply' in data)) {
+    console.error('[AI] Invalid response format from Supabase:', data);
+    throw new Error('The AI service returned an invalid response.');
+  }
+    
+  const reply = (data as { reply?: unknown }).reply;
+  if (typeof reply === 'string' && reply.trim()) {
+    console.log('[AI] Got valid reply from Supabase function');
+    return reply.trim();
+  }
+  throw new Error('The AI service returned an empty response.');
 }
 
 export async function getChatReply(prompt: string, context: ChatContext) {
@@ -120,7 +114,8 @@ export async function getChatReply(prompt: string, context: ChatContext) {
     const remote = await tryRemoteAnswer(prompt, context);
     if (remote) return remote;
   } catch (err) {
-    console.error('[AI] Remote call failed, falling back:', err);
+    console.error('[AI] Remote call failed:', err);
+    if (isSupabaseEnabled) return translate(context.language, 'aiChat.remoteUnavailable');
   }
 
   return buildLocalAnswer(prompt, context);

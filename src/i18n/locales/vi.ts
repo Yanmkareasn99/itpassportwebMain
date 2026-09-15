@@ -591,4 +591,5 @@ export const vi = {
   , "adminPage.examDateRequired": "Vui lòng chọn ngày thi."
   , "ui.examDate": "Ngày thi"
   , "ui.uncategorized": "Chưa phân loại"
+  , "aiChat.remoteUnavailable": "Dịch vụ AI hiện không khả dụng. Vui lòng thử lại sau ít phút."
 } as const;

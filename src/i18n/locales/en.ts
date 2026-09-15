@@ -591,4 +591,5 @@ export const en = {
   , "adminPage.examDateRequired": "Please select the exam date."
   , "ui.examDate": "Exam date"
   , "ui.uncategorized": "Uncategorized"
+  , "aiChat.remoteUnavailable": "The AI service is unavailable right now. Please try again shortly."
 } as const;

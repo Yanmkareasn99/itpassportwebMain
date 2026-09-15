@@ -591,4 +591,5 @@ export const ja = {
   , "adminPage.examDateRequired": "試験日を選択してください。"
   , "ui.examDate": "試験日"
   , "ui.uncategorized": "未分類"
+  , "aiChat.remoteUnavailable": "現在AIサービスを利用できません。しばらくしてからもう一度お試しください。"
 } as const;

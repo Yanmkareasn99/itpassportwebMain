@@ -134,8 +134,9 @@ The AI Edge Function expects:
 SUPABASE_URL=your_supabase_project_url
 SUPABASE_ANON_KEY=your_supabase_anon_key
 GEMINI_API_KEY=your_gemini_key
-ALLOWED_ORIGIN=https://manabi-app.jp
+ALLOWED_ORIGIN=https://manabi-app.jp,https://itpassportwebapp-eta.vercel.app
 GEMINI_MODEL=gemini-3.5-flash-lite
+AI_RATE_LIMIT_MAX_REQUESTS=60
 ```
 
 `ALLOWED_ORIGIN` is exact-match only. Multiple production origins can be comma-separated.
