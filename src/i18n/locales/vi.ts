@@ -106,7 +106,7 @@ export const vi = {
   "ui.mockCorrect": "Trả lời đúng khi thi thử",
   "ui.mockWrong": "Trả lời sai khi thi thử",
   "ui.progressWarning": "Có thể luyện tập, nhưng không tải được lịch sử tiến độ: {error}",
-  "ui.noMatches": "Không có câu hỏi phù hợp. Hãy đổi độ khó, loại câu hỏi hoặc chế độ học.",
+  "ui.noMatches": "Không có câu hỏi phù hợp. Hãy đổi ngày thi, loại câu hỏi hoặc chế độ học.",
   "ui.noMistakes": "Không có câu sai cần ôn tập.",
   "ui.dismiss": "Đóng",
   "ui.noData": "Không có dữ liệu",
@@ -589,4 +589,7 @@ export const vi = {
   , "practiceListPage.examDate": "Ngày thi"
   , "adminPage.examDate": "Ngày thi"
   , "adminPage.examDateRequired": "Vui lòng chọn ngày thi."
+  , "ui.examDate": "Ngày thi"
+  , "ui.uncategorized": "Chưa phân loại"
+  , "aiChat.remoteUnavailable": "Dịch vụ AI hiện không khả dụng. Vui lòng thử lại sau ít phút."
 } as const;

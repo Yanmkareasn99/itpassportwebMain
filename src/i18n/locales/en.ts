@@ -589,4 +589,7 @@ export const en = {
   , "practiceListPage.examDate": "Exam date"
   , "adminPage.examDate": "Exam date"
   , "adminPage.examDateRequired": "Please select the exam date."
+  , "ui.examDate": "Exam date"
+  , "ui.uncategorized": "Uncategorized"
+  , "aiChat.remoteUnavailable": "The AI service is unavailable right now. Please try again shortly."
 } as const;

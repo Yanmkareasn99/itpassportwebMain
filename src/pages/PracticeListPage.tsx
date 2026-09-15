@@ -18,6 +18,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Question, Page } from '../types';
+import { formatExamDate, UNCATEGORIZED_EXAM_DATE } from '../lib/examDate';
 
 interface PracticeListPageProps {
   currentPage: Page;
@@ -104,16 +105,6 @@ interface CategoryStats {
 
 function getCategoryLabel(category: PracticeCategory, language: LanguageCode) {
   return category.name ?? translate(language, category.labelKey!);
-}
-
-function formatExamDate(date: string, language: LanguageCode) {
-  const locale = language === 'ja' ? 'ja-JP' : language === 'vi' ? 'vi-VN' : 'en-US';
-  return new Intl.DateTimeFormat(locale, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    timeZone: 'UTC',
-  }).format(new Date(`${date}T00:00:00Z`));
 }
 
 function CategoryCard({
@@ -586,6 +577,10 @@ export default function PracticeListPage({
                   value: 'all',
                   label:
                     translate(currentLanguage, 'practiceListPage.all'),
+                },
+                {
+                  value: UNCATEGORIZED_EXAM_DATE,
+                  label: translate(currentLanguage, 'ui.uncategorized'),
                 },
                 ...examDates.map(date => ({
                   value: date,

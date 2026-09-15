@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import type { Question, PracticeSession } from '../types';
+import { UNCATEGORIZED_EXAM_DATE } from './examDate';
 
 export interface PracticeAnswer {
   questionId: string;
@@ -102,7 +103,11 @@ export async function fetchPracticeQuestions(
 
     if (subjectIds) query = query.in('subject_id', subjectIds);
 
-    if (examDateFilter !== 'all') query = query.eq('exam_date', examDateFilter);
+    if (examDateFilter === UNCATEGORIZED_EXAM_DATE) {
+      query = query.is('exam_date', null);
+    } else if (examDateFilter !== 'all') {
+      query = query.eq('exam_date', examDateFilter);
+    }
 
     if (formatFilter !== 'all') {
       query = query.eq('question_type', formatFilter);

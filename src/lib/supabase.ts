@@ -3,7 +3,8 @@ import { getLocalRows } from './localData';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-export const isSupabaseEnabled = import.meta.env.VITE_USE_SUPABASE === 'true';
+export const isSupabaseEnabled = import.meta.env.VITE_USE_SUPABASE !== 'false'
+  && Boolean(supabaseUrl && supabaseAnonKey);
 
 type QueryResult = {
   data: unknown;
@@ -12,7 +13,7 @@ type QueryResult = {
 };
 
 type Filter = {
-  kind: 'eq' | 'in';
+  kind: 'eq' | 'in' | 'is';
   column: string;
   value: unknown;
 };
@@ -164,6 +165,11 @@ class LocalQuery {
     return this;
   }
 
+  is(column: string, value: null | boolean) {
+    this.filters.push({ kind: 'is', column, value });
+    return this;
+  }
+
   order(column: string, options?: { ascending?: boolean }) {
     this.orderBy = { column, ascending: options?.ascending !== false };
     return this;
@@ -262,7 +268,7 @@ class LocalQuery {
 
   private matches(item: LocalRow) {
     return this.filters.every((filter) => {
-      if (filter.kind === 'eq') return item[filter.column] === filter.value;
+      if (filter.kind === 'eq' || filter.kind === 'is') return item[filter.column] === filter.value;
       return Array.isArray(filter.value) && filter.value.includes(item[filter.column]);
     });
   }

@@ -11,6 +11,7 @@ import { practiceErrorMessage, type PracticeAnswer } from '../lib/practice';
 import { awardLocalAnswerPoints } from '../lib/points';
 import { Question, AnswerChoice, Page } from '../types';
 import { AnswerChoiceContent, QuestionImage } from '../components/QuestionMedia';
+import { formatExamDate } from '../lib/examDate';
 
 
 interface PracticeQuestionPageProps {
@@ -300,6 +301,11 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">
                   {label.question} {currentIndex + 1}
+                </span>
+                <span className="text-xs font-semibold text-violet-600 bg-violet-50 px-2.5 py-1 rounded-full">
+                  {translate(language, 'ui.examDate')}: {question.exam_date
+                    ? formatExamDate(question.exam_date, language)
+                    : translate(language, 'ui.uncategorized')}
                 </span>
                 <span className="text-xs text-gray-400">{'★'.repeat(question.difficulty)}</span>
               </div>

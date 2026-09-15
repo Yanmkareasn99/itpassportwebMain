@@ -106,7 +106,7 @@ export const ja = {
   "ui.mockCorrect": "模擬試験の正解",
   "ui.mockWrong": "模擬試験の不正解",
   "ui.progressWarning": "練習問題は利用できますが、学習履歴を読み込めませんでした：{error}",
-  "ui.noMatches": "条件に一致する問題がありません。難易度・問題形式・学習モードを変更してください。",
+  "ui.noMatches": "条件に一致する問題がありません。試験日・問題形式・学習モードを変更してください。",
   "ui.noMistakes": "復習が必要な間違いはありません。",
   "ui.dismiss": "閉じる",
   "ui.noData": "データがありません",
@@ -589,4 +589,7 @@ export const ja = {
   , "practiceListPage.examDate": "試験日"
   , "adminPage.examDate": "試験日"
   , "adminPage.examDateRequired": "試験日を選択してください。"
+  , "ui.examDate": "試験日"
+  , "ui.uncategorized": "未分類"
+  , "aiChat.remoteUnavailable": "現在AIサービスを利用できません。しばらくしてからもう一度お試しください。"
 } as const;
