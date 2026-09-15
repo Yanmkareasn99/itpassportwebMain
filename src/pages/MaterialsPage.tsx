@@ -68,7 +68,7 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
     if (!title.trim()) { setError(t('materialsPage.titleRequired')); return; }
     setBusy(true);
     try {
-      await uploadMaterial(user.id, file, title, description);
+      await uploadMaterial(file, title, description);
       setFile(null);
       setTitle('');
       setDescription('');
@@ -131,7 +131,7 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
               </label>
               <label className="text-sm font-medium text-gray-700 dark:text-slate-200 space-y-2">
                 <span>{t('materialsPage.file')}</span>
-                <input id="material-file" required type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.mp4" onChange={event => {
+                <input id="material-file" required type="file" accept=".pdf,.png,.jpg,.jpeg,.docx,.pptx,.xlsx" onChange={event => {
                   const selected = event.target.files?.[0] ?? null;
                   setFile(selected);
                   if (selected && !title) setTitle(selected.name.replace(/\.[^.]+$/, ''));

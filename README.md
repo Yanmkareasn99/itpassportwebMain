@@ -32,7 +32,7 @@ Website: [https://manabi-app.jp](https://manabi-app.jp)
 - AI chat and per-question explanations through a Supabase Edge Function.
 - Local AI fallback explanations when Supabase or Gemini is unavailable.
 - Japanese, English, and Vietnamese localization.
-- Shared materials: signed-in users can upload PDFs, images, plain text, and MP4 files (up to 20 MB), then view or download files uploaded by others.
+- Shared materials: signed-in users can upload PDFs, images, and Office documents (up to 20 MB) to `files.manabi-app.jp`, then view or download files uploaded by others.
 - Admin tools for questions, subjects, users, mock-exam settings, stats, CSV import, and searchable/scanned PDF question import with OCR fallback.
 - Real browser URLs with route guards for signed-in and admin-only pages.
 - Standardized CSV, scoring, auth, rate-limit, error, and data helper modules.
@@ -102,6 +102,7 @@ VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 VITE_USE_SUPABASE=true
 VITE_ALLOWED_ORIGINS=https://manabi-app.jp
+VITE_MATERIAL_FILES_URL=https://files.manabi-app.jp
 ```
 
 4. Start the app:
@@ -124,7 +125,7 @@ Apply every migration in `supabase/migrations` in filename order. With the Supab
 supabase db push
 ```
 
-The migrations create the Manabi schema, authorization policies, password-recovery-compatible profiles, admin helpers, AI chat storage, practice-session persistence, points, battle RPCs, question import support, and the private shared-materials bucket. Apply `20260914000000_add_shared_materials.sql` before using the Materials tab. Shared files require Supabase; local demo mode cannot share files between users. Configure the Supabase Auth redirect allow list with `https://manabi-app.jp/login?recovery=1` so emailed password-reset links return to this application.
+The migrations create the Manabi schema, authorization policies, password-recovery-compatible profiles, admin helpers, AI chat storage, practice-session persistence, points, battle RPCs, question import support, and shared-material metadata. Apply `20260914000000_add_shared_materials.sql` and `20260915000000_move_material_files_to_file_server.sql` before using the Materials tab. Material binaries are uploaded to `files.manabi-app.jp`; local demo mode cannot share files between users. Configure the Supabase Auth redirect allow list with `https://manabi-app.jp/login?recovery=1` so emailed password-reset links return to this application.
 
 The unit tests validate the TypeScript wager boundary and duplicate UI submissions. Before production deployment, run Supabase integration checks confirming that invalid or insufficient wagers leave balances unchanged, concurrent create requests produce only one waiting room and one wager lock, and repeated cancellation requests produce exactly one refund ledger entry.
 

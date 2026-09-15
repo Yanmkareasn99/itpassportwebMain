@@ -5,10 +5,36 @@ export const MATERIAL_MIME_TYPES = [
   'application/pdf',
   'image/png',
   'image/jpeg',
-  'image/webp',
-  'text/plain',
-  'video/mp4',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/zip',
+  'application/octet-stream',
 ] as const;
+
+const MATERIAL_EXTENSIONS: Record<string, readonly string[]> = {
+  pdf: ['application/pdf'],
+  png: ['image/png'],
+  jpg: ['image/jpeg'],
+  jpeg: ['image/jpeg'],
+  docx: [
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/zip',
+    'application/octet-stream',
+  ],
+  pptx: [
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/zip',
+    'application/octet-stream',
+  ],
+  xlsx: [
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/zip',
+    'application/octet-stream',
+  ],
+};
+
+const materialFilesUrl = (import.meta.env.VITE_MATERIAL_FILES_URL || 'https://files.manabi-app.jp').replace(/\/$/, '');
 
 export interface Material {
   id: string;
@@ -29,13 +55,15 @@ function requireSharedStorage() {
 export type MaterialFileProblem = 'invalidType' | 'emptyFile' | 'fileTooLarge';
 
 const fileProblemMessages: Record<MaterialFileProblem, string> = {
-  invalidType: 'Choose a PDF, PNG, JPEG, WebP, plain text, or MP4 file.',
+  invalidType: 'Choose a PDF, PNG, JPEG, DOCX, PPTX, or XLSX file.',
   emptyFile: 'Choose a file that is not empty.',
   fileTooLarge: 'Files must be 20 MB or smaller.',
 };
 
 export function validateMaterialFile(file: File): MaterialFileProblem | null {
-  if (!MATERIAL_MIME_TYPES.includes(file.type as typeof MATERIAL_MIME_TYPES[number])) {
+  const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
+  const allowedMimeTypes = MATERIAL_EXTENSIONS[extension];
+  if (!allowedMimeTypes || (file.type !== '' && !allowedMimeTypes.includes(file.type))) {
     return 'invalidType';
   }
   if (file.size === 0) return 'emptyFile';
@@ -50,7 +78,7 @@ export async function listMaterials(): Promise<Material[]> {
   return (data ?? []) as Material[];
 }
 
-export async function uploadMaterial(userId: string, file: File, title: string, description: string): Promise<void> {
+export async function uploadMaterial(file: File, title: string, description: string): Promise<void> {
   requireSharedStorage();
   const problem = validateMaterialFile(file);
   if (problem) throw new Error(fileProblemMessages[problem]);
@@ -59,30 +87,31 @@ export async function uploadMaterial(userId: string, file: File, title: string, 
   if (!cleanTitle || cleanTitle.length > 120) throw new Error('Enter a title of up to 120 characters.');
   if (cleanDescription.length > 500) throw new Error('Description must be 500 characters or shorter.');
 
-  const id = crypto.randomUUID();
-  const path = `${userId}/${id}`;
-  const bucket = supabase.storage.from('materials');
-  const { error: uploadError } = await bucket.upload(path, file, { contentType: file.type, upsert: false });
-  if (uploadError) throw uploadError;
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+  if (!session?.access_token) throw new Error('Sign in again before uploading a material.');
 
-  const { error: recordError } = await supabase.from('materials').insert({
-    id,
-    uploader_id: userId,
-    title: cleanTitle,
-    description: cleanDescription || null,
-    file_name: file.name,
-    mime_type: file.type,
-    file_size: file.size,
-    storage_path: path,
+  const body = new FormData();
+  body.append('file', file);
+  body.append('title', cleanTitle);
+  body.append('description', cleanDescription);
+
+  const response = await fetch(`${materialFilesUrl}/upload.php`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${session.access_token}` },
+    body,
   });
-  if (recordError) {
-    await bucket.remove([path]);
-    throw recordError;
-  }
+  const result = await response.json().catch(() => null) as { error?: string } | null;
+  if (!response.ok) throw new Error(result?.error || 'The material could not be uploaded.');
 }
 
 export async function materialUrl(material: Material, download = false): Promise<string> {
   requireSharedStorage();
+  // New files live on files.manabi-app.jp. UUID-prefixed paths are legacy
+  // objects that still need a Supabase signed URL.
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\//i.test(material.storage_path)) {
+    return `${materialFilesUrl}/${material.storage_path.split('/').map(encodeURIComponent).join('/')}`;
+  }
   const { data, error } = await supabase.storage.from('materials').createSignedUrl(
     material.storage_path,
     60,
