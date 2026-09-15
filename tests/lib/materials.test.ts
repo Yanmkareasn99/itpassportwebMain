@@ -50,7 +50,7 @@ describe('shared materials', () => {
     const file = pdf();
     await uploadMaterial(file, ' Guide ', ' For beginners ');
 
-    expect(fetch).toHaveBeenCalledWith('https://files.manabi-app.jp/upload.php', expect.objectContaining({
+    expect(fetch).toHaveBeenCalledWith('https://files.manabi-app.jp/api/upload.php', expect.objectContaining({
       method: 'POST',
       headers: { Authorization: 'Bearer access-token' },
       body: expect.any(FormData),

@@ -105,6 +105,8 @@ VITE_ALLOWED_ORIGINS=https://manabi-app.jp
 VITE_MATERIAL_FILES_URL=https://files.manabi-app.jp
 ```
 
+The material upload API must be available at `${VITE_MATERIAL_FILES_URL}/api/upload.php`.
+
 4. Start the app:
 
 ```bash
