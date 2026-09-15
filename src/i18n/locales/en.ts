@@ -106,7 +106,7 @@ export const en = {
   "ui.mockCorrect": "Mock correct",
   "ui.mockWrong": "Mock wrong",
   "ui.progressWarning": "Practice questions are available, but progress history could not be loaded: {error}",
-  "ui.noMatches": "No questions match these filters. Try another difficulty, question type, or learning mode.",
+  "ui.noMatches": "No questions match these filters. Try another exam date, question type, or learning mode.",
   "ui.noMistakes": "No mistakes are waiting for review.",
   "ui.dismiss": "Dismiss",
   "ui.noData": "No data available",
@@ -426,7 +426,7 @@ export const en = {
   "settingsPage.help": "Help",
   "settingsPage.helpIntro": "A quick guide to the main features of the app.",
   "settingsPage.helpPracticeTitle": "Practice",
-  "settingsPage.helpPracticeBody": "Pick a topic in Practice, then filter by difficulty or question format. Each practice session is saved so you can track your progress.",
+  "settingsPage.helpPracticeBody": "Pick a topic in Practice, then filter by exam date or question format. Each practice session is saved so you can track your progress.",
   "settingsPage.helpMockExamTitle": "Mock exam",
   "settingsPage.helpMockExamBody": "The mock exam has a time limit and a fixed number of questions. You need to reach a minimum correct-answer rate (set by your teacher or admin) to pass.",
   "settingsPage.helpBattleTitle": "Battle",
@@ -586,4 +586,7 @@ export const en = {
   "aiChat.systemSubject": "Subject: {subject}",
   "aiChat.systemLearner": "Learner: {name}",
   "aiChat.systemRecentQuestions": "Recent question data:\n{questions}"
+  , "practiceListPage.examDate": "Exam date"
+  , "adminPage.examDate": "Exam date"
+  , "adminPage.examDateRequired": "Please select the exam date."
 } as const;

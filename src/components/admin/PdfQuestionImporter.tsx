@@ -62,6 +62,7 @@ export default function PdfQuestionImporter({
   const { language } = useLanguage();
   const [subjectId, setSubjectId] = useState(subjects[0]?.id ?? '');
   const [examKey, setExamKey] = useState('');
+  const [examDate, setExamDate] = useState('');
   const [questionFile, setQuestionFile] = useState<File | null>(null);
   const [answerFile, setAnswerFile] = useState<File | null>(null);
   const [questions, setQuestions] = useState<PdfImportQuestion[]>([]);
@@ -169,6 +170,10 @@ export default function PdfQuestionImporter({
       setError(translate(language, 'adminPage.pleaseSelectASubject'));
       return;
     }
+    if (!examDate) {
+      setError(translate(language, 'adminPage.examDateRequired'));
+      return;
+    }
     if (!questions.length || invalidCount) {
       setError(translate(language, 'adminPage.pdfFixReviewErrors'));
       return;
@@ -192,6 +197,7 @@ export default function PdfQuestionImporter({
         }));
         const { error: importError } = await supabase.from('question_import_staging').insert({
           source_key: question.sourceKey,
+          exam_date: examDate,
           subject_id: subjectId,
           question_number: question.number,
           question_text: question.questionText.trim(),
@@ -260,6 +266,15 @@ export default function PdfQuestionImporter({
             value={examKey}
             onChange={event => setExamKey(event.target.value.replace(/\s/g, ''))}
             placeholder="2026B"
+            className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+          />
+        </label>
+        <label className="block text-xs font-semibold text-gray-600">
+          {translate(language, 'adminPage.examDate')}
+          <input
+            type="date"
+            value={examDate}
+            onChange={event => setExamDate(event.target.value)}
             className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
           />
         </label>

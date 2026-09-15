@@ -586,4 +586,7 @@ export const vi = {
   "aiChat.systemSubject": "Môn học: {subject}",
   "aiChat.systemLearner": "Người học: {name}",
   "aiChat.systemRecentQuestions": "Dữ liệu câu hỏi gần đây:\n{questions}"
+  , "practiceListPage.examDate": "Ngày thi"
+  , "adminPage.examDate": "Ngày thi"
+  , "adminPage.examDateRequired": "Vui lòng chọn ngày thi."
 } as const;
