@@ -50,6 +50,12 @@ describe('practice data', () => {
     expect(await loadExamDates()).toEqual(['2025-04-20', '2024-04-21', '2023-04-16']);
   });
 
+  it('filters questions without an exam date as uncategorized', async () => {
+    const questions = await fetchPracticeQuestions(null, 'uncategorized', 'all');
+    expect(questions.length).toBeGreaterThan(0);
+    expect(questions.every(question => question.exam_date === null)).toBe(true);
+  });
+
   it('handles a filter with no matching questions', async () => {
     expect(await fetchPracticeQuestions(['missing-subject'], '2025-04-20', 'tree')).toEqual([]);
   });

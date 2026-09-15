@@ -415,7 +415,7 @@ export const localQuestions: Question[] = seedQuestions.map((q, qIndex) => {
     explanation_en: q.explanation_en,
     explanation_vi: q.explanation_vi,
 
-    exam_date: ['2025-04-20', '2024-04-21', '2023-04-16'][qIndex % 3],
+    exam_date: qIndex === 0 ? null : ['2025-04-20', '2024-04-21', '2023-04-16'][qIndex % 3],
 
     difficulty: q.difficulty,
     points: 1,

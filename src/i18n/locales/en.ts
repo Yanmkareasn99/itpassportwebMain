@@ -589,4 +589,6 @@ export const en = {
   , "practiceListPage.examDate": "Exam date"
   , "adminPage.examDate": "Exam date"
   , "adminPage.examDateRequired": "Please select the exam date."
+  , "ui.examDate": "Exam date"
+  , "ui.uncategorized": "Uncategorized"
 } as const;
