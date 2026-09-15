@@ -235,7 +235,7 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
             if (event.key === 'Tab') {
               const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'));
               const first = buttons[0];
-              const last = buttons.at(-1);
+              const last = buttons[buttons.length - 1];
               if (event.shiftKey && document.activeElement === first) {
                 event.preventDefault();
                 last?.focus();
