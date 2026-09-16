@@ -5,7 +5,7 @@ import Layout from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { DEFAULT_MOCK_EXAM_SETTINGS, fetchMockExamSettings, hasPassedMockExam } from '../lib/mockExamSettings';
+import { DEFAULT_MOCK_EXAM_SETTINGS, fetchMockExamSettings, hasPassedMockExam, type MockExamSettings } from '../lib/mockExamSettings';
 import { awardLocalAnswerPoints } from '../lib/points';
 import { Question, AnswerChoice, Page } from '../types';
 import { AnswerChoiceContent, QuestionImage } from '../components/QuestionMedia';
@@ -18,10 +18,10 @@ interface MockExamPageProps {
 export default function MockExamPage({ currentPage, onNavigate }: MockExamPageProps) {
   const { user } = useAuth();
   const { language } = useLanguage();
-  const [settings, setSettings] = useState(DEFAULT_MOCK_EXAM_SETTINGS);
+  const [settings, setSettings] = useState<MockExamSettings | null>(null);
   const [settingsLoading, setSettingsLoading] = useState(true);
   const [error, setError] = useState('');
-  const examDuration = settings.duration_minutes * 60;
+  const examDuration = (settings?.duration_minutes ?? DEFAULT_MOCK_EXAM_SETTINGS.duration_minutes) * 60;
   const [stage, setStage] = useState<'intro' | 'exam' | 'result'>('intro');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -159,15 +159,15 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
             <p className="text-gray-500 mb-8">{translate(language, 'mockExamPage.checkYourAbilityInTheSameFormatAs')}</p>
             <div className="grid grid-cols-3 gap-4 mb-8">
               <div className="bg-gray-50 rounded-xl p-4">
-                <p className="text-2xl font-bold text-gray-800">{settings.question_count}</p>
+                <p className="text-2xl font-bold text-gray-800">{settings?.question_count ?? '—'}</p>
                 <p className="text-xs text-gray-400 mt-1">{translate(language, 'mockExamPage.questions')}</p>
               </div>
               <div className="bg-gray-50 rounded-xl p-4">
-                <p className="text-2xl font-bold text-gray-800">{settings.duration_minutes}</p>
+                <p className="text-2xl font-bold text-gray-800">{settings?.duration_minutes ?? '—'}</p>
                 <p className="text-xs text-gray-400 mt-1">{translate(language, 'mockExamPage.timeLimitMin')}</p>
               </div>
               <div className="bg-gray-50 rounded-xl p-4">
-                <p className="text-2xl font-bold text-gray-800">{settings.passing_score_percent}%</p>
+                <p className="text-2xl font-bold text-gray-800">{settings ? `${settings.passing_score_percent}%` : '—'}</p>
                 <p className="text-xs text-gray-400 mt-1">{translate(language, 'mockExamPage.passingScore')}</p>
               </div>
             </div>
@@ -202,7 +202,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
       if (chosen && ch.find(c => c.id === chosen)?.is_correct) correct++;
     }
     const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
-    const passed = hasPassedMockExam(correct, total, settings.passing_score_percent);
+    const passed = hasPassedMockExam(correct, total, settings?.passing_score_percent ?? DEFAULT_MOCK_EXAM_SETTINGS.passing_score_percent);
     const timeTaken = examDuration - timeLeft;
 
     return (
