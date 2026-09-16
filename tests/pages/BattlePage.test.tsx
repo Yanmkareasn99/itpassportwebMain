@@ -6,7 +6,11 @@ const mocks = vi.hoisted(() => ({
   room: { id: 'room-1', creator_id: 'me', opponent_id: 'them', status: 'active', question_ids: ['q1'], time_per_question_seconds: 30, wager_points: 0, creator_score: 0, opponent_score: 0, created_at: new Date().toISOString() },
   answers: [] as Array<{ user_id: string; question_id: string; selected_choice_id: string | null; is_correct: boolean }>,
   balance: 100,
-  create: vi.fn(), cancel: vi.fn(), submit: vi.fn(), complete: vi.fn(), channel: vi.fn(),
+  rankings: [
+    { ranking_position: 1, user_id: 'alice', name: 'Alice', win_count: 4, correct_answer_count: 100 },
+    { ranking_position: 2, user_id: 'me', name: 'Me', win_count: 3, correct_answer_count: 120 },
+  ],
+  create: vi.fn(), cancel: vi.fn(), submit: vi.fn(), complete: vi.fn(), channel: vi.fn(), rpc: vi.fn(),
 }));
 vi.mock('../../src/contexts/AuthContext', () => {
   const auth = { profile: { id: 'me', name: 'Me' } };
@@ -34,6 +38,7 @@ vi.mock('../../src/lib/supabase', () => ({
     },
     channel: mocks.channel,
     removeChannel: vi.fn(),
+    rpc: mocks.rpc,
   },
 }));
 
@@ -59,6 +64,7 @@ beforeEach(() => {
   mocks.room.opponent_id = 'them';
   mocks.answers = [{ user_id: 'them', question_id: 'q1', selected_choice_id: 'a1', is_correct: true }];
   mocks.channel.mockImplementation(() => { const channel = { on: () => channel, subscribe: () => channel }; return channel; });
+  mocks.rpc.mockResolvedValue({ data: mocks.rankings, error: null });
   mocks.submit.mockImplementation(async (_room, question, choice) => {
     mocks.answers.push({ user_id: 'me', question_id: question, selected_choice_id: choice, is_correct: choice === 'a1' });
     return { ...mocks.room };
@@ -68,6 +74,17 @@ beforeEach(() => {
   mocks.complete.mockImplementation(async () => { mocks.room.status = 'completed'; return { ...mocks.room, winner_id: 'them' }; });
 });
 afterEach(() => { vi.useRealTimers(); });
+
+it('shows rankings ordered by wins with lifetime correct answers as the tiebreak statistic', async () => {
+  render(<BattlePage currentPage="battle" onNavigate={() => {}} />);
+  await flush();
+
+  expect(screen.getByText('Battle Rankings')).toBeTruthy();
+  expect(screen.getByText('Alice')).toBeTruthy();
+  expect(screen.getByText('100')).toBeTruthy();
+  expect(screen.getByText('Me (You)')).toBeTruthy();
+  expect(mocks.rpc).toHaveBeenCalledWith('get_battle_rankings', { ranking_limit: 50 });
+});
 
 describe('battle recovery', () => {
   it('persists timed-out questions and settles instead of waiting forever', async () => {

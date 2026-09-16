@@ -15,6 +15,7 @@ import {
   joinOnlineBattleRoom,
   submitOnlineBattleAnswer,
 } from '../lib/points';
+import { fetchBattleRankings, type BattleRankingRow } from '../lib/battleRanking';
 
 interface BattlePageProps {
   currentPage: Page;
@@ -58,6 +59,9 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   const [error, setError] = useState('');
   const [waitingForOpponent, setWaitingForOpponent] = useState(false);
   const [profileNames, setProfileNames] = useState<Record<string, string>>({});
+  const [rankings, setRankings] = useState<BattleRankingRow[]>([]);
+  const [rankingLoading, setRankingLoading] = useState(isSupabaseEnabled);
+  const [rankingError, setRankingError] = useState('');
 
   const submittingAnswer = useRef(false);
   const completingBattle = useRef(false);
@@ -142,6 +146,21 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     void loadProfileNames(availableRooms.map(room => room.creator_id));
   }, [loadProfileNames, profile?.id]);
 
+  const loadRankings = useCallback(async () => {
+    if (!isSupabaseEnabled) return;
+    setRankingLoading(true);
+    setRankingError('');
+    try {
+      setRankings(await fetchBattleRankings());
+    } catch (rankingLoadError) {
+      setRankingError(rankingLoadError instanceof Error
+        ? rankingLoadError.message
+        : 'Unable to load battle rankings.');
+    } finally {
+      setRankingLoading(false);
+    }
+  }, []);
+
   const loadRoomAnswers = useCallback(async (roomId: string) => {
     const { data, error: answerError } = await supabase
       .from('battle_answers')
@@ -217,13 +236,14 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
           void loadRooms();
         } else setStage('result');
         await loadBalance();
+        void loadRankings();
       }
     } catch (refreshError) {
       setError(refreshError instanceof Error ? refreshError.message : 'Unable to refresh battle room.');
     } finally {
       refreshingRoom.current = false;
     }
-  }, [activeRoomId, loadBalance, loadProfileNames, loadQuestionsForRoom, loadRoomAnswers, loadRooms, profile?.id, stage]);
+  }, [activeRoomId, loadBalance, loadProfileNames, loadQuestionsForRoom, loadRankings, loadRoomAnswers, loadRooms, profile?.id, stage]);
 
   const refreshRoomRef = useRef(refreshActiveRoom);
   refreshRoomRef.current = refreshActiveRoom;
@@ -231,7 +251,8 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   useEffect(() => {
     void loadRooms();
     void loadBalance();
-  }, [loadBalance, loadRooms]);
+    void loadRankings();
+  }, [loadBalance, loadRankings, loadRooms]);
 
   useEffect(() => {
     if (profile) {
@@ -290,13 +311,14 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
       setActiveRoom(completed);
       setStage('result');
       await loadBalance();
+      void loadRankings();
     } catch (completionError) {
       setWaitingForOpponent(true);
       setError(completionError instanceof Error ? completionError.message : 'Unable to settle battle. Retrying...');
     } finally {
       completingBattle.current = false;
     }
-  }, [loadBalance, profile]);
+  }, [loadBalance, loadRankings, profile]);
 
   const resetQuestionState = useCallback((index: number) => {
     const nextIndex = questions.findIndex((item, questionIndex) => questionIndex >= index
@@ -540,6 +562,71 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                 {translate(language, 'ui.createRoom')}
               </button>
             </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between gap-3 border-b border-gray-100 p-5">
+              <div>
+                <h3 className="flex items-center gap-2 font-semibold text-gray-700">
+                  <Trophy className="h-4 w-4 text-amber-500" />
+                  {translate(language, 'ui.battleRanking')}
+                </h3>
+                <p className="mt-1 text-xs text-gray-400">{translate(language, 'ui.rankingHelp')}</p>
+              </div>
+              <button
+                type="button"
+                aria-label={translate(language, 'ui.refreshRanking')}
+                onClick={() => void loadRankings()}
+                disabled={rankingLoading || !isSupabaseEnabled}
+                className="rounded-lg p-1.5 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 disabled:opacity-40"
+              >
+                <RefreshCw className={`h-4 w-4 ${rankingLoading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+
+            {rankingError ? (
+              <p role="alert" className="p-5 text-sm text-red-600">{translateMessage(language, rankingError)}</p>
+            ) : rankingLoading ? (
+              <p role="status" className="p-5 text-sm text-gray-400">{translate(language, 'ui.loadingRanking')}</p>
+            ) : rankings.length === 0 ? (
+              <p className="p-5 text-sm text-gray-400">{translate(language, 'ui.noRanking')}</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-400">
+                    <tr>
+                      <th className="px-5 py-3 text-left">{translate(language, 'ui.rank')}</th>
+                      <th className="px-3 py-3 text-left">{translate(language, 'ui.player')}</th>
+                      <th className="px-3 py-3 text-right">{translate(language, 'ui.wins')}</th>
+                      <th className="px-5 py-3 text-right">{translate(language, 'ui.allTimeCorrect')}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {rankings.map(row => {
+                      const isCurrentUser = row.user_id === profile?.id;
+                      return (
+                        <tr key={row.user_id} className={isCurrentUser ? 'bg-amber-50/70' : ''}>
+                          <td className="px-5 py-3 font-bold text-gray-600">
+                            {row.ranking_position <= 3
+                              ? ['🥇', '🥈', '🥉'][row.ranking_position - 1]
+                              : `#${row.ranking_position}`}
+                          </td>
+                          <td className="px-3 py-3 font-medium text-gray-700">
+                            {row.name}{isCurrentUser ? ` (${translate(language, 'ui.you')})` : ''}
+                          </td>
+                          <td className="px-3 py-3 text-right font-bold text-amber-600">
+                            {row.win_count.toLocaleString(languageLocales[language])}
+                          </td>
+                          <td className="px-5 py-3 text-right font-semibold text-blue-600">
+                            {row.correct_answer_count.toLocaleString(languageLocales[language])}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </Layout>
