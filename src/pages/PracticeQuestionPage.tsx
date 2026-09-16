@@ -12,6 +12,7 @@ import { awardLocalAnswerPoints } from '../lib/points';
 import { Question, AnswerChoice, Page } from '../types';
 import { AnswerChoiceContent, QuestionImage } from '../components/QuestionMedia';
 import { formatExamDate } from '../lib/examDate';
+import { createAnswerChoiceOrders, getRandomizeAnswerChoicesPreference } from '../lib/questionRandomization';
 
 
 interface PracticeQuestionPageProps {
@@ -68,9 +69,14 @@ export default function PracticeQuestionPage({ currentPage, onNavigate, question
   const savingRef = useRef(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [randomizeAnswerChoices] = useState(getRandomizeAnswerChoicesPreference);
+  const answerChoiceOrders = useMemo(
+    () => createAnswerChoiceOrders(questions, randomizeAnswerChoices),
+    [questions, randomizeAnswerChoices],
+  );
 
   const question = questions[currentIndex];
-  const choices: AnswerChoice[] = [...(question?.answer_choices ?? [])].sort((a, b) => a.sort_order - b.sort_order);
+  const choices: AnswerChoice[] = question ? answerChoiceOrders.get(question.id) ?? [] : [];
   const totalQuestions = questions.length;
   const progressPct = totalQuestions > 0 ? Math.round((answers.length / totalQuestions) * 100) : 0;
   const correctSoFar = answers.filter(a => a.isCorrect).length;

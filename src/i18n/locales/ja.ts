@@ -500,6 +500,7 @@ export const ja = {
   "settingsPage.darkMode": "ダークモード",
   "settingsPage.darkModeOn": "オン",
   "settingsPage.darkModeOff": "オフ",
+  "settingsPage.randomizeAnswerChoices": "解答の選択肢をランダム表示",
   "settingsPage.profileSaveFailed": "保存に失敗しました: {error}",
   "settingsPage.profileSaved": "プロフィールを保存しました",
   "settingsPage.targetSaved": "目標試験日を保存しました",

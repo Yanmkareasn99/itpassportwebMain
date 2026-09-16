@@ -1,5 +1,5 @@
 import { translateMessage, translate } from '../i18n';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Clock, ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertCircle, BarChart2 } from 'lucide-react';
 import Layout from '../components/Layout';
 import { supabase } from '../lib/supabase';
@@ -9,6 +9,7 @@ import { DEFAULT_MOCK_EXAM_SETTINGS, fetchMockExamSettings, hasPassedMockExam, t
 import { awardLocalAnswerPoints } from '../lib/points';
 import { Question, AnswerChoice, Page } from '../types';
 import { AnswerChoiceContent, QuestionImage } from '../components/QuestionMedia';
+import { createAnswerChoiceOrders, getRandomizeAnswerChoicesPreference, shuffleItems } from '../lib/questionRandomization';
 
 interface MockExamPageProps {
   currentPage: Page;
@@ -31,6 +32,11 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
   const [sessionId, setSessionId] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const finishingRef = useRef(false);
+  const [randomizeAnswerChoices] = useState(getRandomizeAnswerChoicesPreference);
+  const answerChoiceOrders = useMemo(
+    () => createAnswerChoiceOrders(questions, randomizeAnswerChoices),
+    [questions, randomizeAnswerChoices],
+  );
 
   useEffect(() => {
     if (stage !== 'intro') return;
@@ -56,12 +62,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
       if (!data || data.length < config.question_count) {
         throw new Error(`This exam requires ${config.question_count} questions, but only ${data?.length ?? 0} are available. Please ask an administrator to add questions or reduce the exam question count.`);
       }
-      const shuffled = [...data];
-      for (let i = shuffled.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-      }
-      const selected = shuffled.slice(0, config.question_count) as Question[];
+      const selected = shuffleItems(data).slice(0, config.question_count) as Question[];
       let newSessionId: string | null = null;
       if (user) {
         const { data: session, error: sessionError } = await supabase.from('exam_sessions')
@@ -143,7 +144,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
   }
 
   const question = questions[currentIndex];
-  const choices: AnswerChoice[] = [...(question?.answer_choices ?? [])].sort((a, b) => a.sort_order - b.sort_order);
+  const choices: AnswerChoice[] = question ? answerChoiceOrders.get(question.id) ?? [] : [];
   const answeredCount = Object.keys(userAnswers).length;
   const timeWarning = timeLeft < 600;
 

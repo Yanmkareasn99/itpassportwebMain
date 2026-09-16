@@ -111,6 +111,21 @@ it('rejects a password confirmation mismatch', async () => {
   expect(mocks.updatePassword).not.toHaveBeenCalled();
 });
 
+it('shows a red already-registered error instead of a confirmation notice', async () => {
+  mocks.signUp.mockRejectedValueOnce(new Error('User already registered'));
+  render(<MemoryRouter><LoginPage /></MemoryRouter>);
+
+  fireEvent.click(screen.getByRole('button', { name: 'No account? Create one' }));
+  fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Student' } });
+  fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'registered@example.com' } });
+  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'secret12' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
+
+  const message = await screen.findByText('This email is already registered.');
+  expect(message.closest('div')?.className).toContain('text-red-600');
+  expect(screen.queryByText(/confirmation email sent/i)).toBeNull();
+});
+
 it('shows a localized error when updating the password fails', async () => {
   mocks.passwordRecoveryState = 'valid';
   mocks.updatePassword.mockRejectedValueOnce(new Error('expired token'));

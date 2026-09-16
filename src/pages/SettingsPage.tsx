@@ -13,12 +13,14 @@ import {
   HelpCircle,
   UserRound,
   Moon,
+  Shuffle,
 } from 'lucide-react';
 import Layout from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Language, useLanguage } from '../contexts/LanguageContext';
 import { Page } from '../types';
+import { getRandomizeAnswerChoicesPreference, setRandomizeAnswerChoicesPreference } from '../lib/questionRandomization';
 
 interface SettingsPageProps {
   currentPage: Page;
@@ -38,6 +40,9 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
     const savedTheme = window.localStorage.getItem('manabi-theme');
     return savedTheme === 'dark';
   });
+  const [randomizeAnswerChoices, setRandomizeAnswerChoices] = useState(
+    getRandomizeAnswerChoicesPreference,
+  );
 
   const [name, setName] = useState(profile?.name ?? '');
   const [studentId, setStudentId] = useState(profile?.student_id ?? '');
@@ -68,6 +73,10 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
     root.classList.toggle('dark', darkMode);
     window.localStorage.setItem('manabi-theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
+
+  useEffect(() => {
+    setRandomizeAnswerChoicesPreference(randomizeAnswerChoices);
+  }, [randomizeAnswerChoices]);
 
   useEffect(() => {
     async function loadTarget() {
@@ -289,6 +298,31 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
                   >
                     <span
                       className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${darkMode ? 'translate-x-5' : 'translate-x-0'}`}
+                    />
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={randomizeAnswerChoices}
+                  onClick={() => setRandomizeAnswerChoices(current => !current)}
+                  className={`no-press-animation flex w-full items-center gap-4 rounded-2xl px-3 py-3.5 text-left transition ${darkMode ? 'hover:bg-slate-800' : 'hover:bg-gray-50'}`}
+                >
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600 shadow-inner shadow-white/60">
+                    <Shuffle className="w-5 h-5" />
+                  </div>
+                  <span className={`flex-1 text-[15px] font-semibold ${darkMode ? 'text-slate-100' : 'text-gray-800'}`}>
+                    {translate(language, 'settingsPage.randomizeAnswerChoices')}
+                  </span>
+                  <span className={`text-sm font-medium ${randomizeAnswerChoices ? 'text-blue-500' : darkMode ? 'text-slate-400' : 'text-gray-400'}`}>
+                    {randomizeAnswerChoices ? translate(language, 'settingsPage.darkModeOn') : translate(language, 'settingsPage.darkModeOff')}
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className={`relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200 ${randomizeAnswerChoices ? 'bg-blue-500' : 'bg-gray-300'}`}
+                  >
+                    <span
+                      className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${randomizeAnswerChoices ? 'translate-x-5' : 'translate-x-0'}`}
                     />
                   </span>
                 </button>

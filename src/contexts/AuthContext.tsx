@@ -238,6 +238,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
     if (!data.user) throw new Error('Failed to create user');
 
+    // With email confirmation enabled, Supabase deliberately returns a
+    // successful-looking, obfuscated user for an address that already exists.
+    // That response has no identities and no confirmation email is sent.
+    if (Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      throw new Error('User already registered');
+    }
+
     // A database trigger creates the profile for email/password and OAuth users.
     // A null session means email confirmation is required before sign-in.
     return data.session === null;
