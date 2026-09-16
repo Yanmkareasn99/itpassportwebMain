@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Bell, Coins } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { getPointBalance } from '../lib/points';
+import { getCachedPointBalance, getPointBalance } from '../lib/points';
 import type { Page } from '../types';
 import BrandLogo from './BrandLogo';
 
@@ -15,14 +15,26 @@ interface HeaderProps {
 
 const DEFAULT_READ_NOTIFICATION_IDS = [3];
 
+function readSavedNotificationIds(storageKey: string) {
+  try {
+    const savedIds = window.localStorage.getItem(storageKey);
+    return new Set(savedIds ? JSON.parse(savedIds) as number[] : DEFAULT_READ_NOTIFICATION_IDS);
+  } catch {
+    return new Set(DEFAULT_READ_NOTIFICATION_IDS);
+  }
+}
+
 export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
   const { profile } = useAuth();
   const { language } = useLanguage();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const notificationStorageKey = `manabi-notifications-read:${profile?.id ?? 'guest'}`;
   const [readNotificationIds, setReadNotificationIds] = useState<Set<number>>(
-    () => new Set(DEFAULT_READ_NOTIFICATION_IDS),
+    () => readSavedNotificationIds(notificationStorageKey),
   );
-  const [pointBalance, setPointBalance] = useState<number | null>(null);
+  const [pointBalance, setPointBalance] = useState<number | null>(
+    () => getCachedPointBalance(profile?.id),
+  );
   
   const notificationRef = useRef<HTMLDivElement | null>(null);
 
@@ -60,15 +72,9 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
   ];
 
   const unreadCount = notifications.filter(item => !readNotificationIds.has(item.id)).length;
-  const notificationStorageKey = `manabi-notifications-read:${profile?.id ?? 'guest'}`;
 
   useEffect(() => {
-    try {
-      const savedIds = window.localStorage.getItem(notificationStorageKey);
-      setReadNotificationIds(new Set(savedIds ? JSON.parse(savedIds) as number[] : DEFAULT_READ_NOTIFICATION_IDS));
-    } catch {
-      setReadNotificationIds(new Set(DEFAULT_READ_NOTIFICATION_IDS));
-    }
+    setReadNotificationIds(readSavedNotificationIds(notificationStorageKey));
   }, [notificationStorageKey]);
 
   function saveReadNotificationIds(ids: Set<number>) {
@@ -113,7 +119,6 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
   async function loadPoints() {
     if (!profile) return;
 
-    
     try {
       const points = await getPointBalance(profile.id);
       setPointBalance(points.balance);

@@ -11,7 +11,7 @@ const AdminPage = lazy(() => import('./pages/AdminPage'));
 const BattlePage = lazy(() => import('./pages/BattlePage'));
 const HomePage = lazy(() => import('./pages/HomePage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
-const MaterialsPage = lazy(() => import('./pages/MaterialsPage'));
+const MaterialsPage = lazy(() => import('./pages/MaterialsPage.tsx'));
 const MockExamPage = lazy(() => import('./pages/MockExamPage'));
 const PracticeListPage = lazy(() => import('./pages/PracticeListPage'));
 const PracticeQuestionPage = lazy(() => import('./pages/PracticeQuestionPage'));

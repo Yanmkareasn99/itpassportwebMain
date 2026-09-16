@@ -11,6 +11,13 @@ import { emptyQuestionForm, type ChoiceForm, type CsvImportData, type QuestionFo
 
 const QUESTION_FETCH_PAGE_SIZE = 1000;
 
+function parseQuestionPoints(value: string, fallback = 1) {
+  const trimmed = value.trim();
+  if (!trimmed) return fallback;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 async function fetchAllQuestions(): Promise<Question[]> {
   const questions: Question[] = [];
 
@@ -299,7 +306,7 @@ export default function QuestionsTab() {
         explanation_en: question.explanation_en || null,
         explanation_vi: question.explanation_vi || null,
         difficulty: Number(question.difficulty) || 2,
-        points: Number(question.points) || 1,
+        points: parseQuestionPoints(question.points),
       }));
       const { error: questionError } = await supabase.from('questions').insert(questionPayloads);
       if (questionError) throw questionError;
@@ -427,7 +434,7 @@ export default function QuestionsTab() {
             <input
               type="number" min={1}
               value={form.points}
-              onChange={e => setForm(f => ({ ...f, points: parseInt(e.target.value) || 1 }))}
+              onChange={e => setForm(f => ({ ...f, points: parseQuestionPoints(e.target.value, f.points) }))}
               className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
             />
           </div>
