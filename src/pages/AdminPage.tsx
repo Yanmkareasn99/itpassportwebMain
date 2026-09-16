@@ -28,8 +28,19 @@ const tabs: { id: Tab; labelKey: Parameters<typeof translate>[1]; icon: LucideIc
 
 export default function AdminPage({ currentPage, onNavigate }: AdminPageProps) {
   const [tab, setTab] = useState<Tab>('questions');
+  const [mountedTabs, setMountedTabs] = useState<Set<Tab>>(() => new Set(['questions']));
   const { language } = useLanguage();
   const { isAdmin } = useAuth();
+
+  function openTab(nextTab: Tab) {
+    setTab(nextTab);
+    setMountedTabs(current => {
+      if (current.has(nextTab)) return current;
+      const next = new Set(current);
+      next.add(nextTab);
+      return next;
+    });
+  }
 
   return (
     <Layout
@@ -49,7 +60,7 @@ export default function AdminPage({ currentPage, onNavigate }: AdminPageProps) {
               {tabs.map(({ id, labelKey, icon: Icon }) => (
                 <button
                   key={id}
-                  onClick={() => setTab(id)}
+                  onClick={() => openTab(id)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition shrink-0 whitespace-nowrap ${
                     tab === id ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
                   }`}
@@ -60,11 +71,21 @@ export default function AdminPage({ currentPage, onNavigate }: AdminPageProps) {
               ))}
             </div>
 
-            {tab === 'questions' && <QuestionsTab />}
-            {tab === 'subjects' && <SubjectsTab />}
-            {tab === 'users' && <UsersTab />}
-            {tab === 'mock-exam' && <MockExamTab />}
-            {tab === 'stats' && <StatsTab />}
+            <div className={tab === 'questions' ? '' : 'hidden'}>
+              {mountedTabs.has('questions') && <QuestionsTab />}
+            </div>
+            <div className={tab === 'subjects' ? '' : 'hidden'}>
+              {mountedTabs.has('subjects') && <SubjectsTab />}
+            </div>
+            <div className={tab === 'users' ? '' : 'hidden'}>
+              {mountedTabs.has('users') && <UsersTab />}
+            </div>
+            <div className={tab === 'mock-exam' ? '' : 'hidden'}>
+              {mountedTabs.has('mock-exam') && <MockExamTab />}
+            </div>
+            <div className={tab === 'stats' ? '' : 'hidden'}>
+              {mountedTabs.has('stats') && <StatsTab />}
+            </div>
           </>
         )}
       </div>

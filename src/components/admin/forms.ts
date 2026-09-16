@@ -13,6 +13,7 @@ export interface QuestionForm {
   explanation: string;
   explanation_en: string;
   explanation_vi: string;
+  exam_date: string;
   difficulty: number;
   points: number;
   image_url: string;
@@ -38,6 +39,7 @@ export const emptyQuestionForm = (): QuestionForm => ({
   explanation: '',
   explanation_en: '',
   explanation_vi: '',
+  exam_date: '',
   difficulty: 3,
   points: 1,
   image_url: '',

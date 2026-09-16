@@ -1,9 +1,10 @@
 import { translateMessage, translate, type Language } from '../i18n';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   BookOpen,
   PieChart,
   CheckCircle2,
+  Check,
   LayoutGrid,
   RefreshCw,
   ChevronDown,
@@ -13,11 +14,12 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import Layout from '../components/Layout';
-import { fetchPracticeQuestions, loadLatestAnswerStatus, loadPracticeProgress, practiceErrorMessage, type DifficultyFilter, type FormatFilter, type ModeFilter } from '../lib/practice';
+import { fetchPracticeQuestions, loadExamDates, loadLatestAnswerStatus, loadPracticeProgress, practiceErrorMessage, type ExamDateFilter, type FormatFilter, type ModeFilter } from '../lib/practice';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Question, Page } from '../types';
+import { formatExamDate, UNCATEGORIZED_EXAM_DATE } from '../lib/examDate';
 
 interface PracticeListPageProps {
   currentPage: Page;
@@ -235,6 +237,102 @@ function SelectDropdown({
   );
 }
 
+function MultiSelectDropdown({
+  label,
+  allLabel,
+  selectedValues,
+  options,
+  onChange,
+}: {
+  label: string;
+  allLabel: string;
+  selectedValues: string[];
+  options: { value: string; label: string }[];
+  onChange: (values: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const selectedLabels = options
+    .filter(option => selectedValues.includes(option.value))
+    .map(option => option.label);
+  const summary = selectedLabels.length === 0 ? allLabel : selectedLabels.join(', ');
+
+  useEffect(() => {
+    if (!open) return;
+    function closeOnOutsideClick(event: PointerEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+    document.addEventListener('pointerdown', closeOnOutsideClick);
+    return () => document.removeEventListener('pointerdown', closeOnOutsideClick);
+  }, [open]);
+
+  function toggleValue(value: string) {
+    onChange(selectedValues.includes(value)
+      ? selectedValues.filter(selected => selected !== value)
+      : [...selectedValues, value]);
+  }
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen(current => !current)}
+        className="flex min-w-36 items-center justify-between gap-2 rounded-xl border border-gray-200 bg-white py-2 pl-3 pr-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        <span className="max-w-48 truncate">{label}: {summary}</span>
+        {selectedLabels.length > 1 && (
+          <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
+            {selectedLabels.length}
+          </span>
+        )}
+        <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div
+          role="listbox"
+          aria-label={label}
+          aria-multiselectable="true"
+          className="absolute left-0 top-full z-30 mt-2 max-h-72 min-w-64 overflow-y-auto rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl"
+        >
+          <button
+            type="button"
+            role="option"
+            aria-selected={selectedValues.length === 0}
+            onClick={() => onChange([])}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50"
+          >
+            <span className={`flex h-4 w-4 items-center justify-center rounded border ${selectedValues.length === 0 ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300'}`}>
+              {selectedValues.length === 0 && <Check className="h-3 w-3" />}
+            </span>
+            {allLabel}
+          </button>
+          {options.map(option => {
+            const selected = selectedValues.includes(option.value);
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                onClick={() => toggleValue(option.value)}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50"
+              >
+                <span className={`flex h-4 w-4 items-center justify-center rounded border ${selected ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300'}`}>
+                  {selected && <Check className="h-3 w-3" />}
+                </span>
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function PracticeListPage({
   currentPage,
   onNavigate,
@@ -255,11 +353,13 @@ export default function PracticeListPage({
   const [error, setError] = useState('');
   const [progressWarning, setProgressWarning] = useState('');
 
-  const [diffFilter, setDiffFilter] = useState<DifficultyFilter>('all');
+  const [selectedExamDates, setSelectedExamDates] = useState<string[]>([]);
+  const [examDates, setExamDates] = useState<string[]>([]);
   const [formatFilter, setFormatFilter] = useState<FormatFilter>('all');
   const [modeFilter, setModeFilter] = useState<ModeFilter>('all');
   const [filterResult, setFilterResult] = useState<{ key: string; questions: Question[]; error: string } | null>(null);
-  const filterKey = JSON.stringify([user?.id, diffFilter, formatFilter, modeFilter]);
+  const examDateFilter: ExamDateFilter = selectedExamDates.length > 0 ? selectedExamDates : 'all';
+  const filterKey = JSON.stringify([user?.id, selectedExamDates, formatFilter, modeFilter]);
   const currentResult = filterResult?.key === filterKey ? filterResult : null;
   const matchingQuestions = currentResult?.questions ?? [];
   const userId = user?.id;
@@ -269,7 +369,7 @@ export default function PracticeListPage({
     let cancelled = false;
     const timer = window.setTimeout(async () => {
       try {
-        let questions = await fetchPracticeQuestions(null, diffFilter, formatFilter);
+        let questions = await fetchPracticeQuestions(null, examDateFilter, formatFilter);
         if (modeFilter !== 'all') {
           const latest = await loadLatestAnswerStatus(userId);
           questions = questions.filter(question => modeFilter === 'new'
@@ -281,7 +381,7 @@ export default function PracticeListPage({
       }
     }, 200);
     return () => { cancelled = true; window.clearTimeout(timer); };
-  }, [userId, diffFilter, formatFilter, modeFilter, filterKey]);
+  }, [userId, examDateFilter, formatFilter, modeFilter, filterKey]);
 
   async function startFilteredPractice() {
     if (!user || starting || !currentResult || currentResult.error || !matchingQuestions.length) return;
@@ -323,8 +423,9 @@ export default function PracticeListPage({
           ]),
         ];
 
-        const [totalResult, ...countResults] = await Promise.all([
+        const [totalResult, availableExamDates, ...countResults] = await Promise.all([
           supabase.from('questions').select('id', { count: 'exact', head: true }),
+          loadExamDates(),
           ...subjectIds.map(subjectId =>
             supabase
               .from('questions')
@@ -344,6 +445,7 @@ export default function PracticeListPage({
         if (cancelled) return;
 
         setQuestionCounts(counts);
+        setExamDates(availableExamDates);
         setTotalQuestionCount(
           totalResult.count ?? Object.values(counts).reduce((sum, count) => sum + count, 0),
         );
@@ -449,7 +551,7 @@ export default function PracticeListPage({
     setError('');
 
     try {
-      let selectedQuestions = await fetchPracticeQuestions(subjectIds, key === 'all' ? 'all' : diffFilter, key === 'all' ? 'all' : formatFilter);
+      let selectedQuestions = await fetchPracticeQuestions(subjectIds, key === 'all' ? 'all' : examDateFilter, key === 'all' ? 'all' : formatFilter);
 
       if (key !== 'all' && modeFilter !== 'all') {
         const latestAnswers = await loadLatestAnswerStatus(user!.id);
@@ -461,7 +563,7 @@ export default function PracticeListPage({
       if (selectedQuestions.length > 0) {
         await onStartPractice(!subjectIds || subjectIds.length > 1 ? 'all' : subjectIds[0], selectedQuestions);
       } else {
-        setError('No questions match these filters. Try another difficulty, question type, or learning mode.');
+        setError(translate(currentLanguage, 'ui.noMatches'));
       }
     } catch (error) {
       setError(practiceErrorMessage(error, 'Unable to start practice.'));
@@ -537,7 +639,7 @@ export default function PracticeListPage({
           </div>
         )}
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <div className="motion-stagger grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           {categories.map((cat) => (
             <CategoryCard
               key={cat.id}
@@ -562,33 +664,22 @@ export default function PracticeListPage({
               {translate(currentLanguage, 'practiceListPage.filterBy')}
             </span>
 
-            <SelectDropdown
+            <MultiSelectDropdown
               label={
-                translate(currentLanguage, 'practiceListPage.difficulty')
+                translate(currentLanguage, 'practiceListPage.examDate')
               }
-              value={diffFilter}
-              onChange={(v) => { setDiffFilter(v as DifficultyFilter); setError(''); }}
+              allLabel={translate(currentLanguage, 'practiceListPage.all')}
+              selectedValues={selectedExamDates}
+              onChange={(values) => { setSelectedExamDates(values); setError(''); }}
               options={[
                 {
-                  value: 'all',
-                  label:
-                    translate(currentLanguage, 'practiceListPage.all'),
+                  value: UNCATEGORIZED_EXAM_DATE,
+                  label: translate(currentLanguage, 'ui.uncategorized'),
                 },
-                {
-                  value: 'easy',
-                  label:
-                    translate(currentLanguage, 'practiceListPage.easy'),
-                },
-                {
-                  value: 'medium',
-                  label:
-                    translate(currentLanguage, 'practiceListPage.medium'),
-                },
-                {
-                  value: 'hard',
-                  label:
-                    translate(currentLanguage, 'practiceListPage.hard'),
-                },
+                ...examDates.map(date => ({
+                  value: date,
+                  label: formatExamDate(date, currentLanguage),
+                })),
               ]}
             />
 

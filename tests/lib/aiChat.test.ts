@@ -22,7 +22,7 @@ describe('AI fallback and limits', () => {
     vi.restoreAllMocks();
   });
 
-  it('returns a local answer when the remote AI call fails', async () => {
+  it('reports an unavailable remote service instead of returning a generic answer', async () => {
     const reply = await getChatReply('Can you make a study plan?', {
       language: 'en',
       profileName: 'Alice',
@@ -31,8 +31,7 @@ describe('AI fallback and limits', () => {
       history: [],
     });
 
-    expect(reply).toContain('Study Plan');
-    expect(reply).toContain('Alice');
+    expect(reply).toBe('The AI service is unavailable right now. Please try again shortly.');
   });
 
   it('enforces per-user request limits', () => {

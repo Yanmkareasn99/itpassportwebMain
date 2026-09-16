@@ -192,7 +192,7 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
       <button
         type="button"
         onClick={onClick}
-        className={`flex w-full items-center gap-4 rounded-2xl px-3 py-3.5 text-left transition ${darkMode ? 'hover:bg-slate-800' : 'hover:bg-gray-50'}`}
+        className={`no-press-animation flex w-full items-center gap-4 rounded-2xl px-3 py-3.5 text-left transition ${darkMode ? 'hover:bg-slate-800' : 'hover:bg-gray-50'}`}
       >
         <div
           className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full shadow-inner shadow-white/60"
@@ -235,7 +235,7 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
               <button
                 type="button"
                 onClick={() => setView('profile')}
-                className={`flex w-full items-center gap-4 rounded-2xl px-3 py-3.5 text-left transition profile-gradient hover:opacity-95`}
+                className="no-press-animation flex w-full items-center gap-4 rounded-2xl px-3 py-3.5 text-left transition profile-gradient hover:opacity-95"
               >
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full profile-avatar-gradient shadow-inner">
                   <UserRound className="w-7 h-7" />
@@ -261,14 +261,37 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
                   value={nativeLanguageNames[language]}
                   onClick={() => setView('language')}
                 />
-                <SettingRow
-                  icon={<Moon className="w-5 h-5" />}
-                  iconBg={darkMode ? '#1e293b' : '#e2e8f0'}
-                  iconColor={darkMode ? '#f8fafc' : '#334155'}
-                  label={translate(language, 'settingsPage.darkMode')}
-                  value={darkMode ? translate(language, 'settingsPage.darkModeOn') : translate(language, 'settingsPage.darkModeOff')}
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={darkMode}
                   onClick={() => setDarkMode(prev => !prev)}
-                />
+                  className={`no-press-animation flex w-full items-center gap-4 rounded-2xl px-3 py-3.5 text-left transition ${darkMode ? 'hover:bg-slate-800' : 'hover:bg-gray-50'}`}
+                >
+                  <div
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full shadow-inner shadow-white/60"
+                    style={{
+                      backgroundColor: darkMode ? '#1e293b' : '#e2e8f0',
+                      color: darkMode ? '#f8fafc' : '#334155',
+                    }}
+                  >
+                    <Moon className="w-5 h-5" />
+                  </div>
+                  <span className={`flex-1 text-[15px] font-semibold ${darkMode ? 'text-slate-100' : 'text-gray-800'}`}>
+                    {translate(language, 'settingsPage.darkMode')}
+                  </span>
+                  <span className={`text-sm font-medium ${darkMode ? 'text-blue-300' : 'text-gray-400'}`}>
+                    {darkMode ? translate(language, 'settingsPage.darkModeOn') : translate(language, 'settingsPage.darkModeOff')}
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className={`relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200 ${darkMode ? 'bg-blue-500' : 'bg-gray-300'}`}
+                  >
+                    <span
+                      className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${darkMode ? 'translate-x-5' : 'translate-x-0'}`}
+                    />
+                  </span>
+                </button>
                 <SettingRow
                   icon={<Calendar className="w-5 h-5" />}
                   iconBg="#d1fae5"

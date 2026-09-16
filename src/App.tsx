@@ -1,20 +1,21 @@
 import { translateMessage, translate } from './i18n';
 import { useLanguage } from './contexts/LanguageContext';
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { createPracticeSession, loadPracticeSession, practiceErrorMessage } from './lib/practice';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import AIChatPage from './pages/AIChatPage';
-import AdminPage from './pages/AdminPage';
-import BattlePage from './pages/BattlePage';
-import HomePage from './pages/HomePage';
-import LoginPage from './pages/LoginPage';
-import MaterialsPage from './pages/MaterialsPage';
-import MockExamPage from './pages/MockExamPage';
-import PracticeListPage from './pages/PracticeListPage';
-import PracticeQuestionPage from './pages/PracticeQuestionPage';
-import SettingsPage from './pages/SettingsPage';
 import type { Page, Question } from './types';
+
+const AIChatPage = lazy(() => import('./pages/AIChatPage'));
+const AdminPage = lazy(() => import('./pages/AdminPage'));
+const BattlePage = lazy(() => import('./pages/BattlePage'));
+const HomePage = lazy(() => import('./pages/HomePage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const MaterialsPage = lazy(() => import('./pages/MaterialsPage.tsx'));
+const MockExamPage = lazy(() => import('./pages/MockExamPage'));
+const PracticeListPage = lazy(() => import('./pages/PracticeListPage'));
+const PracticeQuestionPage = lazy(() => import('./pages/PracticeQuestionPage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 
 const pagePaths: Record<Page, string> = {
   home: '/',
@@ -68,11 +69,13 @@ function AdminRoute({ children }: { children: JSX.Element }) {
   return children;
 }
 
-function LoginRoute() {
-  const { user, loading } = useAuth();
+export function LoginRoute() {
+  const { user, loading, passwordRecoveryState } = useAuth();
 
   if (loading) return <LoadingScreen />;
-  if (user) return <Navigate to="/" replace />;
+  if (user && (passwordRecoveryState === 'idle' || passwordRecoveryState === 'invalid')) {
+    return <Navigate to="/" replace />;
+  }
 
   return <LoginPage />;
 }
@@ -139,28 +142,28 @@ function AppRoutes() {
   const onNavigate = usePageNavigation();
 
   return (
-    <Routes>
-      <Route path="/login" element={<LoginRoute />} />
-      <Route path="/" element={<ProtectedRoute><HomePage currentPage="home" onNavigate={onNavigate} /></ProtectedRoute>} />
-      <Route path="/practice" element={<ProtectedRoute><PracticeListRoute /></ProtectedRoute>} />
-      <Route path="/practice/session" element={<ProtectedRoute><PracticeSessionRoute /></ProtectedRoute>} />
-      <Route path="/mock-exam" element={<ProtectedRoute><MockExamPage currentPage="mock-exam" onNavigate={onNavigate} /></ProtectedRoute>} />
-      <Route path="/battle" element={<ProtectedRoute><BattlePage currentPage="battle" onNavigate={onNavigate} /></ProtectedRoute>} />
-      <Route path="/ai-chat" element={<ProtectedRoute><AIChatPage currentPage="ai-chat" onNavigate={onNavigate} /></ProtectedRoute>} />
-      <Route path="/materials" element={<ProtectedRoute><MaterialsPage currentPage="materials" onNavigate={onNavigate} /></ProtectedRoute>} />
-      <Route path="/settings" element={<ProtectedRoute><SettingsPage currentPage="settings" onNavigate={onNavigate} /></ProtectedRoute>} />
-      <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminPage currentPage="admin" onNavigate={onNavigate} /></AdminRoute></ProtectedRoute>} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <Suspense fallback={<LoadingScreen />}>
+      <Routes>
+        <Route path="/login" element={<LoginRoute />} />
+        <Route path="/" element={<ProtectedRoute><HomePage currentPage="home" onNavigate={onNavigate} /></ProtectedRoute>} />
+        <Route path="/practice" element={<ProtectedRoute><PracticeListRoute /></ProtectedRoute>} />
+        <Route path="/practice/session" element={<ProtectedRoute><PracticeSessionRoute /></ProtectedRoute>} />
+        <Route path="/mock-exam" element={<ProtectedRoute><MockExamPage currentPage="mock-exam" onNavigate={onNavigate} /></ProtectedRoute>} />
+        <Route path="/battle" element={<ProtectedRoute><BattlePage currentPage="battle" onNavigate={onNavigate} /></ProtectedRoute>} />
+        <Route path="/ai-chat" element={<ProtectedRoute><AIChatPage currentPage="ai-chat" onNavigate={onNavigate} /></ProtectedRoute>} />
+        <Route path="/materials" element={<ProtectedRoute><MaterialsPage currentPage="materials" onNavigate={onNavigate} /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><SettingsPage currentPage="settings" onNavigate={onNavigate} /></ProtectedRoute>} />
+        <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminPage currentPage="admin" onNavigate={onNavigate} /></AdminRoute></ProtectedRoute>} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   );
 }
 
 export default function App() {
   useEffect(() => {
     const savedTheme = window.localStorage.getItem('manabi-theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const shouldUseDark = savedTheme ? savedTheme === 'dark' : prefersDark;
-    document.documentElement.classList.toggle('dark', shouldUseDark);
+    document.documentElement.classList.toggle('dark', savedTheme === 'dark');
   }, []);
 
   return (

@@ -1,146 +1,153 @@
 import { isSupabaseEnabled, supabase } from './supabase';
-import { StudyMaterial } from '../types';
 
-const MATERIALS_BUCKET = 'study-materials';
-const LOCAL_MATERIALS_KEY = 'manabi-local-materials';
-const LOCAL_FILE_PREFIX = 'local-file:';
+export const MATERIAL_MAX_BYTES = 20 * 1024 * 1024;
+export const MATERIAL_MIME_TYPES = [
+  'application/pdf',
+  'image/png',
+  'image/jpeg',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/zip',
+  'application/octet-stream',
+] as const;
 
-type StoredLocalMaterial = StudyMaterial & {
-  data_url: string;
+const MATERIAL_EXTENSIONS: Record<string, readonly string[]> = {
+  pdf: ['application/pdf'],
+  png: ['image/png'],
+  jpg: ['image/jpeg'],
+  jpeg: ['image/jpeg'],
+  docx: [
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/zip',
+    'application/octet-stream',
+  ],
+  pptx: [
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/zip',
+    'application/octet-stream',
+  ],
+  xlsx: [
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/zip',
+    'application/octet-stream',
+  ],
 };
 
-function readLocalMaterials(): StoredLocalMaterial[] {
-  try {
-    return JSON.parse(localStorage.getItem(LOCAL_MATERIALS_KEY) ?? '[]') as StoredLocalMaterial[];
-  } catch {
-    localStorage.removeItem(LOCAL_MATERIALS_KEY);
-    return [];
-  }
-}
+const materialFilesUrl = (import.meta.env.VITE_MATERIAL_FILES_URL || 'https://files.manabi-app.jp').replace(/\/$/, '');
 
-function writeLocalMaterials(materials: StoredLocalMaterial[]) {
-  localStorage.setItem(LOCAL_MATERIALS_KEY, JSON.stringify(materials));
-}
-
-function fileToDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error ?? new Error('Unable to read file.'));
-    reader.readAsDataURL(file);
-  });
-}
-
-function makeSafeFileName(name: string) {
-  return name.replace(/[^\w.-]+/g, '_').replace(/^_+|_+$/g, '') || 'material';
-}
-
-export async function fetchStudyMaterials(): Promise<StudyMaterial[]> {
-  if (!isSupabaseEnabled) {
-    return readLocalMaterials().map(material => {
-      const { data_url, ...studyMaterial } = material;
-      void data_url;
-      return studyMaterial;
-    });
-  }
-
-  const { data, error } = await supabase
-    .from('study_materials')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) throw error;
-  return (data ?? []) as StudyMaterial[];
-}
-
-export async function uploadStudyMaterial(params: {
-  file: File;
+export interface Material {
+  id: string;
+  uploader_id: string;
   title: string;
-  description: string;
-  userId: string;
-}) {
-  const now = new Date().toISOString();
-  const cleanName = makeSafeFileName(params.file.name);
-  const title = params.title.trim() || params.file.name;
-
-  if (!isSupabaseEnabled) {
-    const id = globalThis.crypto?.randomUUID?.() ?? `local-${Date.now()}`;
-    const material: StoredLocalMaterial = {
-      id,
-      title,
-      description: params.description.trim() || null,
-      file_name: params.file.name,
-      file_path: `${LOCAL_FILE_PREFIX}${id}`,
-      file_size: params.file.size,
-      mime_type: params.file.type || 'application/octet-stream',
-      uploaded_by: params.userId,
-      created_at: now,
-      updated_at: now,
-      data_url: await fileToDataUrl(params.file),
-    };
-    writeLocalMaterials([material, ...readLocalMaterials()]);
-    return material;
-  }
-
-  const filePath = `${params.userId}/${Date.now()}-${cleanName}`;
-  const { error: uploadError } = await supabase.storage
-    .from(MATERIALS_BUCKET)
-    .upload(filePath, params.file, {
-      contentType: params.file.type || 'application/octet-stream',
-      upsert: false,
-    });
-
-  if (uploadError) throw uploadError;
-
-  const { data, error } = await supabase
-    .from('study_materials')
-    .insert({
-      title,
-      description: params.description.trim() || null,
-      file_name: params.file.name,
-      file_path: filePath,
-      file_size: params.file.size,
-      mime_type: params.file.type || 'application/octet-stream',
-      uploaded_by: params.userId,
-    })
-    .select('*')
-    .single();
-
-  if (error) throw error;
-  return data as StudyMaterial;
+  description: string | null;
+  file_name: string;
+  mime_type: string;
+  file_size: number;
+  storage_path: string;
+  created_at: string;
 }
 
-export async function getStudyMaterialUrl(material: StudyMaterial, download: boolean) {
-  if (!isSupabaseEnabled) {
-    const local = readLocalMaterials().find(item => item.id === material.id);
-    if (!local) throw new Error('File not found.');
-    return local.data_url;
+function requireSharedStorage() {
+  if (!isSupabaseEnabled) throw new Error('Shared materials require Supabase to be enabled.');
+}
+
+export type MaterialFileProblem = 'invalidType' | 'emptyFile' | 'fileTooLarge';
+
+const fileProblemMessages: Record<MaterialFileProblem, string> = {
+  invalidType: 'Choose a PDF, PNG, JPEG, DOCX, PPTX, or XLSX file.',
+  emptyFile: 'Choose a file that is not empty.',
+  fileTooLarge: 'Files must be 20 MB or smaller.',
+};
+
+export function validateMaterialFile(file: File): MaterialFileProblem | null {
+  const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
+  const allowedMimeTypes = MATERIAL_EXTENSIONS[extension];
+  if (!allowedMimeTypes || (file.type !== '' && !allowedMimeTypes.includes(file.type))) {
+    return 'invalidType';
   }
+  if (file.size === 0) return 'emptyFile';
+  if (file.size > MATERIAL_MAX_BYTES) return 'fileTooLarge';
+  return null;
+}
 
-  const { data, error } = await supabase.storage
-    .from(MATERIALS_BUCKET)
-    .createSignedUrl(material.file_path, 60, {
-      download: download ? material.file_name : false,
-    });
-
+export async function listMaterials(): Promise<Material[]> {
+  requireSharedStorage();
+  const { data, error } = await supabase.from('materials').select('*').order('created_at', { ascending: false });
   if (error) throw error;
+  return (data ?? []) as Material[];
+}
+
+export async function uploadMaterial(file: File, title: string, description: string): Promise<void> {
+  requireSharedStorage();
+  const problem = validateMaterialFile(file);
+  if (problem) throw new Error(fileProblemMessages[problem]);
+  const cleanTitle = title.trim();
+  const cleanDescription = description.trim();
+  if (!cleanTitle || cleanTitle.length > 120) throw new Error('Enter a title of up to 120 characters.');
+  if (cleanDescription.length > 500) throw new Error('Description must be 500 characters or shorter.');
+
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+  if (!session?.access_token) throw new Error('Sign in again before uploading a material.');
+
+  const body = new FormData();
+  body.append('file', file);
+  body.append('title', cleanTitle);
+  body.append('description', cleanDescription);
+
+  const response = await fetch(`${materialFilesUrl}/api/upload.php`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${session.access_token}` },
+    body,
+  });
+  const result = await response.json().catch(() => null) as { error?: string } | null;
+  if (!response.ok) throw new Error(result?.error || 'The material could not be uploaded.');
+}
+
+export async function deleteMaterial(materialId: string): Promise<void> {
+  requireSharedStorage();
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+  if (!session?.access_token) throw new Error('Sign in again before deleting a material.');
+
+  const response = await fetch(
+    `${materialFilesUrl}/api/delete.php?id=${encodeURIComponent(materialId)}`,
+    {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    },
+  );
+  const result = await response.json().catch(() => null) as { error?: string } | null;
+  if (!response.ok) throw new Error(result?.error || 'The material could not be deleted.');
+}
+
+export async function materialUrl(material: Material, download = false): Promise<string> {
+  requireSharedStorage();
+  // New files live on files.manabi-app.jp. UUID-prefixed paths are legacy
+  // objects that still need a Supabase signed URL.
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\//i.test(material.storage_path)) {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) throw sessionError;
+    if (!session?.access_token) throw new Error('Sign in again before opening a material.');
+
+    const params = new URLSearchParams({ id: material.id });
+    if (download) params.set('download', '1');
+    const response = await fetch(`${materialFilesUrl}/api/download.php?${params}`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (!response.ok) {
+      const result = await response.json().catch(() => null) as { error?: string } | null;
+      throw new Error(result?.error || 'Unable to open this material.');
+    }
+    return URL.createObjectURL(await response.blob());
+  }
+  const { data, error } = await supabase.storage.from('materials').createSignedUrl(
+    material.storage_path,
+    60,
+    download ? { download: material.file_name } : undefined,
+  );
+  if (error) throw error;
+  if (!data?.signedUrl) throw new Error('Unable to open this material.');
   return data.signedUrl;
-}
-
-export async function deleteStudyMaterial(material: StudyMaterial) {
-  if (!isSupabaseEnabled) {
-    writeLocalMaterials(readLocalMaterials().filter(item => item.id !== material.id));
-    return;
-  }
-
-  const { error: storageError } = await supabase.storage
-    .from(MATERIALS_BUCKET)
-    .remove([material.file_path]);
-  if (storageError) throw storageError;
-
-  const { error } = await supabase
-    .from('study_materials')
-    .delete()
-    .eq('id', material.id);
-  if (error) throw error;
 }

@@ -25,6 +25,7 @@ const OPTION_KEYS = ['ア', 'イ', 'ウ', 'エ'];
 const questionRows = [];
 const choiceRows = [];
 const questionTexts = new Set();
+const questionByText = new Map();
 
 function readJson(filename) {
   return JSON.parse(readFileSync(resolve(DATA_DIR, filename), 'utf8'));
@@ -32,6 +33,16 @@ function readJson(filename) {
 
 function isImagePath(value) {
   return typeof value === 'string' && value.startsWith('../');
+}
+
+function examDateFromPeriod(period) {
+  const value = String(period ?? '');
+  if (/^\d{6}$/.test(value)) {
+    const month = Number(value.slice(4));
+    if (month >= 1 && month <= 12) return `${value.slice(0, 4)}-${value.slice(4)}-01`;
+  }
+  if (/^\d{4}$/.test(value)) return `${value}-01-01`;
+  return null;
 }
 
 function normalizeImagePath(year, subjectKey, sourcePath, questionId, choiceSuffix = '') {
@@ -65,9 +76,19 @@ function addQuestion({
   explanationEn = null,
   explanationVi = null,
   imageUrl = null,
+  sourceKey = null,
+  examDate = null,
 }) {
   const cleanText = typeof text === 'string' ? text.trim() : '';
-  if (!cleanText || questionTexts.has(cleanText) || options.length === 0) return;
+  if (!cleanText || options.length === 0) return;
+  const existingQuestion = questionByText.get(cleanText);
+  if (existingQuestion) {
+    if (examDate && (!existingQuestion.exam_date || examDate > existingQuestion.exam_date)) {
+      existingQuestion.exam_date = examDate;
+      existingQuestion.source_key = sourceKey;
+    }
+    return;
+  }
 
   const validOptions = options.filter(option => option.text || option.imageUrl);
   if (validOptions.length === 0) return;
@@ -75,6 +96,8 @@ function addQuestion({
 
   questionRows.push({
     id: questionId,
+    source_key: sourceKey,
+    exam_date: examDate,
     subject_id: subjectId,
     question_number: number,
     question_text: cleanText,
@@ -87,6 +110,7 @@ function addQuestion({
     explanation_en: explanationEn,
     explanation_vi: explanationVi,
   });
+  questionByText.set(cleanText, questionRows[questionRows.length - 1]);
 
   validOptions.forEach((option, index) => {
     choiceRows.push({
@@ -166,6 +190,8 @@ function addKakomon(filename, answerGroup, subjectKey) {
           };
         }),
         correctAnswer,
+        sourceKey: `${subjectKey}:${session.year}:Q${question.id}`,
+        examDate: examDateFromPeriod(session.year),
       });
     }
   }
@@ -213,6 +239,8 @@ writeFileSync(
   resolve(OUTPUT_DIR, 'questions.csv'),
   toCsv(questionRows, [
     'id',
+    'source_key',
+    'exam_date',
     'subject_id',
     'question_number',
     'question_text',
@@ -234,3 +262,4 @@ writeFileSync(
 );
 
 console.log(`Created ${questionRows.length} questions and ${choiceRows.length} answer choices in ${OUTPUT_DIR}`);
+console.log(`Exam dates populated for ${questionRows.filter(question => question.exam_date).length} questions; ${questionRows.filter(question => !question.exam_date).length} generic questions have no exam source.`);

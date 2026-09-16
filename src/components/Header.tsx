@@ -3,8 +3,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Bell, Coins } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { getPointBalance } from '../lib/points';
+import { getCachedPointBalance, getPointBalance } from '../lib/points';
 import type { Page } from '../types';
+import BrandLogo from './BrandLogo';
 
 interface HeaderProps {
   title: string;
@@ -14,14 +15,26 @@ interface HeaderProps {
 
 const DEFAULT_READ_NOTIFICATION_IDS = [3];
 
+function readSavedNotificationIds(storageKey: string) {
+  try {
+    const savedIds = window.localStorage.getItem(storageKey);
+    return new Set(savedIds ? JSON.parse(savedIds) as number[] : DEFAULT_READ_NOTIFICATION_IDS);
+  } catch {
+    return new Set(DEFAULT_READ_NOTIFICATION_IDS);
+  }
+}
+
 export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
   const { profile } = useAuth();
   const { language } = useLanguage();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const notificationStorageKey = `manabi-notifications-read:${profile?.id ?? 'guest'}`;
   const [readNotificationIds, setReadNotificationIds] = useState<Set<number>>(
-    () => new Set(DEFAULT_READ_NOTIFICATION_IDS),
+    () => readSavedNotificationIds(notificationStorageKey),
   );
-  const [pointBalance, setPointBalance] = useState<number | null>(null);
+  const [pointBalance, setPointBalance] = useState<number | null>(
+    () => getCachedPointBalance(profile?.id),
+  );
   
   const notificationRef = useRef<HTMLDivElement | null>(null);
 
@@ -59,15 +72,9 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
   ];
 
   const unreadCount = notifications.filter(item => !readNotificationIds.has(item.id)).length;
-  const notificationStorageKey = `manabi-notifications-read:${profile?.id ?? 'guest'}`;
 
   useEffect(() => {
-    try {
-      const savedIds = window.localStorage.getItem(notificationStorageKey);
-      setReadNotificationIds(new Set(savedIds ? JSON.parse(savedIds) as number[] : DEFAULT_READ_NOTIFICATION_IDS));
-    } catch {
-      setReadNotificationIds(new Set(DEFAULT_READ_NOTIFICATION_IDS));
-    }
+    setReadNotificationIds(readSavedNotificationIds(notificationStorageKey));
   }, [notificationStorageKey]);
 
   function saveReadNotificationIds(ids: Set<number>) {
@@ -112,7 +119,6 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
   async function loadPoints() {
     if (!profile) return;
 
-    
     try {
       const points = await getPointBalance(profile.id);
       setPointBalance(points.balance);
@@ -135,6 +141,9 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
   return (
     <header className="sm:h-20 header-gradient border-b border-gray-100 dark:border-slate-700 flex flex-row items-center gap-2 sm:gap-3 py-2 sm:py-0 sticky top-0 z-10">
       <div className="app-shell w-full flex items-center gap-2 sm:gap-3">
+        <button type="button" onClick={() => onNavigate('home')} aria-label={translate(language, 'sidebar.home')} className="md:hidden shrink-0">
+          <BrandLogo variant="mark" alt="" />
+        </button>
         <div className="flex-1 min-w-0">
           {subtitle && (
             <p className="text-xs text-gray-400 dark:text-slate-400">
@@ -171,7 +180,7 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
             </button>
 
             {isNotificationsOpen && (
-              <div className="absolute right-0 mt-3 w-80 max-w-[calc(100vw-2rem)] bg-white border border-gray-100 dark:bg-slate-900 dark:border-slate-700 rounded-2xl shadow-xl overflow-hidden z-50">
+              <div className="fixed inset-x-4 top-14 max-h-[calc(100dvh-4.5rem)] flex flex-col bg-white border border-gray-100 dark:bg-slate-900 dark:border-slate-700 rounded-2xl shadow-xl overflow-hidden z-50 sm:absolute sm:inset-x-auto sm:top-auto sm:right-0 sm:mt-3 sm:w-80 sm:max-h-none">
                 <div className="px-4 py-3 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
                   <div>
                     <p className="text-sm font-bold text-gray-800 dark:text-slate-100">
@@ -196,7 +205,7 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
                   )}
                 </div>
 
-                <div className="max-h-80 overflow-y-auto">
+                <div className="min-h-0 overflow-y-auto sm:max-h-80">
                   {notifications.map(item => {
                     const isUnread = !readNotificationIds.has(item.id);
 

@@ -1,151 +1,88 @@
-import questionsAData from '../data/kakomon_questionsA.json';
-import questionsSData from '../data/kakomon_questionsS.json';
-import { AnswerChoice, Question } from '../types';
-
-interface SourceQuestion {
-  id?: string | number;
-  question?: string;
-  image_file?: string;
-  options?: Record<string, string>;
-}
-
-interface ExamSession {
-  year: string | number;
-  questions?: SourceQuestion[];
-}
-
-interface ExamData {
-  exam_data?: ExamSession[];
-}
+import imageMetadataData from '../data/questionImageMetadata.json';
+import type { AnswerChoice, Question } from '../types';
 
 interface ImageMetadata {
   question?: string;
-  choices: Map<number, string>;
+  choices?: Record<string, string>;
 }
 
+type ImageLoader = () => Promise<string>;
+
+const imageMetadata = imageMetadataData as Record<string, ImageMetadata>;
 const imageModules = import.meta.glob('../data/img/**/*.png', {
-  eager: true,
   query: '?url',
   import: 'default',
-}) as Record<string, string>;
+}) as Record<string, ImageLoader>;
 
-const imageUrls = new Map<string, string>();
-for (const [modulePath, url] of Object.entries(imageModules)) {
+const imageLoaders = new Map<string, ImageLoader>();
+for (const [modulePath, loader] of Object.entries(imageModules)) {
   const relativePath = modulePath.replace('../data/img/', '').replace(/\\/g, '/');
-  imageUrls.set(relativePath.toLowerCase(), url);
+  imageLoaders.set(relativePath.toLowerCase(), loader);
 }
 
-function getFilename(path: string) {
-  return path.replace(/\\/g, '/').split('/').pop() ?? '';
+const imagePromises = new Map<string, Promise<string | undefined>>();
+
+function questionKey(value: string) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
 }
 
-function getSessionFolder(year: string | number, examKind: 'A' | 'S') {
-  const value = String(year);
-  if (examKind === 'A' && value.toLowerCase() === 'sample') return 'sampleA';
-  return `${value}${examKind}`;
-}
-
-function resolveBundledImage(relativePath: string | null | undefined) {
-  if (!relativePath) return undefined;
-
-  const normalized = relativePath.replace(/\\/g, '/');
+function normalizeAssetPath(path: string) {
+  const normalized = path.replace(/\\/g, '/');
   const imgIndex = normalized.toLowerCase().lastIndexOf('/img/');
-  const assetPath = imgIndex >= 0
+  return imgIndex >= 0
     ? normalized.slice(imgIndex + 5)
     : normalized.replace(/^\.?\/?src\/data\/img\//i, '').replace(/^img\//i, '');
-
-  return imageUrls.get(assetPath.toLowerCase());
 }
 
-function resolveSourceImage(
-  folder: string,
-  sourcePath: string,
-  questionId: string | number | undefined,
-  choiceSuffix = '',
-) {
-  const id = String(questionId ?? '');
-  const session = folder.replace(/[AS]$/i, '');
-  const candidates = [
-    getFilename(sourcePath),
-    `${id}${choiceSuffix}.png`,
-    `${id.padStart(2, '0')}${choiceSuffix}.png`,
-    `${session}Q${id}${choiceSuffix}.png`,
-    `${session}Q${id.padStart(2, '0')}${choiceSuffix}.png`,
-  ];
-
-  for (const filename of candidates) {
-    const url = resolveBundledImage(`${folder}/${filename}`);
-    if (url) return url;
-  }
-  return undefined;
+function resolveBundledImage(path: string | null | undefined) {
+  if (!path) return Promise.resolve(undefined);
+  const assetPath = normalizeAssetPath(path).toLowerCase();
+  const existing = imagePromises.get(assetPath);
+  if (existing) return existing;
+  const loader = imageLoaders.get(assetPath);
+  const promise = loader ? loader().catch(() => undefined) : Promise.resolve(undefined);
+  imagePromises.set(assetPath, promise);
+  return promise;
 }
 
-const imageMetadataByQuestion = new Map<string, ImageMetadata>();
-
-function indexExamData(data: ExamData, examKind: 'A' | 'S') {
-  for (const session of data.exam_data ?? []) {
-    const folder = getSessionFolder(session.year, examKind);
-
-    for (const sourceQuestion of session.questions ?? []) {
-      const questionText = sourceQuestion.question?.trim();
-      if (!questionText) continue;
-
-      const metadata: ImageMetadata = { choices: new Map() };
-      if (sourceQuestion.image_file) {
-        metadata.question = resolveSourceImage(
-          folder,
-          sourceQuestion.image_file,
-          sourceQuestion.id,
-        );
-      }
-
-      Object.values(sourceQuestion.options ?? {}).forEach((value, index) => {
-        if (typeof value !== 'string' || !value.startsWith('../')) return;
-        const choiceUrl = resolveSourceImage(
-          folder,
-          value,
-          sourceQuestion.id,
-          ['a', 'i', 'u', 'e'][index],
-        );
-        if (choiceUrl) metadata.choices.set(index + 1, choiceUrl);
-      });
-
-      if (metadata.question || metadata.choices.size > 0) {
-        imageMetadataByQuestion.set(questionText, metadata);
-      }
-    }
-  }
+function isDirectUrl(path: string) {
+  return /^(https?:|data:|blob:)/i.test(path);
 }
 
-indexExamData(questionsAData as unknown as ExamData, 'A');
-indexExamData(questionsSData as unknown as ExamData, 'S');
-
-export function getQuestionImageUrl(question: Question | undefined) {
+export async function getQuestionImageUrl(question: Question | undefined) {
   if (!question) return undefined;
 
   const storedImage = question.image_url?.trim();
-  if (storedImage && /^(https?:|data:|blob:)/i.test(storedImage)) {
-    return storedImage;
-  }
+  if (storedImage && isDirectUrl(storedImage)) return storedImage;
 
-  return resolveBundledImage(storedImage)
-    ?? (storedImage?.startsWith('/') ? storedImage : undefined)
-    ?? imageMetadataByQuestion.get(question.question_text.trim())?.question;
+  const storedAsset = await resolveBundledImage(storedImage);
+  if (storedAsset) return storedAsset;
+  if (storedImage?.startsWith('/')) return storedImage;
+
+  const fallbackPath = imageMetadata[questionKey(question.question_text.trim())]?.question;
+  return resolveBundledImage(fallbackPath);
 }
 
-export function getAnswerChoiceImageUrl(
+export async function getAnswerChoiceImageUrl(
   question: Question | undefined,
   choice: AnswerChoice,
 ) {
   const storedImage = choice.image_url?.trim();
-  if (storedImage && /^(https?:|data:|blob:)/i.test(storedImage)) {
-    return storedImage;
-  }
+  if (storedImage && isDirectUrl(storedImage)) return storedImage;
 
-  if (!question) return resolveBundledImage(storedImage);
-  return resolveBundledImage(storedImage)
-    ?? (storedImage?.startsWith('/') ? storedImage : undefined)
-    ?? imageMetadataByQuestion.get(question.question_text.trim())?.choices.get(choice.sort_order);
+  const storedAsset = await resolveBundledImage(storedImage);
+  if (storedAsset) return storedAsset;
+  if (storedImage?.startsWith('/')) return storedImage;
+  if (!question) return undefined;
+
+  const fallbackPath = imageMetadata[questionKey(question.question_text.trim())]
+    ?.choices?.[String(choice.sort_order)];
+  return resolveBundledImage(fallbackPath);
 }
 
 export function isImageReference(value: string) {

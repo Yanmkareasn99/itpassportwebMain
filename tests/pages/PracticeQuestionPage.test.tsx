@@ -8,7 +8,13 @@ vi.mock('../../src/contexts/LanguageContext', () => ({ useLanguage: () => ({ lan
 vi.mock('../../src/components/Layout', () => ({ default: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
 vi.mock('../../src/components/QuestionMedia', () => ({ QuestionImage: () => null, AnswerChoiceContent: () => <span>Choose answer</span> }));
 vi.mock('../../src/lib/supabase', () => ({ isSupabaseEnabled: true, supabase: { from: mocks.from } }));
-const questions = [1, 2].map(id => ({ id: `q${id}`, question_text: `Question text ${id}`, question_type: 'multiple_choice', answer_choices: [{ id: `a${id}`, is_correct: true, choice_text: 'A', sort_order: 0 }] })) as Question[];
+const questions = [1, 2].map(id => ({
+  id: `q${id}`,
+  question_text: `Question text ${id}`,
+  question_type: 'multiple_choice',
+  exam_date: id === 1 ? '2026-09-15' : null,
+  answer_choices: [{ id: `a${id}`, is_correct: true, choice_text: 'A', sort_order: 0 }],
+})) as Question[];
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.insert.mockResolvedValue({ error: null });
@@ -19,7 +25,13 @@ it('continues at the next unanswered question after reloading, with no new sessi
   render(<PracticeQuestionPage currentPage="practice-question" onNavigate={() => {}} sessionId="existing" questions={questions}
     initialAnswers={[{ questionId: 'q1', choiceId: 'a1', isCorrect: true }]} />);
   expect(screen.getByText('Question text 2')).toBeTruthy();
+  expect(screen.getByText('Exam date: Uncategorized')).toBeTruthy();
   expect(mocks.from).not.toHaveBeenCalled();
+});
+
+it('shows the source exam date while answering a dated question', () => {
+  render(<PracticeQuestionPage currentPage="practice-question" onNavigate={() => {}} sessionId="existing" questions={questions} />);
+  expect(screen.getByText('Exam date: Sep 15, 2026')).toBeTruthy();
 });
 
 it('keeps an answer retryable after a database failure and prevents duplicate clicks while saving', async () => {

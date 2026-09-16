@@ -28,6 +28,7 @@ export interface Question {
   explanation_ja?: string | null;
   explanation_en?: string | null;
   explanation_vi?: string | null;
+  exam_date: string | null;
   difficulty: number;
   points: number;
   answer_choices?: AnswerChoice[];

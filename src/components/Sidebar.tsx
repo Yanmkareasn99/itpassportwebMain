@@ -1,6 +1,5 @@
 import { translate } from '../i18n';
 import {
-  BookOpen,
   Home,
   Layers,
   Trophy,
@@ -15,6 +14,7 @@ import {
 import { useAuth } from "../contexts/AuthContext";
 import { useLanguage } from "../contexts/LanguageContext";
 import { Page } from "../types";
+import BrandLogo from './BrandLogo';
 
 interface SidebarProps {
   currentPage: Page;
@@ -73,12 +73,7 @@ export default function Sidebar({
       {/* Logo */}
 
       <div className="h-20 flex items-center justify-center border-b px-4 dark:border-slate-700">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center">
-            <BookOpen className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-xl font-bold text-blue-600">マナビ</span>
-        </div>
+        <BrandLogo compact />
       </div>
 
       {/* Menu */}

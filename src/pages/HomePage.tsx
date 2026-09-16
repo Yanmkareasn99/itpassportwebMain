@@ -261,11 +261,12 @@ export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
       <div className="app-shell">
         <div className="flex flex-col-reverse lg:flex-row gap-6">
           <div className="flex-1 space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 xl:gap-6">
+            <div className="motion-stagger grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 xl:gap-6">
               {features.map(({ page, icon: Icon, title, description, cardClass, iconBg, iconColor, arrowBg }) => (
-                <div
+                <button
+                  type="button"
                   key={page}
-                  className={`${page === 'materials' ? 'md:col-span-2' : ''} ${cardClass} rounded-2xl p-4 sm:p-5 xl:p-6 flex items-center justify-between gap-4 xl:gap-5 cursor-pointer transition-all hover:shadow-md`} 
+                  className={`motion-lift ${page === 'materials' ? 'md:col-span-2' : ''} ${cardClass} w-full rounded-2xl p-4 sm:p-5 xl:p-6 flex items-center justify-between gap-4 xl:gap-5 text-left transition-all hover:shadow-md`}
                   onClick={() => onNavigate(page)}
                 >
                   <div className="flex items-center gap-4 xl:gap-5 min-w-0">
@@ -279,14 +280,13 @@ export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
                     </div>
                   </div>
 
-                  <button
-                    onClick={e => { e.stopPropagation(); onNavigate(page); }}
-                    aria-label={title}
+                  <span
+                    aria-hidden="true"
                     className={`${arrowBg} w-12 h-12 xl:w-[3.25rem] xl:h-[3.25rem] rounded-xl flex items-center justify-center text-white shadow-lg shadow-black/10 transition hover:opacity-90 shrink-0`}
                   >
                     <ArrowRight className="w-5 h-5 xl:w-6 xl:h-6" />
-                  </button>
-                </div>
+                  </span>
+                </button>
               ))}
             </div>
 
@@ -307,7 +307,7 @@ export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
                   </button>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="motion-stagger space-y-3">
                   {recentSessions.map(s => {
                     const pct = s.answered_count > 0 ? Math.round((s.correct_answers / s.answered_count) * 100) : 0;
                     return (
@@ -332,7 +332,7 @@ export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
             </div>
           </div>
 
-          <div className="w-full lg:w-72 space-y-5 shrink-0">
+          <div className="motion-stagger w-full lg:w-72 space-y-5 shrink-0">
             <CalendarWidget daysLeft={daysLeft} language={language} sessions={practiceSessions} examTargetDate={examTargetDate} />
             {progressError && <p role="alert" className="text-sm text-red-600">{translateMessage(language, progressError)}</p>}
             <StatsCard sessions={practiceSessions} examSessions={examSessions} language={language} />

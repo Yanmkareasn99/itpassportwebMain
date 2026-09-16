@@ -11,16 +11,29 @@ interface ChatRequest {
   systemPrompt?: unknown;
 }
 
-const DEFAULT_ALLOWED_ORIGIN = 'https://itpassportweb-app.vercel.app';
-const RATE_LIMIT_MAX_REQUESTS = 10;
+const DEFAULT_ALLOWED_ORIGINS = [
+  'https://manabi-app.jp',
+  'https://itpassportwebapp-eta.vercel.app',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+];
+const DEFAULT_RATE_LIMIT_MAX_REQUESTS = 60;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
 const rateBuckets = new Map<string, { count: number; resetTime: number }>();
 
 function allowedOrigins() {
-  return (Deno.env.get('ALLOWED_ORIGIN') ?? DEFAULT_ALLOWED_ORIGIN)
+  const configured = (Deno.env.get('ALLOWED_ORIGIN') ?? '')
     .split(',')
     .map(origin => origin.trim())
     .filter(Boolean);
+  return [...new Set([...DEFAULT_ALLOWED_ORIGINS, ...configured])];
+}
+
+function rateLimitMaxRequests() {
+  const configured = Number(Deno.env.get('AI_RATE_LIMIT_MAX_REQUESTS'));
+  return Number.isInteger(configured) && configured > 0
+    ? configured
+    : DEFAULT_RATE_LIMIT_MAX_REQUESTS;
 }
 
 function getAllowedOrigin(requestOrigin: string | null) {
@@ -48,19 +61,20 @@ function json(body: unknown, status: number, origin: string) {
 function consumeRateLimit(userId: string) {
   const now = Date.now();
   const bucket = rateBuckets.get(userId);
+  const maxRequests = rateLimitMaxRequests();
 
   if (!bucket || now >= bucket.resetTime) {
     const resetTime = now + RATE_LIMIT_WINDOW_MS;
     rateBuckets.set(userId, { count: 1, resetTime });
-    return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - 1, resetTime };
+    return { allowed: true, remaining: maxRequests - 1, resetTime };
   }
 
-  if (bucket.count >= RATE_LIMIT_MAX_REQUESTS) {
+  if (bucket.count >= maxRequests) {
     return { allowed: false, remaining: 0, resetTime: bucket.resetTime };
   }
 
   bucket.count += 1;
-  return { allowed: true, remaining: RATE_LIMIT_MAX_REQUESTS - bucket.count, resetTime: bucket.resetTime };
+  return { allowed: true, remaining: maxRequests - bucket.count, resetTime: bucket.resetTime };
 }
 
 Deno.serve(async (req) => {

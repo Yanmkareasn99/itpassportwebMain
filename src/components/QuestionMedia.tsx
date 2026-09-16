@@ -11,10 +11,18 @@ interface QuestionImageProps {
 }
 
 export function QuestionImage({ question }: QuestionImageProps) {
-  const src = getQuestionImageUrl(question);
+  const [src, setSrc] = useState<string>();
   const [failed, setFailed] = useState(false);
 
-  useEffect(() => setFailed(false), [src]);
+  useEffect(() => {
+    let active = true;
+    setSrc(undefined);
+    setFailed(false);
+    void getQuestionImageUrl(question).then(url => {
+      if (active) setSrc(url);
+    });
+    return () => { active = false; };
+  }, [question]);
 
   if (!src || failed) return null;
 
@@ -39,10 +47,18 @@ interface AnswerChoiceContentProps {
 }
 
 export function AnswerChoiceContent({ question, choice, displayIndex }: AnswerChoiceContentProps) {
-  const src = getAnswerChoiceImageUrl(question, choice);
+  const [src, setSrc] = useState<string>();
   const [failed, setFailed] = useState(false);
 
-  useEffect(() => setFailed(false), [src]);
+  useEffect(() => {
+    let active = true;
+    setSrc(undefined);
+    setFailed(false);
+    void getAnswerChoiceImageUrl(question, choice).then(url => {
+      if (active) setSrc(url);
+    });
+    return () => { active = false; };
+  }, [choice, question]);
 
   const hasImage = Boolean(src && !failed);
   const text = choice.choice_text.trim();

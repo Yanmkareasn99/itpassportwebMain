@@ -1,22 +1,26 @@
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import type { PdfImportQuestion, PdfImportResult } from './pdfQuestionImport';
-import { inferQuestionDifficulty } from './pdfQuestionImport';
+import { extractAnswerMap, extractPages } from './pdfAnswerText';
+import {
+  type PdfImportQuestion,
+  type PdfImportResult,
+} from './pdfQuestionImport';
 
-interface OcrLine {
+export interface OcrLine {
   text: string;
   topRatio: number;
   bottomRatio: number;
 }
 
-interface OcrPage {
+export interface OcrPage {
   pageNumber: number;
   lines: OcrLine[];
 }
 
-interface QuestionStart {
+export interface QuestionStart {
   number: number;
   pageNumber: number;
   topRatio: number;
+  warnings: string[];
 }
 
 const ANSWER_LABELS = 'アイウエ';
@@ -185,18 +189,36 @@ function detectAnswerGrid(canvas: HTMLCanvasElement) {
   return { horizontalLines, tables, rowCount };
 }
 
-function findQuestionStarts(pages: OcrPage[]) {
+export function isQuestionRangeHeading(value: string) {
+  const compact = value.normalize('NFKC').replace(/\s+/g, '');
+  return /^[問間]\d{1,4}(?:(?:から|より)|[～〜~\-－—―])[問間]?\d{1,4}(?:まで)?/.test(compact);
+}
+
+export function findQuestionStarts(pages: OcrPage[]) {
   const candidates: Array<QuestionStart & { detectedNumber: number }> = [];
   for (const page of pages) {
-    for (const line of page.lines) {
+    for (let lineIndex = 0; lineIndex < page.lines.length; lineIndex += 1) {
+      const line = page.lines[lineIndex];
       const normalized = line.text.normalize('NFKC').replace(/\s+/g, ' ').trim();
+      const previousLine = page.lines[lineIndex - 1]?.text ?? '';
+      const nextLine = page.lines[lineIndex + 1]?.text ?? '';
+      // Section dividers such as "問1から問34までは、ストラテジ系の問題です。"
+      // are not questions. Treating one as a start shifts every later question and answer.
+      if (
+        isQuestionRangeHeading(normalized)
+        || isQuestionRangeHeading(`${normalized} ${nextLine}`)
+        || isQuestionRangeHeading(`${previousLine} ${normalized}`)
+      ) continue;
       const match = normalized.match(/^[問間]\s*(\d{1,4})(?:\D|$)/);
       if (!match) continue;
+      const detectedNumber = Number(match[1]);
+      if (detectedNumber < 1 || detectedNumber > 200) continue;
       candidates.push({
-        detectedNumber: Number(match[1]),
+        detectedNumber,
         number: 0,
         pageNumber: page.pageNumber,
         topRatio: line.topRatio,
+        warnings: [],
       });
     }
   }
@@ -204,21 +226,72 @@ function findQuestionStarts(pages: OcrPage[]) {
   candidates.sort((left, right) => (
     left.pageNumber - right.pageNumber || left.topRatio - right.topRatio
   ));
-  let previousNumber = 0;
-  return candidates.map(candidate => {
-    const expectedNumber = previousNumber + 1;
-    const number = previousNumber === 0
-      ? candidate.detectedNumber
-      : candidate.detectedNumber === expectedNumber
-        ? candidate.detectedNumber
-        : expectedNumber;
-    previousNumber = number;
-    return {
-      number,
+  const starts: QuestionStart[] = [];
+  const byNumber = new Map<number, QuestionStart>();
+  for (let index = 0; index < candidates.length; index += 1) {
+    const candidate = candidates[index];
+    const duplicate = byNumber.get(candidate.detectedNumber);
+    if (duplicate) {
+      duplicate.warnings.push(`Question ${candidate.detectedNumber} was detected more than once; review its crop.`);
+      continue;
+    }
+
+    const previous = starts[starts.length - 1];
+    if (previous && candidate.detectedNumber <= previous.number) {
+      previous.warnings.push(`Ignored out-of-order question heading ${candidate.detectedNumber}; review question segmentation.`);
+      continue;
+    }
+
+    if (previous && candidate.detectedNumber > previous.number + 1) {
+      const nextNumber = candidates.slice(index + 1).find(next => next.detectedNumber > previous.number)?.detectedNumber;
+      if (nextNumber === previous.number + 1) {
+        previous.warnings.push(`Ignored likely false-positive question heading ${candidate.detectedNumber}.`);
+        continue;
+      }
+      const firstMissing = previous.number + 1;
+      const lastMissing = candidate.detectedNumber - 1;
+      candidate.warnings.push(
+        firstMissing === lastMissing
+          ? `Question ${firstMissing} was not detected before this question; review segmentation.`
+          : `Questions ${firstMissing}-${lastMissing} were not detected before this question; review segmentation.`,
+      );
+    } else if (!previous && candidate.detectedNumber > 1) {
+      candidate.warnings.push(
+        candidate.detectedNumber === 2
+          ? 'Question 1 was not detected before this question; review segmentation.'
+          : `Questions 1-${candidate.detectedNumber - 1} were not detected before this question; review segmentation.`,
+      );
+    }
+
+    const start: QuestionStart = {
+      number: candidate.detectedNumber,
       pageNumber: candidate.pageNumber,
       topRatio: candidate.topRatio,
+      warnings: candidate.warnings,
     };
-  }).filter(candidate => candidate.number >= 1 && candidate.number <= 200);
+    starts.push(start);
+    byNumber.set(start.number, start);
+  }
+  return starts;
+}
+
+export function mergeExpectedAnswerMaps(
+  expectedNumbers: Iterable<number>,
+  textLayerAnswers: ReadonlyMap<number, string>,
+  ocrAnswers: ReadonlyMap<number, string> = new Map(),
+) {
+  const expected = new Set(expectedNumbers);
+  const answers = new Map<number, string>();
+  for (const [number, label] of textLayerAnswers) {
+    if (expected.has(number) && ANSWER_LABELS.includes(label)) answers.set(number, label);
+  }
+  for (const [number, label] of ocrAnswers) {
+    if (expected.has(number) && !answers.has(number) && ANSWER_LABELS.includes(label)) {
+      answers.set(number, label);
+    }
+  }
+  const missingNumbers = [...expected].filter(number => !answers.has(number));
+  return { answers, missingNumbers, answerCount: answers.size };
 }
 
 function extractAnswers(pages: OcrPage[]) {
@@ -378,16 +451,28 @@ export async function processScannedExamPdfs(
       throw new Error('This scanned PDF could not be segmented into questions. Make sure the pages show headings such as “問1”.');
     }
 
-    const answers = answerDocument
-      ? extractAnswers(await ocrAnswerPages(answerDocument, worker, PSM, onProgress))
-      : new Map<number, string>();
+    const expectedNumbers = starts.map(start => start.number);
+    let answerResult = mergeExpectedAnswerMaps(expectedNumbers, new Map());
+    if (answerDocument) {
+      // An exam can have scanned question pages and a searchable answer PDF.
+      // Prefer its exact text layer over OCR, which is less reliable for dense grids.
+      onProgress?.('Reading embedded answer text…');
+      const textLayerAnswers = extractAnswerMap(await extractPages(answerDocument));
+      answerResult = mergeExpectedAnswerMaps(expectedNumbers, textLayerAnswers);
+
+      if (answerResult.missingNumbers.length > 0) {
+        onProgress?.(`OCR: looking for ${answerResult.missingNumbers.length} missing answers…`);
+        const ocrAnswers = extractAnswers(await ocrAnswerPages(answerDocument, worker, PSM, onProgress));
+        answerResult = mergeExpectedAnswerMaps(expectedNumbers, textLayerAnswers, ocrAnswers);
+      }
+    }
 
     const questions: PdfImportQuestion[] = [];
     for (let index = 0; index < starts.length; index += 1) {
       const start = starts[index];
       const next = starts[index + 1];
       onProgress?.(`Preparing question ${index + 1} of ${starts.length}…`);
-      const correctChoice = answers.get(start.number) ?? '';
+      const correctChoice = answerResult.answers.get(start.number) ?? '';
       questions.push({
         sourceKey: `${examKey}:Q${start.number}`,
         number: start.number,
@@ -401,12 +486,15 @@ export async function processScannedExamPdfs(
         })),
         correctChoice,
         explanation: '',
-        difficulty: inferQuestionDifficulty(start.number),
+        difficulty: 2,
         points: 1,
-        warnings: correctChoice ? [] : ['Correct answer not detected. Select it below.'],
+        warnings: [
+          ...start.warnings,
+          ...(correctChoice ? [] : ['Correct answer not detected. Select it below.']),
+        ],
       });
     }
-    return { questions, answerCount: answers.size };
+    return { questions, answerCount: answerResult.answerCount };
   } finally {
     await worker.terminate();
   }

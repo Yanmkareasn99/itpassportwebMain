@@ -17,6 +17,19 @@ function readLocalNumber(key: string, fallback: number) {
   return Number.isFinite(value) ? value : fallback;
 }
 
+export function getCachedPointBalance(userId: string | null | undefined) {
+  if (!userId) return null;
+  const value = localStorage.getItem(localBalanceKey(userId));
+  if (value === null) return null;
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function cachePointBalance(userId: string, balance: number) {
+  localStorage.setItem(localBalanceKey(userId), String(balance));
+}
+
 function localBalanceKey(userId: string) {
   return `${LOCAL_POINTS_KEY}:${userId}`;
 }
@@ -27,12 +40,15 @@ function localDailyKey(userId: string) {
 
 export async function getPointBalance(userId: string): Promise<ProfilePoints> {
   if (!isSupabaseEnabled) {
-    return {
+    const result = {
       user_id: userId,
       balance: readLocalNumber(localBalanceKey(userId), 0),
       last_daily_awarded_on: localStorage.getItem(localDailyKey(userId)),
       updated_at: new Date().toISOString(),
     };
+
+    cachePointBalance(userId, result.balance);
+    return result;
   }
 
   const { data, error } = await supabase
@@ -43,12 +59,15 @@ export async function getPointBalance(userId: string): Promise<ProfilePoints> {
 
   if (error) throw error;
 
-  return (data as ProfilePoints | null) ?? {
+  const result = (data as ProfilePoints | null) ?? {
     user_id: userId,
     balance: 0,
     last_daily_awarded_on: null,
     updated_at: new Date().toISOString(),
   };
+
+  cachePointBalance(userId, result.balance);
+  return result;
 }
 
 export async function claimDailyLoginPoints(userId: string): Promise<ProfilePoints> {
@@ -78,6 +97,7 @@ export async function awardLocalAnswerPoints(userId: string, isCorrect: boolean,
   const balanceKey = localBalanceKey(userId);
   const nextBalance = readLocalNumber(balanceKey, 0) + DEFAULT_POINT_SETTINGS[key];
   localStorage.setItem(balanceKey, String(nextBalance));
+  cachePointBalance(userId, nextBalance);
 }
 
 export async function fetchPointSettings(): Promise<PointSetting[]> {
@@ -110,6 +130,9 @@ export async function updatePointSetting(key: string, value: number) {
 }
 
 export async function createOnlineBattleRoom(wager: number, questionCount: number, secondsPerQuestion = 30) {
+  if (!Number.isInteger(wager) || wager < 0) {
+    throw new Error('Wager must be a non-negative integer.');
+  }
   if (!Number.isInteger(questionCount) || questionCount < 1 || questionCount > 20) throw new Error('Question count must be between 1 and 20.');
   if (!Number.isInteger(secondsPerQuestion) || secondsPerQuestion < 5 || secondsPerQuestion > 300) throw new Error('Time per question must be between 5 and 300 seconds.');
   const { data, error } = await supabase.rpc('create_battle_room', {

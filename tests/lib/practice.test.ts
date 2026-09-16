@@ -4,7 +4,7 @@ vi.mock('../../src/lib/supabase', async importOriginal => {
   return importOriginal();
 });
 import { supabase } from '../../src/lib/supabase';
-import { createPracticeSession, fetchPracticeQuestions, loadLatestAnswerStatus, loadPracticeSession, loadPracticeProgress, practiceErrorMessage } from '../../src/lib/practice';
+import { createPracticeSession, fetchPracticeQuestions, loadExamDates, loadLatestAnswerStatus, loadPracticeSession, loadPracticeProgress, practiceErrorMessage } from '../../src/lib/practice';
 
 beforeEach(() => {
   localStorage.clear();
@@ -38,17 +38,26 @@ describe('practice data', () => {
     expect([...await loadLatestAnswerStatus('me')]).toEqual([['q', true]]);
   });
 
-  it.each(['easy', 'medium', 'hard'] as const)('combines %s difficulty with question type and subject filters', async difficulty => {
+  it.each(['2025-04-20', '2024-04-21', '2023-04-16'] as const)('combines the %s exam date with question type and subject filters', async examDate => {
     const all = await fetchPracticeQuestions(null, 'all', 'all');
     const subject = all[0].subject_id;
-    const actual = await fetchPracticeQuestions([subject], difficulty, 'multiple_choice');
-    const levels = difficulty === 'easy' ? [1] : difficulty === 'medium' ? [2, 3] : [4, 5];
-    const expected = all.filter(q => q.subject_id === subject && levels.includes(q.difficulty) && q.question_type === 'multiple_choice');
+    const actual = await fetchPracticeQuestions([subject], examDate, 'multiple_choice');
+    const expected = all.filter(q => q.subject_id === subject && q.exam_date === examDate && q.question_type === 'multiple_choice');
     expect(actual.map(q => q.id).sort()).toEqual(expected.map(q => q.id).sort());
   });
 
+  it('lists each available exam date newest first', async () => {
+    expect(await loadExamDates()).toEqual(['2025-04-20', '2024-04-21', '2023-04-16']);
+  });
+
+  it('filters questions without an exam date as uncategorized', async () => {
+    const questions = await fetchPracticeQuestions(null, 'uncategorized', 'all');
+    expect(questions.length).toBeGreaterThan(0);
+    expect(questions.every(question => question.exam_date === null)).toBe(true);
+  });
+
   it('handles a filter with no matching questions', async () => {
-    expect(await fetchPracticeQuestions(['missing-subject'], 'hard', 'tree')).toEqual([]);
+    expect(await fetchPracticeQuestions(['missing-subject'], '2025-04-20', 'tree')).toEqual([]);
   });
 
   it('retains plain-object Supabase error messages', () => {

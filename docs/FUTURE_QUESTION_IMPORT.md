@@ -12,6 +12,20 @@ edit extracted text and choices, and select any answers that were not detected.
 Click **Import/update all** to upload the images to Supabase Storage and sync all
 questions and choices. Reusing the same exam key updates the existing exam.
 
+This Storage workflow is also the recommended image-delivery path for bundle
+performance. New question and answer-choice images should keep an HTTPS
+Supabase Storage URL in `image_url`; the student app uses those URLs directly,
+so the browser can cache and deliver them through the Storage CDN without a new
+frontend deployment.
+
+Historical images under `src/data/img` remain a compatibility fallback and are
+loaded only when their question is displayed. To remove them from frontend
+builds completely, upload them to the `question-images` bucket, update the
+matching `questions.image_url` and `answer_choices.image_url` rows, verify that
+no rows still use `img/...` paths, and then remove the corresponding bundled
+files. Run `npm run generate:image-metadata` whenever historical source JSON or
+fallback image paths change; production builds run it automatically.
+
 No terminal command or CSV upload is needed for this Admin-panel workflow.
 
 Image-only scanned PDFs are handled automatically with Japanese OCR in the
@@ -133,3 +147,23 @@ order by q.question_number;
 
 Every result should show `has_question_image = true` and
 `correct_choices = 1`.
+
+## Backfill dates for existing questions
+
+Older imports discarded the `year` value embedded in the historical JSON.
+After applying `20260915010000_add_question_exam_dates.sql`, set a service-role
+connection locally and run the automatic matcher:
+
+```powershell
+$env:SUPABASE_URL = "https://your-project.supabase.co"
+$env:SUPABASE_SERVICE_ROLE_KEY = "your-secret-service-role-key"
+npm run backfill:exam-dates
+npm run backfill:exam-dates -- --apply
+```
+
+The first command is a dry run. The second updates only rows whose `exam_date`
+is currently null. Annual source values such as `2025` become `2025-01-01`, and
+monthly values such as `202507` become `2025-07-01`; these dates represent the
+start of the known exam period because the source files do not contain an exact
+day. Generic questions from `questions.json` and `category_questions.json` are
+left undated because they are not associated with an exam.

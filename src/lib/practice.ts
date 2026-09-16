@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import type { Question, PracticeSession } from '../types';
+import { UNCATEGORIZED_EXAM_DATE } from './examDate';
 
 export interface PracticeAnswer {
   questionId: string;
@@ -90,9 +91,26 @@ export async function loadPracticeSession(userId: string, sessionId: string) {
 
 export async function fetchPracticeQuestions(
   subjectIds: string[] | null,
-  diffFilter: DifficultyFilter,
+  examDateFilter: ExamDateFilter,
   formatFilter: FormatFilter,
 ): Promise<Question[]> {
+  if (Array.isArray(examDateFilter)) {
+    const includesUncategorized = examDateFilter.includes(UNCATEGORIZED_EXAM_DATE);
+    const selectedDates = examDateFilter.filter(value => value !== UNCATEGORIZED_EXAM_DATE);
+
+    // The local Supabase-compatible query adapter does not expose PostgREST's
+    // `.or()` method. Load these two disjoint groups separately so mixed date
+    // and null selections behave the same in local and hosted environments.
+    if (includesUncategorized && selectedDates.length > 0) {
+      const [datedQuestions, uncategorizedQuestions] = await Promise.all([
+        fetchPracticeQuestions(subjectIds, selectedDates, formatFilter),
+        fetchPracticeQuestions(subjectIds, UNCATEGORIZED_EXAM_DATE, formatFilter),
+      ]);
+      return [...datedQuestions, ...uncategorizedQuestions].sort((left, right) =>
+        left.question_number - right.question_number || left.id.localeCompare(right.id));
+    }
+  }
+
   const questions: Question[] = [];
 
   for (let from = 0; ; from += 500) {
@@ -102,12 +120,18 @@ export async function fetchPracticeQuestions(
 
     if (subjectIds) query = query.in('subject_id', subjectIds);
 
-    if (diffFilter === 'easy') {
-      query = query.eq('difficulty', 1);
-    } else if (diffFilter === 'medium') {
-      query = query.in('difficulty', [2, 3]);
-    } else if (diffFilter === 'hard') {
-      query = query.in('difficulty', [4, 5]);
+    if (Array.isArray(examDateFilter) && examDateFilter.length > 0) {
+      const includesUncategorized = examDateFilter.includes(UNCATEGORIZED_EXAM_DATE);
+      const selectedDates = examDateFilter.filter(value => value !== UNCATEGORIZED_EXAM_DATE);
+      if (includesUncategorized) {
+        query = query.is('exam_date', null);
+      } else {
+        query = query.in('exam_date', selectedDates);
+      }
+    } else if (examDateFilter === UNCATEGORIZED_EXAM_DATE) {
+      query = query.is('exam_date', null);
+    } else if (examDateFilter !== 'all') {
+      query = query.eq('exam_date', examDateFilter);
     }
 
     if (formatFilter !== 'all') {
@@ -129,7 +153,23 @@ export async function fetchPracticeQuestions(
   return questions;
 }
 
-export type DifficultyFilter = 'all' | 'easy' | 'medium' | 'hard';
+export async function loadExamDates(): Promise<string[]> {
+  const dates = new Set<string>();
+  for (let from = 0; ; from += 500) {
+    const { data, error } = await supabase.from('questions')
+      .select('exam_date')
+      .order('exam_date', { ascending: false })
+      .range(from, from + 499);
+    if (error) throw error;
+    for (const question of data ?? []) {
+      if (question.exam_date) dates.add(question.exam_date as string);
+    }
+    if (!data || data.length < 500) break;
+  }
+  return [...dates].sort((left, right) => right.localeCompare(left));
+}
+
+export type ExamDateFilter = 'all' | string | string[];
 export type FormatFilter = 'all' | 'multiple_choice' | 'tree';
 export type ModeFilter = 'all' | 'new' | 'review';
 

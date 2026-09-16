@@ -1,17 +1,30 @@
 import { supportedLanguages, translate } from '../i18n';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { BookOpen, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import {
+  AlertCircle,
+  BookOpen,
+  BrainCircuit,
+  Calculator,
+  Eye,
+  EyeOff,
+  FileQuestion,
+  GraduationCap,
+  Pencil,
+} from 'lucide-react';
+import BrandLogo from '../components/BrandLogo';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 function isRegisteredEmailError(message: string) {
   return /user already registered|already registered|already exists/i.test(message);
 }
 
 export default function LoginPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
   useEffect(() => {
     const root = document.documentElement;
-    const previousDarkMode = root.classList.contains('dark');
     const previousColorScheme = root.style.colorScheme;
 
     root.classList.remove('dark');
@@ -19,15 +32,19 @@ export default function LoginPage() {
 
     return () => {
       root.style.colorScheme = previousColorScheme;
-      root.classList.toggle('dark', previousDarkMode);
+      root.classList.toggle('dark', window.localStorage.getItem('manabi-theme') === 'dark');
     };
   }, []);
 
-  const { signIn, signUp, signInWithGoogle } = useAuth();
+  const {
+    signIn, signUp, signInWithGoogle, resetPassword, updatePassword,
+    passwordRecoveryState, clearPasswordRecovery,
+  } = useAuth();
   const { language, setLanguage } = useLanguage();
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [mode, setMode] = useState<'login' | 'signup' | 'forgot' | 'recovery'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
   const [studentId, setStudentId] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -46,10 +63,16 @@ export default function LoginPage() {
     signup: translate(language, 'loginPage.createAccount'),
     loginHelp: translate(language, 'loginPage.signInToContinueLearning'),
     signupHelp: translate(language, 'loginPage.createANewAccount'),
+    forgotTitle: translate(language, 'loginPage.forgotPasswordTitle'),
+    forgotHelp: translate(language, 'loginPage.forgotPasswordHelp'),
+    recoveryTitle: translate(language, 'loginPage.resetPasswordTitle'),
+    recoveryHelp: translate(language, 'loginPage.resetPasswordHelp'),
     name: translate(language, 'loginPage.name'),
     studentId: translate(language, 'loginPage.studentIdOptional'),
     email: translate(language, 'loginPage.email'),
     password: translate(language, 'loginPage.password'),
+    newPassword: translate(language, 'loginPage.newPassword'),
+    confirmPassword: translate(language, 'loginPage.confirmNewPassword'),
     processing: translate(language, 'loginPage.processing'),
     noAccount: translate(language, 'loginPage.noAccountCreateOne'),
     hasAccount: translate(language, 'loginPage.alreadyHaveAnAccount'),
@@ -60,7 +83,58 @@ export default function LoginPage() {
     confirmationSent: translate(language, 'loginPage.confirmationEmailSentConfirmYourEmailThenSign'),
     showPassword: translate(language, 'loginPage.showPassword'),
     hidePassword: translate(language, 'loginPage.hidePassword'),
+    forgotPassword: translate(language, 'loginPage.forgotPassword'),
+    sendResetLink: translate(language, 'loginPage.sendResetLink'),
+    resetEmailSent: translate(language, 'loginPage.resetEmailSent'),
+    resetEmailError: translate(language, 'loginPage.resetEmailFailed'),
+    updatePassword: translate(language, 'loginPage.updatePassword'),
+    updatePasswordError: translate(language, 'loginPage.updatePasswordFailed'),
+    passwordsDoNotMatch: translate(language, 'loginPage.passwordsDoNotMatch'),
+    passwordMinimum: translate(language, 'loginPage.passwordMinimum'),
+    backToSignIn: translate(language, 'loginPage.backToSignIn'),
+    invalidRecovery: translate(language, 'loginPage.invalidRecoveryLink'),
   };
+
+  useEffect(() => {
+    const search = new URLSearchParams(location.search);
+    const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
+    const recoveryRequested = search.get('recovery') === '1'
+      || search.get('type') === 'recovery'
+      || hash.get('type') === 'recovery'
+      || search.has('error')
+      || hash.has('error');
+
+    if (passwordRecoveryState === 'valid') {
+      setMode('recovery');
+      setError('');
+    } else if (recoveryRequested && passwordRecoveryState === 'invalid') {
+      setMode('login');
+      setError(text.invalidRecovery);
+      navigate('/login', { replace: true });
+    }
+  }, [location.hash, location.search, navigate, passwordRecoveryState, text.invalidRecovery]);
+
+  const pageTitle = mode === 'login'
+    ? text.login
+    : mode === 'signup'
+      ? text.signup
+      : mode === 'forgot'
+        ? text.forgotTitle
+        : text.recoveryTitle;
+  const pageHelp = mode === 'login'
+    ? text.loginHelp
+    : mode === 'signup'
+      ? text.signupHelp
+      : mode === 'forgot'
+        ? text.forgotHelp
+        : text.recoveryHelp;
+  const submitLabel = mode === 'login'
+    ? text.login
+    : mode === 'signup'
+      ? text.signup
+      : mode === 'forgot'
+        ? text.sendResetLink
+        : text.updatePassword;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -68,7 +142,22 @@ export default function LoginPage() {
     setNotice('');
     setLoading(true);
     try {
-      if (mode === 'login') {
+      if (mode === 'forgot') {
+        await resetPassword(email);
+        setNotice(text.resetEmailSent);
+      } else if (mode === 'recovery') {
+        if (password.length < 6) {
+          setError(text.passwordMinimum);
+          return;
+        }
+        if (password !== confirmPassword) {
+          setError(text.passwordsDoNotMatch);
+          return;
+        }
+        await updatePassword(password);
+        clearPasswordRecovery();
+        navigate('/', { replace: true });
+      } else if (mode === 'login') {
         await signIn(email, password);
       } else {
         if (!name.trim()) { setError(text.nameError); setLoading(false); return; }
@@ -81,7 +170,9 @@ export default function LoginPage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (mode === 'login') setError(text.loginError);
-      else setError(isRegisteredEmailError(msg) ? text.registeredEmailError : text.signupError + msg);
+      else if (mode === 'signup') setError(isRegisteredEmailError(msg) ? text.registeredEmailError : text.signupError + msg);
+      else if (mode === 'forgot') setError(text.resetEmailError);
+      else setError(text.updatePasswordError);
     } finally {
       setLoading(false);
     }
@@ -102,20 +193,22 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(96,165,250,0.22),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(168,139,250,0.18),_transparent_35%),linear-gradient(135deg,#eff6ff_0%,#f8fafc_45%,#eef2ff_100%)] flex items-center justify-center p-4 sm:p-6 lg:p-8">
-      <div className="w-full max-w-5xl overflow-hidden rounded-[32px] border border-blue-100/70 bg-white/80 shadow-[0_30px_80px_rgba(30,41,59,0.12)] backdrop-blur-md">
+    <div className="relative min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(96,165,250,0.22),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(168,139,250,0.18),_transparent_35%),linear-gradient(135deg,#eff6ff_0%,#f8fafc_45%,#eef2ff_100%)] flex items-center justify-center p-4 sm:p-6 lg:p-8">
+      <div className="login-exam-background" aria-hidden="true">
+        <span className="login-exam-float login-exam-float--book"><BookOpen /></span>
+        <span className="login-exam-float login-exam-float--calculator"><Calculator /></span>
+        <span className="login-exam-float login-exam-float--pencil"><Pencil /></span>
+        <span className="login-exam-float login-exam-float--question"><FileQuestion /></span>
+        <span className="login-exam-float login-exam-float--cap"><GraduationCap /></span>
+        <span className="login-exam-float login-exam-float--brain"><BrainCircuit /></span>
+      </div>
+
+      <div className="relative z-10 w-full max-w-5xl overflow-hidden rounded-[32px] border border-blue-100/70 bg-white/80 shadow-[0_30px_80px_rgba(30,41,59,0.12)] backdrop-blur-md">
         <div className="grid lg:grid-cols-[1.1fr_0.9fr]">
           <div className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-gradient-to-br from-[#1d4ed8] via-[#3b82f6] to-[#7c3aed] p-10 text-white">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.22),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.08),_transparent_35%)]" />
             <div className="relative z-10">
-              <div className="inline-flex items-center gap-3 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 backdrop-blur-sm">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15">
-                  <BookOpen className="h-5 w-5 text-white" />
-                </div>
-                <span className="text-xl font-bold tracking-tight">{text.brand}</span>
-              </div>
-
-              <div className="mt-10 space-y-6">
+              <div className="space-y-6">
                 <div>
                   <p className="text-sm font-medium uppercase tracking-[0.18em] text-blue-100">{text.eyebrow}</p>
                   <h1 className="mt-3 text-3xl font-black leading-tight text-white">{text.headline}</h1>
@@ -144,18 +237,15 @@ export default function LoginPage() {
           <div className="flex items-center justify-center px-4 py-8 sm:px-8 lg:px-10">
             <div className="w-full max-w-md">
               <div className="mb-6 mt-8 text-center">
-                <div className="mb-4 hidden items-center justify-center lg:justify-start gap-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-500/25">
-                    <BookOpen className="h-5 w-5 text-white" />
-                  </div>
-                  <span className="text-2xl font-bold text-blue-600">{text.brand}</span>
+                <div className="mb-4 flex items-center justify-center">
+                  <BrandLogo alt={text.brand} />
                 </div>
 
                 <h2 className="text-2xl font-bold text-slate-800 text-center">
-                  {mode === 'login' ? text.login : text.signup}
+                  {pageTitle}
                 </h2>
                 <p className="mt-2 text-sm text-slate-500 text-center">
-                  {mode === 'login' ? text.loginHelp : text.signupHelp}
+                  {pageHelp}
                 </p>
               </div>
 
@@ -209,9 +299,11 @@ export default function LoginPage() {
                   </>
                 )}
 
+                {mode !== 'recovery' && (
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">{text.email}</label>
+                  <label htmlFor="login-email" className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">{text.email}</label>
                   <input
+                    id="login-email"
                     type="email"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
@@ -220,11 +312,16 @@ export default function LoginPage() {
                     required
                   />
                 </div>
+                )}
 
+                {mode !== 'forgot' && (
                 <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">{text.password}</label>
+                  <label htmlFor="login-password" className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">
+                    {mode === 'recovery' ? text.newPassword : text.password}
+                  </label>
                   <div className="relative">
                     <input
+                      id="login-password"
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={e => setPassword(e.target.value)}
@@ -243,6 +340,39 @@ export default function LoginPage() {
                     </button>
                   </div>
                 </div>
+                )}
+
+                {mode === 'login' && (
+                  <div className="-mt-2 text-right">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode('forgot');
+                        setError('');
+                        setNotice('');
+                      }}
+                      className="text-xs font-semibold text-blue-600 transition hover:text-blue-700 hover:underline"
+                    >
+                      {text.forgotPassword}
+                    </button>
+                  </div>
+                )}
+
+                {mode === 'recovery' && (
+                  <div>
+                    <label htmlFor="login-confirm-password" className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">{text.confirmPassword}</label>
+                    <input
+                      id="login-confirm-password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={e => setConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-100 transition"
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                )}
 
                 {error && (
                   <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-600">
@@ -256,10 +386,11 @@ export default function LoginPage() {
                   disabled={loading}
                   className="mt-2 w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 py-3.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 transition hover:from-blue-500 hover:to-indigo-500 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {loading ? text.processing : mode === 'login' ? text.login : text.signup}
+                  {loading ? text.processing : submitLabel}
                 </button>
               </form>
 
+              {(mode === 'login' || mode === 'signup') && (
               <div className="mt-5">
                 <div className="relative my-5">
                   <div className="absolute inset-0 flex items-center">
@@ -284,16 +415,23 @@ export default function LoginPage() {
                   </button>
                 </div>
               </div>
+              )}
 
               <div className="mt-6 text-center">
                 <button
                   onClick={() => {
-                    setMode(mode === 'login' ? 'signup' : 'login');
+                    if (mode === 'login') setMode('signup');
+                    else if (mode === 'signup' || mode === 'forgot') setMode('login');
+                    else {
+                      clearPasswordRecovery();
+                      navigate('/login', { replace: true });
+                    }
                     setError('');
+                    setNotice('');
                   }}
                   className="text-sm font-semibold text-blue-600 transition hover:text-blue-700"
                 >
-                  {mode === 'login' ? text.noAccount : text.hasAccount}
+                  {mode === 'login' ? text.noAccount : mode === 'signup' ? text.hasAccount : text.backToSignIn}
                 </button>
               </div>
             </div>
