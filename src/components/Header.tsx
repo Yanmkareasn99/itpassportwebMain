@@ -175,7 +175,7 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
             </button>
 
             {isNotificationsOpen && (
-              <div className="absolute right-0 mt-3 w-80 max-w-[calc(100vw-2rem)] bg-white border border-gray-100 dark:bg-slate-900 dark:border-slate-700 rounded-2xl shadow-xl overflow-hidden z-50">
+              <div className="fixed inset-x-4 top-14 max-h-[calc(100dvh-4.5rem)] flex flex-col bg-white border border-gray-100 dark:bg-slate-900 dark:border-slate-700 rounded-2xl shadow-xl overflow-hidden z-50 sm:absolute sm:inset-x-auto sm:top-auto sm:right-0 sm:mt-3 sm:w-80 sm:max-h-none">
                 <div className="px-4 py-3 border-b border-gray-100 dark:border-slate-700 flex items-center justify-between">
                   <div>
                     <p className="text-sm font-bold text-gray-800 dark:text-slate-100">
@@ -200,7 +200,7 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
                   )}
                 </div>
 
-                <div className="max-h-80 overflow-y-auto">
+                <div className="min-h-0 overflow-y-auto sm:max-h-80">
                   {notifications.map(item => {
                     const isUnread = !readNotificationIds.has(item.id);
 
