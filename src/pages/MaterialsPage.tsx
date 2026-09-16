@@ -202,12 +202,12 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
                   <p className="text-xs text-gray-400 dark:text-slate-400 mt-4 break-all">{material.file_name} · {fileSize(material.file_size)}</p>
                   <p className="text-xs text-gray-400 dark:text-slate-400 mt-1">{new Date(material.created_at).toLocaleDateString(languageLocales[language])}</p>
                   <div className="grid grid-cols-2 gap-2 mt-4">
-                    <button onClick={() => openMaterial(material, false)} className="px-3 py-2 rounded-xl bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200 text-xs font-semibold hover:bg-gray-200 dark:hover:bg-slate-700">{t('materialsPage.open')}</button>
+                    <button onClick={() => openMaterial(material, false)} className="px-3 py-2 rounded-xl border border-transparent bg-gray-100 dark:border-slate-600 dark:bg-slate-800 text-gray-700 dark:text-slate-200 text-xs font-semibold hover:bg-gray-200 dark:hover:bg-slate-700">{t('materialsPage.open')}</button>
                     <button onClick={() => openMaterial(material, true)} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 flex items-center justify-center gap-1"><Download className="w-3.5 h-3.5" />{t('materialsPage.download')}</button>
                     {(user?.id === material.uploader_id || isAdmin) && <button
                       onClick={() => setPendingDelete(material)}
                       disabled={deletingId !== null}
-                      className="col-span-2 px-3 py-2 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 text-xs font-semibold hover:bg-red-100 dark:hover:bg-red-900/50 disabled:opacity-50 flex items-center justify-center gap-1"
+                      className="col-span-2 px-3 py-2 rounded-xl border border-transparent bg-red-50 dark:border-red-800 dark:bg-red-950/40 text-red-700 dark:text-red-300 text-xs font-semibold hover:bg-red-100 dark:hover:bg-red-900/50 disabled:opacity-50 flex items-center justify-center gap-1"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       {deletingId === material.id ? t('materialsPage.deleting') : t('materialsPage.delete')}
