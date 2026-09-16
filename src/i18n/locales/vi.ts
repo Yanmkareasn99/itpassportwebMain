@@ -500,6 +500,7 @@ export const vi = {
   "settingsPage.darkMode": "Chế độ tối",
   "settingsPage.darkModeOn": "Bật",
   "settingsPage.darkModeOff": "Tắt",
+  "settingsPage.randomizeAnswerChoices": "Xáo trộn các lựa chọn trả lời",
   "settingsPage.profileSaveFailed": "Lưu thất bại: {error}",
   "settingsPage.profileSaved": "Đã lưu hồ sơ",
   "settingsPage.targetSaved": "Đã lưu ngày thi mục tiêu",

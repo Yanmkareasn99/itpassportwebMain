@@ -500,6 +500,7 @@ export const en = {
   "settingsPage.darkMode": "Dark mode",
   "settingsPage.darkModeOn": "On",
   "settingsPage.darkModeOff": "Off",
+  "settingsPage.randomizeAnswerChoices": "Randomize answer choices",
   "settingsPage.profileSaveFailed": "Failed to save: {error}",
   "settingsPage.profileSaved": "Profile saved",
   "settingsPage.targetSaved": "Target exam date saved",

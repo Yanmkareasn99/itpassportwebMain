@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -6,6 +7,7 @@ import { AuthProvider, useAuth } from '../../src/contexts/AuthContext';
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
   onAuthStateChange: vi.fn(),
+  signUp: vi.fn(),
   updateUser: vi.fn(),
   authCallback: null as ((event: AuthChangeEvent, session: Session | null) => void) | null,
 }));
@@ -16,6 +18,7 @@ vi.mock('../../src/lib/supabase', () => ({
     auth: {
       getSession: mocks.getSession,
       onAuthStateChange: mocks.onAuthStateChange,
+      signUp: mocks.signUp,
       updateUser: mocks.updateUser,
     },
     from: () => {
@@ -45,6 +48,23 @@ function Probe() {
   );
 }
 
+function SignupProbe() {
+  const auth = useAuth();
+  const [error, setError] = useState('');
+  return (
+    <div>
+      <span>{error}</span>
+      <button
+        type="button"
+        onClick={() => void auth.signUp('registered@example.com', 'secret12', 'Student')
+          .catch(reason => setError(reason instanceof Error ? reason.message : String(reason)))}
+      >
+        Sign up
+      </button>
+    </div>
+  );
+}
+
 const recoverySession = {
   access_token: 'access',
   refresh_token: 'refresh',
@@ -64,6 +84,7 @@ describe('AuthProvider password recovery lifecycle', () => {
     vi.clearAllMocks();
     window.history.replaceState({}, '', '/login?recovery=1');
     mocks.getSession.mockResolvedValue({ data: { session: null }, error: null });
+    mocks.signUp.mockResolvedValue({ data: { user: null, session: null }, error: null });
     mocks.updateUser.mockResolvedValue({ data: { user: recoverySession.user }, error: null });
     mocks.onAuthStateChange.mockImplementation((callback: typeof mocks.authCallback) => {
       mocks.authCallback = callback;
@@ -100,5 +121,23 @@ describe('AuthProvider password recovery lifecycle', () => {
       await Promise.resolve();
       await Promise.resolve();
     });
+  });
+
+  it('rejects Supabase masked duplicate-email signup responses', async () => {
+    mocks.signUp.mockResolvedValueOnce({
+      data: {
+        user: {
+          id: 'obfuscated-existing-user',
+          identities: [],
+        },
+        session: null,
+      },
+      error: null,
+    });
+    render(<AuthProvider><SignupProbe /></AuthProvider>);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sign up' }));
+
+    expect(await screen.findByText('User already registered')).toBeTruthy();
   });
 });

@@ -276,8 +276,9 @@ export default function LoginPage() {
                 {mode === 'signup' && (
                   <>
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">{text.name}</label>
+                      <label htmlFor="signup-name" className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">{text.name}</label>
                       <input
+                        id="signup-name"
                         type="text"
                         value={name}
                         onChange={e => setName(e.target.value)}
@@ -287,8 +288,9 @@ export default function LoginPage() {
                       />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">{text.studentId}</label>
+                      <label htmlFor="signup-student-id" className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">{text.studentId}</label>
                       <input
+                        id="signup-student-id"
                         type="text"
                         value={studentId}
                         onChange={e => setStudentId(e.target.value)}

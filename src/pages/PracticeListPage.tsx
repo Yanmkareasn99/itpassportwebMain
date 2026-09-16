@@ -20,6 +20,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Question, Page } from '../types';
 import { formatExamDate, UNCATEGORIZED_EXAM_DATE } from '../lib/examDate';
+import { orderPracticeQuestions } from '../lib/questionRandomization';
 
 interface PracticeListPageProps {
   currentPage: Page;
@@ -388,7 +389,7 @@ export default function PracticeListPage({
     setStarting('filtered');
     setError('');
     try {
-      await onStartPractice('all', matchingQuestions);
+      await onStartPractice('all', orderPracticeQuestions(matchingQuestions, true));
     } catch (error) {
       setError(practiceErrorMessage(error, 'Unable to start practice.'));
     } finally { setStarting(null); }
@@ -561,7 +562,10 @@ export default function PracticeListPage({
       }
 
       if (selectedQuestions.length > 0) {
-        await onStartPractice(!subjectIds || subjectIds.length > 1 ? 'all' : subjectIds[0], selectedQuestions);
+        await onStartPractice(
+          !subjectIds || subjectIds.length > 1 ? 'all' : subjectIds[0],
+          orderPracticeQuestions(selectedQuestions, false),
+        );
       } else {
         setError(translate(currentLanguage, 'ui.noMatches'));
       }
@@ -597,7 +601,7 @@ export default function PracticeListPage({
       if (questionsError) throw questionsError;
 
       if (data && data.length > 0) {
-        await onStartPractice('review', data as Question[]);
+        await onStartPractice('review', orderPracticeQuestions(data as Question[], false));
       }
     } catch (reviewError) {
       setError(practiceErrorMessage(reviewError, 'Unable to start review.'));
