@@ -47,6 +47,19 @@ describe('scanned PDF question detection', () => {
     expect(starts.map(start => start.number)).toEqual([1]);
   });
 
+  it('keeps a real question immediately after a complete section range heading', () => {
+    const starts = findQuestionStarts([{
+      pageNumber: 1,
+      lines: [
+        line('問1から問34までは、ストラテジ系の問題です。', 0.05),
+        line('問1 次の記述のうち、適切なものはどれか。', 0.1),
+        line('問2 次の記述のうち、適切なものはどれか。', 0.3),
+      ],
+    }]);
+
+    expect(starts.map(start => start.number)).toEqual([1, 2]);
+  });
+
   it('preserves two questions on one page in vertical order', () => {
     const starts = findQuestionStarts([{
       pageNumber: 1,
@@ -84,6 +97,28 @@ describe('scanned PDF question detection', () => {
 
     expect(starts.map(start => start.number)).toEqual([1, 2]);
     expect(starts[0].warnings.join(' ')).toMatch(/false-positive/);
+  });
+
+  it('recovers when OCR reads each decade trailing zero as nine', () => {
+    const detected = [
+      ...Array.from({ length: 9 }, (_, index) => index + 1),
+      19,
+      ...Array.from({ length: 9 }, (_, index) => index + 11),
+      29,
+      ...Array.from({ length: 9 }, (_, index) => index + 21),
+      39,
+      31,
+    ];
+    const starts = findQuestionStarts([{
+      pageNumber: 1,
+      lines: detected.map((number, index) => line(`問${number} 本文`, index / 100)),
+    }]);
+
+    expect(starts.map(start => start.number)).toEqual(
+      Array.from({ length: 31 }, (_, index) => index + 1),
+    );
+    expect(starts[9].warnings.join(' ')).toMatch(/read question 10 as 19/);
+    expect(starts[19].warnings.join(' ')).toMatch(/read question 20 as 29/);
   });
 
   it('supports common OCR heading confusion and punctuation', () => {
