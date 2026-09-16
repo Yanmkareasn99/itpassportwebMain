@@ -207,7 +207,12 @@ export function findQuestionStarts(pages: OcrPage[]) {
       if (
         isQuestionRangeHeading(normalized)
         || isQuestionRangeHeading(`${normalized} ${nextLine}`)
-        || isQuestionRangeHeading(`${previousLine} ${normalized}`)
+        // Only join the previous line when it is an incomplete range heading.
+        // A complete section heading immediately above a real question (for
+        // example, "問1から問34まで..." followed by "問1 ...") must not
+        // consume that question as part of the range.
+        || (!isQuestionRangeHeading(previousLine)
+          && isQuestionRangeHeading(`${previousLine} ${normalized}`))
       ) continue;
       const match = normalized.match(/^[問間]\s*(\d{1,4})(?:\D|$)/);
       if (!match) continue;
@@ -230,41 +235,61 @@ export function findQuestionStarts(pages: OcrPage[]) {
   const byNumber = new Map<number, QuestionStart>();
   for (let index = 0; index < candidates.length; index += 1) {
     const candidate = candidates[index];
-    const duplicate = byNumber.get(candidate.detectedNumber);
+    const previous = starts[starts.length - 1];
+    let resolvedNumber = candidate.detectedNumber;
+
+    // Tesseract commonly reads a trailing zero as nine in Japanese headings:
+    // 問10 -> 問19, 問20 -> 問29, and so on. Accepting that jump makes all of
+    // the following correctly read questions look out of order. The physical
+    // sequence gives us a safe correction signal: the previous question is 9,
+    // the current OCR value is 19, and the next heading is 11.
+    const expectedNumber = (previous?.number ?? 0) + 1;
+    const nextDetectedNumber = candidates[index + 1]?.detectedNumber;
+    const isTrailingZeroReadAsNine = expectedNumber % 10 === 0
+      && candidate.detectedNumber === expectedNumber + 9
+      && nextDetectedNumber === expectedNumber + 1;
+    if (isTrailingZeroReadAsNine) resolvedNumber = expectedNumber;
+
+    const duplicate = byNumber.get(resolvedNumber);
     if (duplicate) {
-      duplicate.warnings.push(`Question ${candidate.detectedNumber} was detected more than once; review its crop.`);
+      duplicate.warnings.push(`Question ${resolvedNumber} was detected more than once; review its crop.`);
       continue;
     }
 
-    const previous = starts[starts.length - 1];
-    if (previous && candidate.detectedNumber <= previous.number) {
+    if (previous && resolvedNumber <= previous.number) {
       previous.warnings.push(`Ignored out-of-order question heading ${candidate.detectedNumber}; review question segmentation.`);
       continue;
     }
 
-    if (previous && candidate.detectedNumber > previous.number + 1) {
+    if (previous && resolvedNumber > previous.number + 1) {
       const nextNumber = candidates.slice(index + 1).find(next => next.detectedNumber > previous.number)?.detectedNumber;
       if (nextNumber === previous.number + 1) {
         previous.warnings.push(`Ignored likely false-positive question heading ${candidate.detectedNumber}.`);
         continue;
       }
       const firstMissing = previous.number + 1;
-      const lastMissing = candidate.detectedNumber - 1;
+      const lastMissing = resolvedNumber - 1;
       candidate.warnings.push(
         firstMissing === lastMissing
           ? `Question ${firstMissing} was not detected before this question; review segmentation.`
           : `Questions ${firstMissing}-${lastMissing} were not detected before this question; review segmentation.`,
       );
-    } else if (!previous && candidate.detectedNumber > 1) {
+    } else if (!previous && resolvedNumber > 1) {
       candidate.warnings.push(
-        candidate.detectedNumber === 2
+        resolvedNumber === 2
           ? 'Question 1 was not detected before this question; review segmentation.'
-          : `Questions 1-${candidate.detectedNumber - 1} were not detected before this question; review segmentation.`,
+          : `Questions 1-${resolvedNumber - 1} were not detected before this question; review segmentation.`,
+      );
+    }
+
+    if (isTrailingZeroReadAsNine) {
+      candidate.warnings.push(
+        `OCR read question ${expectedNumber} as ${candidate.detectedNumber}; the number was corrected from its sequence.`,
       );
     }
 
     const start: QuestionStart = {
-      number: candidate.detectedNumber,
+      number: resolvedNumber,
       pageNumber: candidate.pageNumber,
       topRatio: candidate.topRatio,
       warnings: candidate.warnings,
