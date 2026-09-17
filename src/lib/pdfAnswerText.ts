@@ -74,16 +74,24 @@ export function extractAnswerMap(pages: PageText[]) {
 
   for (const page of pages) {
     const text = normalize(page.text);
-    for (const match of text.matchAll(directPattern)) answers.set(Number(match[1]), match[2]);
-
     const lines = text.split('\n').map(line => line.trim()).filter(Boolean);
+    // Match explicit pairs within a row only. Crossing a newline would bind
+    // the last number of a number-only row to the first label below it.
+    for (const line of lines) {
+      for (const match of line.matchAll(directPattern)) answers.set(Number(match[1]), match[2]);
+    }
     for (let index = 0; index < lines.length; index += 1) {
       const numbers = [...lines[index].matchAll(/問\s*(\d{1,3})/g)].map(match => Number(match[1]));
-      if (!numbers.length) continue;
+      if (!numbers.length || numbers.every(number => answers.has(number))) continue;
       for (const answerLine of lines.slice(index + 1, index + 4)) {
+        // A new numbered row belongs to different questions. Never use its
+        // labels to fill the preceding row or replace an explicit answer pair.
+        if (/問\s*\d/.test(answerLine)) break;
         const answerLabels = [...answerLine.matchAll(standaloneLabelPattern)].map(match => match[1]);
         if (answerLabels.length === numbers.length) {
-          numbers.forEach((number, answerIndex) => answers.set(number, answerLabels[answerIndex]));
+          numbers.forEach((number, answerIndex) => {
+            if (!answers.has(number)) answers.set(number, answerLabels[answerIndex]);
+          });
           break;
         }
       }

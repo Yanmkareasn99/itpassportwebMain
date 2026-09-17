@@ -3,6 +3,8 @@ import {
   findQuestionStarts,
   isQuestionRangeHeading,
   mergeExpectedAnswerMaps,
+  parseAnswerGridRow,
+  selectAnswerTableLines,
 } from '../../src/lib/scannedPdfQuestionImport';
 
 function line(text: string, topRatio = 0.1) {
@@ -121,6 +123,57 @@ describe('scanned PDF question detection', () => {
     expect(starts[19].warnings.join(' ')).toMatch(/read question 20 as 29/);
   });
 
+  it('recovers the final question when OCR reads its trailing zero as nine', () => {
+    const detected = [
+      ...Array.from({ length: 99 }, (_, index) => index + 1),
+      109,
+    ];
+    const starts = findQuestionStarts([{
+      pageNumber: 1,
+      lines: detected.map((number, index) => line(`問${number} 本文`, index / 110)),
+    }]);
+
+    expect(starts).toHaveLength(100);
+    expect(starts.at(-1)?.number).toBe(100);
+    expect(starts.at(-1)?.warnings.join(' ')).toMatch(/read question 100 as 109/);
+  });
+
+  it('repairs forward OCR jumps without discarding the following headings', () => {
+    const detected = Array.from({ length: 100 }, (_, index) => {
+      const actualNumber = index + 1;
+      if (actualNumber === 20) return 26;
+      if (actualNumber === 36) return 37;
+      if (actualNumber === 60) return 66;
+      return actualNumber;
+    });
+    const starts = findQuestionStarts([{
+      pageNumber: 1,
+      lines: detected.map((number, index) => line(`問${number} 本文`, index / 110)),
+    }], true);
+
+    expect(starts).toHaveLength(100);
+    expect(starts.map(start => start.number)).toEqual(
+      Array.from({ length: 100 }, (_, index) => index + 1),
+    );
+    expect(starts[19].warnings.join(' ')).toMatch(/read question 20 as 26/);
+    expect(starts[35].warnings.join(' ')).toMatch(/read question 36 as 37/);
+  });
+
+  it('does not shift later crops when a question heading is genuinely missing', () => {
+    const detected = [
+      ...Array.from({ length: 35 }, (_, index) => index + 1),
+      ...Array.from({ length: 4 }, (_, index) => index + 37),
+    ];
+    const starts = findQuestionStarts([{
+      pageNumber: 17,
+      lines: detected.map((number, index) => line(`問${number} 本文`, index / 50)),
+    }], true);
+
+    expect(starts.map(start => start.number)).toEqual(detected);
+    expect(starts[35]).toMatchObject({ number: 37, pageNumber: 17 });
+    expect(starts[35].warnings.join(' ')).toMatch(/Question 36 was not detected/);
+  });
+
   it('supports common OCR heading confusion and punctuation', () => {
     const starts = findQuestionStarts([{
       pageNumber: 1,
@@ -141,6 +194,18 @@ describe('scanned PDF question detection', () => {
 });
 
 describe('scanned PDF answer reconciliation', () => {
+  it('ignores page rules above and below the regularly spaced answer grid', () => {
+    const tableLines = Array.from({ length: 27 }, (_, index) => 200 + index * 40);
+
+    expect(selectAnswerTableLines([60, 110, ...tableLines, 1400])).toEqual(tableLines);
+  });
+
+  it('reads the printed question number instead of assigning answers by row position', () => {
+    expect(parseAnswerGridRow('問 1 ア')).toEqual({ number: 1, label: 'ア' });
+    expect(parseAnswerGridRow('１００ ウ')).toEqual({ number: 100, label: 'ウ' });
+    expect(parseAnswerGridRow('問番号 正解')).toBeNull();
+  });
+
   it('reports a missing expected answer even when an unrelated entry makes the sizes equal', () => {
     const result = mergeExpectedAnswerMaps([1, 2], new Map([[1, 'ア'], [99, 'イ']]));
     expect(result.answerCount).toBe(1);

@@ -598,7 +598,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                       <th className="px-5 py-3 text-left">{translate(language, 'ui.rank')}</th>
                       <th className="px-3 py-3 text-left">{translate(language, 'ui.player')}</th>
                       <th className="px-3 py-3 text-right">{translate(language, 'ui.wins')}</th>
-                      <th className="px-5 py-3 text-right">{translate(language, 'ui.allTimeCorrect')}</th>
+                      <th className="px-5 py-3 text-right">{translate(language, 'ui.battleCorrect')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">

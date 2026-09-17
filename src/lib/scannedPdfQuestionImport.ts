@@ -138,6 +138,39 @@ function groupAdjacent(values: number[]) {
   return groups.map(group => Math.round(group.reduce((sum, value) => sum + value, 0) / group.length));
 }
 
+export function selectAnswerTableLines(horizontalLines: number[]) {
+  if (horizontalLines.length < 4) return horizontalLines;
+  const gaps = horizontalLines.slice(1).map((line, index) => line - horizontalLines[index]);
+  const sortedGaps = [...gaps].sort((left, right) => left - right);
+  const medianGap = sortedGaps[Math.floor(sortedGaps.length / 2)];
+  if (medianGap <= 0) return horizontalLines;
+
+  // Answer-table rows are evenly spaced. Page decorations or title rules can
+  // also look like horizontal table borders, but their distance from the next
+  // line is different. Keep the longest regularly spaced run so an extra line
+  // cannot become a fake first answer row and shift answers 2-100 down by one.
+  const runs: number[][] = [[horizontalLines[0]]];
+  for (let index = 1; index < horizontalLines.length; index += 1) {
+    const gap = horizontalLines[index] - horizontalLines[index - 1];
+    if (gap >= medianGap * 0.6 && gap <= medianGap * 1.6) {
+      runs[runs.length - 1].push(horizontalLines[index]);
+    } else {
+      runs.push([horizontalLines[index]]);
+    }
+  }
+  return runs.reduce((longest, run) => run.length > longest.length ? run : longest, []);
+}
+
+export function parseAnswerGridRow(value: string) {
+  const normalized = value.normalize('NFKC').replace(/\s+/g, '');
+  const numberMatch = normalized.match(/\d{1,3}/);
+  const label = [...normalized].find(character => ANSWER_LABELS.includes(character));
+  if (!numberMatch || !label) return null;
+  const number = Number(numberMatch[0]);
+  if (number < 1 || number > 200) return null;
+  return { number, label };
+}
+
 function detectAnswerGrid(canvas: HTMLCanvasElement) {
   const context = canvas.getContext('2d', { willReadFrequently: true });
   if (!context) return null;
@@ -162,7 +195,7 @@ function detectAnswerGrid(canvas: HTMLCanvasElement) {
     }
     if (longestRun >= minimumRun) horizontalCandidates.push(y);
   }
-  const horizontalLines = groupAdjacent(horizontalCandidates);
+  const horizontalLines = selectAnswerTableLines(groupAdjacent(horizontalCandidates));
   if (horizontalLines.length < 4) return null;
 
   const tableTop = horizontalLines[0];
@@ -194,7 +227,7 @@ export function isQuestionRangeHeading(value: string) {
   return /^[問間]\d{1,4}(?:(?:から|より)|[～〜~\-－—―])[問間]?\d{1,4}(?:まで)?/.test(compact);
 }
 
-export function findQuestionStarts(pages: OcrPage[]) {
+export function findQuestionStarts(pages: OcrPage[], repairForwardJumps = false) {
   const candidates: Array<QuestionStart & { detectedNumber: number }> = [];
   for (const page of pages) {
     for (let lineIndex = 0; lineIndex < page.lines.length; lineIndex += 1) {
@@ -247,8 +280,28 @@ export function findQuestionStarts(pages: OcrPage[]) {
     const nextDetectedNumber = candidates[index + 1]?.detectedNumber;
     const isTrailingZeroReadAsNine = expectedNumber % 10 === 0
       && candidate.detectedNumber === expectedNumber + 9
-      && nextDetectedNumber === expectedNumber + 1;
+      && (nextDetectedNumber === expectedNumber + 1 || nextDetectedNumber === undefined);
     if (isTrailingZeroReadAsNine) resolvedNumber = expectedNumber;
+
+    // Only repair a forward jump when the remaining headings prove that it is
+    // an OCR digit error. For example, if question 20 is read as 26, the later
+    // headings still contain 21-26 (including a second 26). A jump from 35 to
+    // a single 37 instead means question 36 was missed; renumbering that 37
+    // would shift every remaining crop by one.
+    const laterDetectedNumbers = new Set(
+      candidates.slice(index + 1).map(next => next.detectedNumber),
+    );
+    const interveningNumbersRemain = Array.from(
+      { length: Math.max(0, candidate.detectedNumber - expectedNumber - 1) },
+      (_, offset) => expectedNumber + offset + 1,
+    ).every(number => laterDetectedNumbers.has(number));
+    const isForwardJumpCorrected = repairForwardJumps
+      && Boolean(previous)
+      && candidate.detectedNumber > expectedNumber
+      && nextDetectedNumber !== expectedNumber
+      && laterDetectedNumbers.has(candidate.detectedNumber)
+      && interveningNumbersRemain;
+    if (isForwardJumpCorrected) resolvedNumber = expectedNumber;
 
     const duplicate = byNumber.get(resolvedNumber);
     if (duplicate) {
@@ -285,6 +338,10 @@ export function findQuestionStarts(pages: OcrPage[]) {
     if (isTrailingZeroReadAsNine) {
       candidate.warnings.push(
         `OCR read question ${expectedNumber} as ${candidate.detectedNumber}; the number was corrected from its sequence.`,
+      );
+    } else if (isForwardJumpCorrected) {
+      candidate.warnings.push(
+        `OCR read question ${expectedNumber} as ${candidate.detectedNumber}; the number was corrected from its physical order.`,
       );
     }
 
@@ -347,7 +404,12 @@ async function ocrQuestionHeadings(
   const pages: OcrPage[] = [];
   for (let pageNumber = 1; pageNumber <= documentProxy.numPages; pageNumber += 1) {
     onProgress?.(`OCR: finding questions on page ${pageNumber} of ${documentProxy.numPages}…`);
-    const pageCanvas = await renderPage(documentProxy, pageNumber, 1.8);
+    // Question numbers are a small part of a full page. At 1.8x Tesseract
+    // frequently confused digits (especially 0/6/9) or missed the heading
+    // entirely, which then shifted answer matching for every later question.
+    // Render the narrow heading strip at a higher resolution while still
+    // releasing each page before moving to the next one.
+    const pageCanvas = await renderPage(documentProxy, pageNumber, 2.6);
     const stripWidth = Math.floor(pageCanvas.width * 0.36);
     const strip = cropCanvas(pageCanvas, 0, 0, stripWidth, pageCanvas.height);
     pageCanvas.width = 1;
@@ -371,7 +433,6 @@ async function ocrAnswerPages(
   onProgress?: (message: string) => void,
 ) {
   const pages: OcrPage[] = [];
-  let nextQuestionNumber = 1;
   for (let pageNumber = 1; pageNumber <= documentProxy.numPages; pageNumber += 1) {
     onProgress?.(`OCR: reading answer page ${pageNumber} of ${documentProxy.numPages}…`);
     const canvas = await renderPage(documentProxy, pageNumber, 3.2);
@@ -383,12 +444,15 @@ async function ocrAnswerPages(
     if (grid) {
       const lines: OcrLine[] = [];
       await worker.setParameters({
-        tessedit_pageseg_mode: pageSegmentationModes.SINGLE_CHAR,
-        tessedit_char_whitelist: ANSWER_LABELS,
+        tessedit_pageseg_mode: pageSegmentationModes.SINGLE_LINE,
+        tessedit_char_whitelist: `0123456789${ANSWER_LABELS}`,
       });
       for (const table of grid.tables) {
         for (let rowIndex = 0; rowIndex < grid.rowCount; rowIndex += 1) {
-          const left = table[1] + 4;
+          // Read the printed question number and answer together. Positional
+          // numbering made one skipped/header row shift every later answer and
+          // leave the final question empty.
+          const left = table[0] + 4;
           const right = table[2] - 4;
           const top = grid.horizontalLines[rowIndex + 1] + 4;
           const bottom = grid.horizontalLines[rowIndex + 2] - 4;
@@ -401,15 +465,14 @@ async function ocrAnswerPages(
             paddedContext.drawImage(cell, 30, 30);
           }
           const result = await worker.recognize(padded);
-          const label = [...result.data.text].find(character => ANSWER_LABELS.includes(character));
-          if (label) {
+          const answer = parseAnswerGridRow(result.data.text);
+          if (answer) {
             lines.push({
-              text: `問 ${nextQuestionNumber} ${label}`,
+              text: `問 ${answer.number} ${answer.label}`,
               topRatio: top / canvas.height,
               bottomRatio: bottom / canvas.height,
             });
           }
-          nextQuestionNumber += 1;
           cell.width = 1;
           cell.height = 1;
           padded.width = 1;
@@ -471,7 +534,7 @@ export async function processScannedExamPdfs(
   try {
     await worker.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
     const headingPages = await ocrQuestionHeadings(questionDocument, worker, onProgress);
-    const starts = findQuestionStarts(headingPages);
+    const starts = findQuestionStarts(headingPages, true);
     if (!starts.length) {
       throw new Error('This scanned PDF could not be segmented into questions. Make sure the pages show headings such as “問1”.');
     }
