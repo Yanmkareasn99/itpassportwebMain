@@ -161,6 +161,16 @@ export function selectAnswerTableLines(horizontalLines: number[]) {
   return runs.reduce((longest, run) => run.length > longest.length ? run : longest, []);
 }
 
+export function parseAnswerGridRow(value: string) {
+  const normalized = value.normalize('NFKC').replace(/\s+/g, '');
+  const numberMatch = normalized.match(/\d{1,3}/);
+  const label = [...normalized].find(character => ANSWER_LABELS.includes(character));
+  if (!numberMatch || !label) return null;
+  const number = Number(numberMatch[0]);
+  if (number < 1 || number > 200) return null;
+  return { number, label };
+}
+
 function detectAnswerGrid(canvas: HTMLCanvasElement) {
   const context = canvas.getContext('2d', { willReadFrequently: true });
   if (!context) return null;
@@ -423,7 +433,6 @@ async function ocrAnswerPages(
   onProgress?: (message: string) => void,
 ) {
   const pages: OcrPage[] = [];
-  let nextQuestionNumber = 1;
   for (let pageNumber = 1; pageNumber <= documentProxy.numPages; pageNumber += 1) {
     onProgress?.(`OCR: reading answer page ${pageNumber} of ${documentProxy.numPages}…`);
     const canvas = await renderPage(documentProxy, pageNumber, 3.2);
@@ -435,12 +444,15 @@ async function ocrAnswerPages(
     if (grid) {
       const lines: OcrLine[] = [];
       await worker.setParameters({
-        tessedit_pageseg_mode: pageSegmentationModes.SINGLE_CHAR,
-        tessedit_char_whitelist: ANSWER_LABELS,
+        tessedit_pageseg_mode: pageSegmentationModes.SINGLE_LINE,
+        tessedit_char_whitelist: `0123456789${ANSWER_LABELS}`,
       });
       for (const table of grid.tables) {
         for (let rowIndex = 0; rowIndex < grid.rowCount; rowIndex += 1) {
-          const left = table[1] + 4;
+          // Read the printed question number and answer together. Positional
+          // numbering made one skipped/header row shift every later answer and
+          // leave the final question empty.
+          const left = table[0] + 4;
           const right = table[2] - 4;
           const top = grid.horizontalLines[rowIndex + 1] + 4;
           const bottom = grid.horizontalLines[rowIndex + 2] - 4;
@@ -453,15 +465,14 @@ async function ocrAnswerPages(
             paddedContext.drawImage(cell, 30, 30);
           }
           const result = await worker.recognize(padded);
-          const label = [...result.data.text].find(character => ANSWER_LABELS.includes(character));
-          if (label) {
+          const answer = parseAnswerGridRow(result.data.text);
+          if (answer) {
             lines.push({
-              text: `問 ${nextQuestionNumber} ${label}`,
+              text: `問 ${answer.number} ${answer.label}`,
               topRatio: top / canvas.height,
               bottomRatio: bottom / canvas.height,
             });
           }
-          nextQuestionNumber += 1;
           cell.width = 1;
           cell.height = 1;
           padded.width = 1;
