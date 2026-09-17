@@ -12,7 +12,7 @@ interface ChatRequest {
 }
 
 const DEFAULT_ALLOWED_ORIGINS = [
-  'https://manabi-app.jp',
+  'https://learnwithmanabi.com',
   'https://itpassportwebapp-eta.vercel.app',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
