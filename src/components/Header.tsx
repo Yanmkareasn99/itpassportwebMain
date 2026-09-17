@@ -1,6 +1,6 @@
 import { translate } from '../i18n';
 import { useEffect, useRef, useState } from 'react';
-import { Bell, Coins } from 'lucide-react';
+import { Bell, Coins, LogOut, ShieldCheck, UserRound } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getCachedPointBalance, getPointBalance } from '../lib/points';
@@ -15,6 +15,15 @@ interface HeaderProps {
 
 const DEFAULT_READ_NOTIFICATION_IDS = [3];
 
+function getInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+
+  if (parts.length === 0) return 'U';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+
+  return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+}
+
 function readSavedNotificationIds(storageKey: string) {
   try {
     const savedIds = window.localStorage.getItem(storageKey);
@@ -25,9 +34,10 @@ function readSavedNotificationIds(storageKey: string) {
 }
 
 export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
-  const { profile } = useAuth();
+  const { profile, isAdmin, signOut } = useAuth();
   const { language } = useLanguage();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const notificationStorageKey = `manabi-notifications-read:${profile?.id ?? 'guest'}`;
   const [readNotificationIds, setReadNotificationIds] = useState<Set<number>>(
     () => readSavedNotificationIds(notificationStorageKey),
@@ -35,8 +45,9 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
   const [pointBalance, setPointBalance] = useState<number | null>(
     () => getCachedPointBalance(profile?.id),
   );
-  
+
   const notificationRef = useRef<HTMLDivElement | null>(null);
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
   const notifications = [
     {
@@ -96,8 +107,14 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
 
   useEffect(() => {
     function handlePointerDown(event: MouseEvent) {
-      if (!notificationRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+
+      if (!notificationRef.current?.contains(target)) {
         setIsNotificationsOpen(false);
+      }
+
+      if (!profileMenuRef.current?.contains(target)) {
+        setIsProfileMenuOpen(false);
       }
     }
 
@@ -136,7 +153,7 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id]);
-  
+
 
   return (
     <header className="sm:h-20 header-gradient border-b border-gray-100 dark:border-slate-700 flex flex-row items-center gap-2 sm:gap-3 py-2 sm:py-0 sticky top-0 z-10">
@@ -166,7 +183,10 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
               aria-label={translate(language, 'header.openNotifications')}
               aria-expanded={isNotificationsOpen}
               onClick={() =>
-                setIsNotificationsOpen(open => !open)
+                setIsNotificationsOpen(open => {
+                  setIsProfileMenuOpen(false);
+                  return !open;
+                })
               }
               className="relative p-1.5 sm:p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 dark:hover:bg-slate-800 dark:text-slate-300 rounded-lg transition"
             >
@@ -264,7 +284,103 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
             </div>
           </div>
 
-          {/* profile removed per user request */}
+          <div ref={profileMenuRef} className="relative">
+            <button
+              type="button"
+              aria-label={translate(language, 'settingsPage.profile')}
+              aria-expanded={isProfileMenuOpen}
+              onClick={() =>
+                setIsProfileMenuOpen(open => {
+                  setIsNotificationsOpen(false);
+                  return !open;
+                })
+              }
+              className="flex items-center rounded-full transition hover:opacity-90"
+            >
+              <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full profile-avatar-gradient text-sm font-bold text-white shadow-inner">
+                {profile?.avatar_url ? (
+                  <img
+                    src={profile.avatar_url}
+                    alt={profile?.name ?? translate(language, 'header.guest')}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span aria-hidden="true" className="flex h-full w-full items-center justify-center">
+                    {getInitials(profile?.name ?? translate(language, 'header.guest'))}
+                  </span>
+                )}
+              </span>
+            </button>
+
+            {isProfileMenuOpen && (
+              <div className="fixed inset-x-4 top-14 z-50 max-h-[calc(100dvh-4.5rem)] overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900 sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-3 sm:w-72">
+                <div className="border-b border-gray-100 px-4 py-3 dark:border-slate-700">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full profile-avatar-gradient text-sm font-bold text-white shadow-inner">
+                      {profile?.avatar_url ? (
+                        <img
+                          src={profile.avatar_url}
+                          alt={profile?.name ?? translate(language, 'header.guest')}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <UserRound className="h-5 w-5 text-white" />
+                      )}
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-gray-800 dark:text-slate-100">
+                        {profile?.name ?? translate(language, 'header.guest')}
+                      </p>
+                      <p className="truncate text-xs text-gray-400 dark:text-slate-400">
+                        {profile?.student_id ?? translate(language, 'settingsPage.account')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-2">
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsProfileMenuOpen(false);
+                        onNavigate('admin');
+                      }}
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50 dark:text-slate-200 dark:hover:bg-slate-800"
+                    >
+                      <ShieldCheck className="h-4 w-4" />
+                      <span>{translate(language, 'adminPage.admin')}</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileMenuOpen(false);
+                      onNavigate('profile');
+                    }}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50 dark:text-slate-200 dark:hover:bg-slate-800"
+                  >
+                    <UserRound className="h-4 w-4" />
+                    <span>{translate(language, 'settingsPage.profile')}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileMenuOpen(false);
+                      void signOut();
+                    }}
+                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-red-600 transition hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-500/10"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>{translate(language, 'sidebar.signOut')}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </header>
