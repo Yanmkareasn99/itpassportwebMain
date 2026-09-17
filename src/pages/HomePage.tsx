@@ -7,6 +7,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { loadPracticeProgress, practiceErrorMessage, type PracticeProgressSession } from '../lib/practice';
 import { supabase } from '../lib/supabase';
 import { Page, PracticeSession, ExamSession } from '../types';
+import AnnouncementBanner from '../components/AnnouncementBanner';
 
 interface HomePageProps {
   currentPage: Page;
@@ -258,7 +259,8 @@ export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
 
   return (
     <Layout currentPage={currentPage} onNavigate={onNavigate} title={`${profile?.name ?? guest}${greeting}`}>
-      <div className="app-shell">
+      <div className="app-shell space-y-5">
+        <AnnouncementBanner />
         <div className="flex flex-col-reverse lg:flex-row gap-6">
           <div className="flex-1 space-y-5">
             <div className="motion-stagger grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 xl:gap-6">

@@ -136,6 +136,28 @@ describe('scanned PDF question detection', () => {
     expect(starts.at(-1)?.warnings.join(' ')).toMatch(/read question 100 as 109/);
   });
 
+  it('repairs forward OCR jumps without discarding the following headings', () => {
+    const detected = Array.from({ length: 100 }, (_, index) => {
+      const actualNumber = index + 1;
+      if (actualNumber === 20) return 26;
+      if (actualNumber === 36) return 37;
+      if (actualNumber === 60) return 66;
+      if (actualNumber === 100) return 196;
+      return actualNumber;
+    });
+    const starts = findQuestionStarts([{
+      pageNumber: 1,
+      lines: detected.map((number, index) => line(`問${number} 本文`, index / 110)),
+    }], true);
+
+    expect(starts).toHaveLength(100);
+    expect(starts.map(start => start.number)).toEqual(
+      Array.from({ length: 100 }, (_, index) => index + 1),
+    );
+    expect(starts[19].warnings.join(' ')).toMatch(/read question 20 as 26/);
+    expect(starts[99].warnings.join(' ')).toMatch(/read question 100 as 196/);
+  });
+
   it('supports common OCR heading confusion and punctuation', () => {
     const starts = findQuestionStarts([{
       pageNumber: 1,
