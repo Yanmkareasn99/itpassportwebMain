@@ -26,6 +26,7 @@ const pagePaths: Record<Page, string> = {
   'ai-chat': '/ai-chat',
   materials: '/materials',
   settings: '/settings',
+  profile: '/settings/profile',
   results: '/results',
   admin: '/admin',
 };
@@ -153,6 +154,7 @@ function AppRoutes() {
         <Route path="/ai-chat" element={<ProtectedRoute><AIChatPage currentPage="ai-chat" onNavigate={onNavigate} /></ProtectedRoute>} />
         <Route path="/materials" element={<ProtectedRoute><MaterialsPage currentPage="materials" onNavigate={onNavigate} /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsPage currentPage="settings" onNavigate={onNavigate} /></ProtectedRoute>} />
+        <Route path="/settings/profile" element={<ProtectedRoute><SettingsPage currentPage="profile" onNavigate={onNavigate} /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminPage currentPage="admin" onNavigate={onNavigate} /></AdminRoute></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

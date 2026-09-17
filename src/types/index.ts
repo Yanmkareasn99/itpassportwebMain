@@ -115,5 +115,6 @@ export type Page =
   | 'ai-chat'
   | 'materials'
   | 'settings'
+  | 'profile'
   | 'results'
   | 'admin';
