@@ -462,6 +462,7 @@ export const ja = {
   "practiceQuestionPage.seeResults": "結果を見る",
   "practiceQuestionPage.showExplanation": "解説を見る",
   "settingsPage.account": "アカウント",
+  "settingsPage.profile": "プロフィール",
   "settingsPage.changePassword": "パスワード変更",
   "settingsPage.chooseTheDisplayLanguage": "表示言語を選択できます",
   "settingsPage.class": "クラス",

@@ -450,6 +450,7 @@ export const en = {
   "practiceQuestionPage.greatWork": "Great work!",
   "practiceQuestionPage.hideExplanation": "Hide explanation",
   "practiceQuestionPage.home": "Home",
+  "practiceQuestionPage.profile": "Profile",
   "practiceQuestionPage.incorrect": "Incorrect",
   "practiceQuestionPage.next": "Next",
   "practiceQuestionPage.practice": "Practice",

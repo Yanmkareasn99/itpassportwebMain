@@ -462,6 +462,7 @@ export const vi = {
   "practiceQuestionPage.seeResults": "Xem kết quả",
   "practiceQuestionPage.showExplanation": "Xem giải thích",
   "settingsPage.account": "Tài khoản",
+  
   "settingsPage.changePassword": "Đổi mật khẩu",
   "settingsPage.chooseTheDisplayLanguage": "Chọn ngôn ngữ hiển thị",
   "settingsPage.class": "Lớp",
