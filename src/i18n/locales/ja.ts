@@ -653,4 +653,12 @@ export const ja = {
   , "ui.examDate": "試験日"
   , "ui.uncategorized": "未分類"
   , "aiChat.remoteUnavailable": "現在AIサービスを利用できません。しばらくしてからもう一度お試しください。"
+  , "settingsPage.deleteAccount": "アカウントを削除"
+  , "settingsPage.deleteAccountWarningTitle": "この操作は取り消せません"
+  , "settingsPage.deleteAccountWarningBody": "プロフィール、学習履歴、解答、ポイント、メッセージ、バトルが完全に削除されます。アップロードした教材は引き続き利用できます。"
+  , "settingsPage.deleteAccountConfirmEmail": "確認のため {email} を入力してください"
+  , "settingsPage.deleteAccountEmailMismatch": "メールアドレスがアカウントと一致しません。"
+  , "settingsPage.deleteAccountFailed": "アカウントの削除に失敗しました: {error}"
+  , "settingsPage.deletingAccount": "アカウントを削除中..."
+  , "settingsPage.deleteAccountAction": "アカウントを完全に削除する"
 } as const;

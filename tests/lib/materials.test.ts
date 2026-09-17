@@ -106,4 +106,5 @@ describe('shared materials', () => {
       },
     );
   });
+
 });

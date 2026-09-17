@@ -654,4 +654,12 @@ export const en = {
   , "ui.examDate": "Exam date"
   , "ui.uncategorized": "Uncategorized"
   , "aiChat.remoteUnavailable": "The AI service is unavailable right now. Please try again shortly."
+  , "settingsPage.deleteAccount": "Delete account"
+  , "settingsPage.deleteAccountWarningTitle": "This action is permanent"
+  , "settingsPage.deleteAccountWarningBody": "Your profile, study history, answers, points, messages, and battles will be permanently deleted. Your uploaded materials will remain available. This cannot be undone."
+  , "settingsPage.deleteAccountConfirmEmail": "Enter {email} to confirm"
+  , "settingsPage.deleteAccountEmailMismatch": "The email address does not match your account."
+  , "settingsPage.deleteAccountFailed": "Failed to delete account: {error}"
+  , "settingsPage.deletingAccount": "Deleting account..."
+  , "settingsPage.deleteAccountAction": "Permanently delete my account"
 } as const;

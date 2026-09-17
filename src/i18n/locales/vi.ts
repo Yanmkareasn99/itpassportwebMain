@@ -654,4 +654,12 @@ export const vi = {
   , "ui.examDate": "Ngày thi"
   , "ui.uncategorized": "Chưa phân loại"
   , "aiChat.remoteUnavailable": "Dịch vụ AI hiện không khả dụng. Vui lòng thử lại sau ít phút."
+  , "settingsPage.deleteAccount": "Xóa tài khoản"
+  , "settingsPage.deleteAccountWarningTitle": "Không thể hoàn tác thao tác này"
+  , "settingsPage.deleteAccountWarningBody": "Hồ sơ, lịch sử học tập, câu trả lời, điểm, tin nhắn và trận đấu của bạn sẽ bị xóa vĩnh viễn. Tài liệu bạn đã tải lên vẫn sẽ có sẵn."
+  , "settingsPage.deleteAccountConfirmEmail": "Nhập {email} để xác nhận"
+  , "settingsPage.deleteAccountEmailMismatch": "Địa chỉ email không khớp với tài khoản của bạn."
+  , "settingsPage.deleteAccountFailed": "Không thể xóa tài khoản: {error}"
+  , "settingsPage.deletingAccount": "Đang xóa tài khoản..."
+  , "settingsPage.deleteAccountAction": "Xóa vĩnh viễn tài khoản của tôi"
 } as const;

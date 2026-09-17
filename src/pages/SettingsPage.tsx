@@ -13,12 +13,15 @@ import {
   HelpCircle,
   UserRound,
   Moon,
+  Shuffle,
+  Trash2,
 } from 'lucide-react';
 import Layout from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { Language, useLanguage } from '../contexts/LanguageContext';
 import { Page } from '../types';
+import { getRandomizeAnswerChoicesPreference, setRandomizeAnswerChoicesPreference } from '../lib/questionRandomization';
 
 const AVATAR_CHOICES = [
   {
@@ -68,10 +71,10 @@ interface SettingsPageProps {
   onNavigate: (page: Page) => void;
 }
 
-type SettingsView = 'home' | 'profile' | 'language' | 'target' | 'password' | 'help';
+type SettingsView = 'home' | 'profile' | 'language' | 'target' | 'password' | 'deleteAccount' | 'help';
 
 export default function SettingsPage({ currentPage, onNavigate }: SettingsPageProps) {
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile, deleteAccount } = useAuth();
   const { language, setLanguage } = useLanguage();
 
   const [view, setView] = useState<SettingsView>(currentPage === 'profile' ? 'profile' : 'home');
@@ -81,6 +84,9 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
     const savedTheme = window.localStorage.getItem('manabi-theme');
     return savedTheme === 'dark';
   });
+  const [randomizeAnswerChoices, setRandomizeAnswerChoices] = useState(
+    getRandomizeAnswerChoicesPreference,
+  );
 
   const [name, setName] = useState(profile?.name ?? '');
   const [studentId, setStudentId] = useState(profile?.student_id ?? '');
@@ -98,6 +104,9 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordMsg, setPasswordMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [accountDeleting, setAccountDeleting] = useState(false);
+  const [deleteAccountMsg, setDeleteAccountMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
   useEffect(() => {
     setView(currentPage === 'profile' ? 'profile' : 'home');
@@ -117,6 +126,10 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
     root.classList.toggle('dark', darkMode);
     window.localStorage.setItem('manabi-theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
+
+  useEffect(() => {
+    setRandomizeAnswerChoicesPreference(randomizeAnswerChoices);
+  }, [randomizeAnswerChoices]);
 
   useEffect(() => {
     async function loadTarget() {
@@ -199,6 +212,28 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
       setConfirmPassword('');
     }
     setPasswordSaving(false);
+  }
+
+  async function handleDeleteAccount(e: React.FormEvent) {
+    e.preventDefault();
+    setDeleteAccountMsg(null);
+    if (deleteConfirmation.trim().toLowerCase() !== (user?.email ?? '').trim().toLowerCase()) {
+      setDeleteAccountMsg({ type: 'err', text: translate(language, 'settingsPage.deleteAccountEmailMismatch') });
+      return;
+    }
+
+    setAccountDeleting(true);
+    try {
+      await deleteAccount();
+    } catch (error) {
+      setDeleteAccountMsg({
+        type: 'err',
+        text: translate(language, 'settingsPage.deleteAccountFailed', {
+          error: error instanceof Error ? error.message : String(error),
+        }),
+      });
+      setAccountDeleting(false);
+    }
   }
 
   function Feedback({ msg }: { msg: { type: 'ok' | 'err'; text: string } | null }) {
@@ -307,6 +342,13 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
                 </div>
                 <ChevronRight className={`w-5 h-5 shrink-0 ${darkMode ? 'text-slate-500' : 'text-gray-300'}`} />
               </button>
+              <SettingRow
+                icon={<Trash2 className="w-5 h-5" />}
+                iconBg="#fee2e2"
+                iconColor="#dc2626"
+                label={translate(language, 'settingsPage.deleteAccount')}
+                onClick={() => setView('deleteAccount')}
+              />
             </div>
 
             <div>
@@ -350,6 +392,31 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
                   >
                     <span
                       className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${darkMode ? 'translate-x-5' : 'translate-x-0'}`}
+                    />
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={randomizeAnswerChoices}
+                  onClick={() => setRandomizeAnswerChoices(current => !current)}
+                  className={`no-press-animation flex w-full items-center gap-4 rounded-2xl px-3 py-3.5 text-left transition ${darkMode ? 'hover:bg-slate-800' : 'hover:bg-gray-50'}`}
+                >
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600 shadow-inner shadow-white/60">
+                    <Shuffle className="w-5 h-5" />
+                  </div>
+                  <span className={`flex-1 text-[15px] font-semibold ${darkMode ? 'text-slate-100' : 'text-gray-800'}`}>
+                    {translate(language, 'settingsPage.randomizeAnswerChoices')}
+                  </span>
+                  <span className={`text-sm font-medium ${randomizeAnswerChoices ? 'text-blue-500' : darkMode ? 'text-slate-400' : 'text-gray-400'}`}>
+                    {randomizeAnswerChoices ? translate(language, 'settingsPage.darkModeOn') : translate(language, 'settingsPage.darkModeOff')}
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className={`relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200 ${randomizeAnswerChoices ? 'bg-blue-500' : 'bg-gray-300'}`}
+                  >
+                    <span
+                      className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${randomizeAnswerChoices ? 'translate-x-5' : 'translate-x-0'}`}
                     />
                   </span>
                 </button>
@@ -621,6 +688,47 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
               >
                 <Lock className="w-4 h-4" />
                 {passwordSaving ? translate(language, 'settingsPage.changing') : translate(language, 'settingsPage.changePasswordAction')}
+              </button>
+            </form>
+          </div>
+        )}
+
+        {view === 'deleteAccount' && (
+          <div className={`rounded-[28px] shadow-[0_20px_40px_rgba(15,23,42,0.06)] ring-1 p-7 ${panelClass}`}>
+            <DetailHeader title={translate(language, 'settingsPage.deleteAccount')} />
+            <div className={`mb-5 rounded-2xl border p-4 ${darkMode ? 'border-red-900/70 bg-red-950/30' : 'border-red-100 bg-red-50'}`}>
+              <p className={`text-sm font-semibold ${darkMode ? 'text-red-300' : 'text-red-700'}`}>
+                {translate(language, 'settingsPage.deleteAccountWarningTitle')}
+              </p>
+              <p className={`mt-1 text-sm leading-relaxed ${darkMode ? 'text-red-200/80' : 'text-red-600'}`}>
+                {translate(language, 'settingsPage.deleteAccountWarningBody')}
+              </p>
+            </div>
+            <form onSubmit={handleDeleteAccount} className="space-y-4">
+              <div>
+                <label className={`block text-xs font-semibold mb-1.5 ${panelSubtleClass}`}>
+                  {translate(language, 'settingsPage.deleteAccountConfirmEmail', { email: user?.email ?? '' })}
+                </label>
+                <input
+                  type="email"
+                  value={deleteConfirmation}
+                  onChange={event => setDeleteConfirmation(event.target.value)}
+                  placeholder={user?.email ?? ''}
+                  autoComplete="off"
+                  className={inputClass}
+                  required
+                />
+              </div>
+              <Feedback msg={deleteAccountMsg} />
+              <button
+                type="submit"
+                disabled={accountDeleting || deleteConfirmation.trim().toLowerCase() !== (user?.email ?? '').trim().toLowerCase()}
+                className="flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Trash2 className="w-4 h-4" />
+                {accountDeleting
+                  ? translate(language, 'settingsPage.deletingAccount')
+                  : translate(language, 'settingsPage.deleteAccountAction')}
               </button>
             </form>
           </div>
