@@ -250,14 +250,24 @@ export function findQuestionStarts(pages: OcrPage[], repairForwardJumps = false)
       && (nextDetectedNumber === expectedNumber + 1 || nextDetectedNumber === undefined);
     if (isTrailingZeroReadAsNine) resolvedNumber = expectedNumber;
 
-    // In scanned exams the headings are physically ordered. One forward OCR
-    // error (for example, 20 -> 26) previously caused the real 21-26 headings
-    // to be discarded as out of order. Keep the existing false-positive
-    // look-ahead, but otherwise repair a forward jump from the page sequence.
+    // Only repair a forward jump when the remaining headings prove that it is
+    // an OCR digit error. For example, if question 20 is read as 26, the later
+    // headings still contain 21-26 (including a second 26). A jump from 35 to
+    // a single 37 instead means question 36 was missed; renumbering that 37
+    // would shift every remaining crop by one.
+    const laterDetectedNumbers = new Set(
+      candidates.slice(index + 1).map(next => next.detectedNumber),
+    );
+    const interveningNumbersRemain = Array.from(
+      { length: Math.max(0, candidate.detectedNumber - expectedNumber - 1) },
+      (_, offset) => expectedNumber + offset + 1,
+    ).every(number => laterDetectedNumbers.has(number));
     const isForwardJumpCorrected = repairForwardJumps
       && Boolean(previous)
       && candidate.detectedNumber > expectedNumber
-      && nextDetectedNumber !== expectedNumber;
+      && nextDetectedNumber !== expectedNumber
+      && laterDetectedNumbers.has(candidate.detectedNumber)
+      && interveningNumbersRemain;
     if (isForwardJumpCorrected) resolvedNumber = expectedNumber;
 
     const duplicate = byNumber.get(resolvedNumber);

@@ -142,7 +142,6 @@ describe('scanned PDF question detection', () => {
       if (actualNumber === 20) return 26;
       if (actualNumber === 36) return 37;
       if (actualNumber === 60) return 66;
-      if (actualNumber === 100) return 196;
       return actualNumber;
     });
     const starts = findQuestionStarts([{
@@ -155,7 +154,22 @@ describe('scanned PDF question detection', () => {
       Array.from({ length: 100 }, (_, index) => index + 1),
     );
     expect(starts[19].warnings.join(' ')).toMatch(/read question 20 as 26/);
-    expect(starts[99].warnings.join(' ')).toMatch(/read question 100 as 196/);
+    expect(starts[35].warnings.join(' ')).toMatch(/read question 36 as 37/);
+  });
+
+  it('does not shift later crops when a question heading is genuinely missing', () => {
+    const detected = [
+      ...Array.from({ length: 35 }, (_, index) => index + 1),
+      ...Array.from({ length: 4 }, (_, index) => index + 37),
+    ];
+    const starts = findQuestionStarts([{
+      pageNumber: 17,
+      lines: detected.map((number, index) => line(`問${number} 本文`, index / 50)),
+    }], true);
+
+    expect(starts.map(start => start.number)).toEqual(detected);
+    expect(starts[35]).toMatchObject({ number: 37, pageNumber: 17 });
+    expect(starts[35].warnings.join(' ')).toMatch(/Question 36 was not detected/);
   });
 
   it('supports common OCR heading confusion and punctuation', () => {
