@@ -138,6 +138,29 @@ function groupAdjacent(values: number[]) {
   return groups.map(group => Math.round(group.reduce((sum, value) => sum + value, 0) / group.length));
 }
 
+export function selectAnswerTableLines(horizontalLines: number[]) {
+  if (horizontalLines.length < 4) return horizontalLines;
+  const gaps = horizontalLines.slice(1).map((line, index) => line - horizontalLines[index]);
+  const sortedGaps = [...gaps].sort((left, right) => left - right);
+  const medianGap = sortedGaps[Math.floor(sortedGaps.length / 2)];
+  if (medianGap <= 0) return horizontalLines;
+
+  // Answer-table rows are evenly spaced. Page decorations or title rules can
+  // also look like horizontal table borders, but their distance from the next
+  // line is different. Keep the longest regularly spaced run so an extra line
+  // cannot become a fake first answer row and shift answers 2-100 down by one.
+  const runs: number[][] = [[horizontalLines[0]]];
+  for (let index = 1; index < horizontalLines.length; index += 1) {
+    const gap = horizontalLines[index] - horizontalLines[index - 1];
+    if (gap >= medianGap * 0.6 && gap <= medianGap * 1.6) {
+      runs[runs.length - 1].push(horizontalLines[index]);
+    } else {
+      runs.push([horizontalLines[index]]);
+    }
+  }
+  return runs.reduce((longest, run) => run.length > longest.length ? run : longest, []);
+}
+
 function detectAnswerGrid(canvas: HTMLCanvasElement) {
   const context = canvas.getContext('2d', { willReadFrequently: true });
   if (!context) return null;
@@ -162,7 +185,7 @@ function detectAnswerGrid(canvas: HTMLCanvasElement) {
     }
     if (longestRun >= minimumRun) horizontalCandidates.push(y);
   }
-  const horizontalLines = groupAdjacent(horizontalCandidates);
+  const horizontalLines = selectAnswerTableLines(groupAdjacent(horizontalCandidates));
   if (horizontalLines.length < 4) return null;
 
   const tableTop = horizontalLines[0];

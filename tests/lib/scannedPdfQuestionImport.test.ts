@@ -3,6 +3,7 @@ import {
   findQuestionStarts,
   isQuestionRangeHeading,
   mergeExpectedAnswerMaps,
+  selectAnswerTableLines,
 } from '../../src/lib/scannedPdfQuestionImport';
 
 function line(text: string, topRatio = 0.1) {
@@ -192,6 +193,12 @@ describe('scanned PDF question detection', () => {
 });
 
 describe('scanned PDF answer reconciliation', () => {
+  it('ignores page rules above and below the regularly spaced answer grid', () => {
+    const tableLines = Array.from({ length: 27 }, (_, index) => 200 + index * 40);
+
+    expect(selectAnswerTableLines([60, 110, ...tableLines, 1400])).toEqual(tableLines);
+  });
+
   it('reports a missing expected answer even when an unrelated entry makes the sizes equal', () => {
     const result = mergeExpectedAnswerMaps([1, 2], new Map([[1, 'ア'], [99, 'イ']]));
     expect(result.answerCount).toBe(1);
