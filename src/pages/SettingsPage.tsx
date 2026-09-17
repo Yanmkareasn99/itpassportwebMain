@@ -22,6 +22,138 @@ import { Language, useLanguage } from '../contexts/LanguageContext';
 import { Page } from '../types';
 import { getRandomizeAnswerChoicesPreference, setRandomizeAnswerChoicesPreference } from '../lib/questionRandomization';
 
+function toAvatarDataUrl(svg: string) {
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+const AVATAR_CHOICES = [
+  {
+    id: 'sun',
+    labelKey: 'settingsPage.avatarOptionSun',
+    src: toAvatarDataUrl(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-hidden="true">
+        <rect width="128" height="128" rx="32" fill="#f97316"/>
+        <path d="M64 16l8.2 18.9 20.5 1.8-15.5 13.3 4.7 19.9L64 39.2 46.1 69l4.7-19.9L35.3 36.7l20.5-1.8L64 16Z" fill="#fde68a"/>
+        <circle cx="64" cy="70" r="28" fill="#fff7ed"/>
+        <circle cx="54" cy="64" r="4" fill="#7c2d12"/>
+        <circle cx="74" cy="64" r="4" fill="#7c2d12"/>
+        <path d="M54 78c4 5 16 5 20 0" fill="none" stroke="#7c2d12" stroke-width="5" stroke-linecap="round"/>
+      </svg>
+    `),
+  },
+  {
+    id: 'robot',
+    labelKey: 'settingsPage.avatarOptionRobot',
+    src: toAvatarDataUrl(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-hidden="true">
+        <rect width="128" height="128" rx="32" fill="#0284c7"/>
+        <rect x="29" y="34" width="70" height="56" rx="20" fill="#e0f2fe"/>
+        <rect x="39" y="46" width="50" height="22" rx="11" fill="#0f172a"/>
+        <circle cx="53" cy="57" r="4" fill="#67e8f9"/>
+        <circle cx="75" cy="57" r="4" fill="#67e8f9"/>
+        <rect x="49" y="74" width="30" height="8" rx="4" fill="#38bdf8"/>
+        <circle cx="64" cy="22" r="8" fill="#bae6fd"/>
+        <rect x="62" y="12" width="4" height="14" rx="2" fill="#bae6fd"/>
+      </svg>
+    `),
+  },
+  {
+    id: 'fox',
+    labelKey: 'settingsPage.avatarOptionFox',
+    src: toAvatarDataUrl(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-hidden="true">
+        <rect width="128" height="128" rx="32" fill="#16a34a"/>
+        <path d="M34 38 48 20 58 42Z" fill="#fb923c"/>
+        <path d="M94 38 80 20 70 42Z" fill="#fb923c"/>
+        <circle cx="64" cy="70" r="30" fill="#ffedd5"/>
+        <path d="M42 52c8-10 36-10 44 0" fill="none" stroke="#fb923c" stroke-width="10" stroke-linecap="round"/>
+        <circle cx="54" cy="66" r="4" fill="#7c2d12"/>
+        <circle cx="74" cy="66" r="4" fill="#7c2d12"/>
+        <path d="M54 80c3 4 17 4 20 0" fill="none" stroke="#7c2d12" stroke-width="5" stroke-linecap="round"/>
+      </svg>
+    `),
+  },
+  {
+    id: 'space',
+    labelKey: 'settingsPage.avatarOptionSpace',
+    src: toAvatarDataUrl(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-hidden="true">
+        <rect width="128" height="128" rx="32" fill="#7c3aed"/>
+        <circle cx="64" cy="68" r="31" fill="#e0e7ff"/>
+        <rect x="48" y="22" width="32" height="16" rx="8" fill="#c4b5fd"/>
+        <circle cx="52" cy="63" r="4" fill="#312e81"/>
+        <circle cx="76" cy="63" r="4" fill="#312e81"/>
+        <path d="M54 77c4 5 16 5 20 0" fill="none" stroke="#312e81" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="98" cy="30" r="5" fill="#fef08a"/>
+        <circle cx="26" cy="36" r="3" fill="#fef08a"/>
+        <circle cx="100" cy="84" r="3" fill="#fef08a"/>
+      </svg>
+    `),
+  },
+  {
+    id: 'cat',
+    labelKey: 'settingsPage.avatarOptionCat',
+    src: toAvatarDataUrl(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-hidden="true">
+        <rect width="128" height="128" rx="32" fill="#db2777"/>
+        <path d="M34 44 44 22 56 40Z" fill="#f9a8d4"/>
+        <path d="M94 44 84 22 72 40Z" fill="#f9a8d4"/>
+        <circle cx="64" cy="68" r="30" fill="#fff1f2"/>
+        <circle cx="53" cy="64" r="4" fill="#831843"/>
+        <circle cx="75" cy="64" r="4" fill="#831843"/>
+        <path d="M58 77c2 2 10 2 12 0" fill="none" stroke="#831843" stroke-width="4" stroke-linecap="round"/>
+        <path d="M34 68h16M34 76h14M78 68h16M80 76h14" stroke="#831843" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+    `),
+  },
+  {
+    id: 'panda',
+    labelKey: 'settingsPage.avatarOptionPanda',
+    src: toAvatarDataUrl(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-hidden="true">
+        <rect width="128" height="128" rx="32" fill="#111827"/>
+        <circle cx="64" cy="68" r="31" fill="#f8fafc"/>
+        <circle cx="48" cy="56" r="11" fill="#111827"/>
+        <circle cx="80" cy="56" r="11" fill="#111827"/>
+        <circle cx="48" cy="56" r="4" fill="#f8fafc"/>
+        <circle cx="80" cy="56" r="4" fill="#f8fafc"/>
+        <circle cx="55" cy="68" r="4" fill="#111827"/>
+        <circle cx="73" cy="68" r="4" fill="#111827"/>
+        <path d="M55 80c4 5 14 5 18 0" fill="none" stroke="#111827" stroke-width="5" stroke-linecap="round"/>
+      </svg>
+    `),
+  },
+  {
+    id: 'star',
+    labelKey: 'settingsPage.avatarOptionStar',
+    src: toAvatarDataUrl(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-hidden="true">
+        <rect width="128" height="128" rx="32" fill="#0f766e"/>
+        <circle cx="64" cy="68" r="29" fill="#ccfbf1"/>
+        <path d="M64 24l8 18 20 2-15 13 5 20-18-10-18 10 5-20-15-13 20-2 8-18Z" fill="#f59e0b"/>
+        <circle cx="54" cy="64" r="4" fill="#134e4a"/>
+        <circle cx="74" cy="64" r="4" fill="#134e4a"/>
+        <path d="M55 78c4 4 14 4 18 0" fill="none" stroke="#134e4a" stroke-width="5" stroke-linecap="round"/>
+      </svg>
+    `),
+  },
+  {
+    id: 'book',
+    labelKey: 'settingsPage.avatarOptionBook',
+    src: toAvatarDataUrl(`
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-hidden="true">
+        <rect width="128" height="128" rx="32" fill="#475569"/>
+        <rect x="28" y="30" width="72" height="66" rx="18" fill="#e2e8f0"/>
+        <path d="M42 40h18c6 0 10 4 10 10v34c0-6-4-10-10-10H42c-4 0-8 3-8 8V48c0-4 4-8 8-8Z" fill="#38bdf8"/>
+        <path d="M86 40H68c-6 0-10 4-10 10v34c0-6 4-10 10-10h18c4 0 8 3 8 8V48c0-4-4-8-8-8Z" fill="#f59e0b"/>
+        <circle cx="50" cy="70" r="4" fill="#0f172a"/>
+        <circle cx="78" cy="70" r="4" fill="#0f172a"/>
+        <path d="M52 82c4 4 20 4 24 0" fill="none" stroke="#0f172a" stroke-width="5" stroke-linecap="round"/>
+      </svg>
+    `),
+  },
+] as const;
+
 interface SettingsPageProps {
   currentPage: Page;
   onNavigate: (page: Page) => void;
@@ -47,6 +179,7 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
   const [name, setName] = useState(profile?.name ?? '');
   const [studentId, setStudentId] = useState(profile?.student_id ?? '');
   const [className, setClassName] = useState(profile?.class_name ?? '');
+  const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url ?? '');
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileMsg, setProfileMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
@@ -65,6 +198,7 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
       setName(profile.name ?? '');
       setStudentId(profile.student_id ?? '');
       setClassName(profile.class_name ?? '');
+      setAvatarUrl(profile.avatar_url ?? '');
     }
   }, [profile]);
 
@@ -107,7 +241,12 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
     setProfileMsg(null);
     const { error } = await supabase
       .from('profiles')
-      .update({ name: name.trim(), student_id: studentId.trim() || null, class_name: className.trim() || null })
+      .update({
+        name: name.trim(),
+        student_id: studentId.trim() || null,
+        class_name: className.trim() || null,
+        avatar_url: avatarUrl || null,
+      })
       .eq('id', user!.id);
     if (error) {
       setProfileMsg({ type: 'err', text: translate(language, 'settingsPage.profileSaveFailed', { error: error.message }) });
@@ -226,6 +365,9 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
     { code: 'vi', label: nativeLanguageNames.vi, helper: translate(language, 'settingsPage.languageVietnamese') },
   ];
 
+  const selectedAvatar = avatarUrl || profile?.avatar_url || '';
+  const currentAvatarChoice = AVATAR_CHOICES.find(choice => choice.src === selectedAvatar) ?? null;
+
   return (
     <Layout
       currentPage={currentPage}
@@ -246,8 +388,12 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
                 onClick={() => setView('profile')}
                 className="no-press-animation flex w-full items-center gap-4 rounded-2xl px-3 py-3.5 text-left transition profile-gradient hover:opacity-95"
               >
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full profile-avatar-gradient shadow-inner">
-                  <UserRound className="w-7 h-7" />
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full profile-avatar-gradient shadow-inner">
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt={translate(language, 'settingsPage.avatar')} className="h-full w-full object-cover" />
+                  ) : (
+                    <UserRound className="w-7 h-7" />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className={`text-[15px] font-semibold truncate ${darkMode ? 'text-slate-100' : 'text-gray-800'}`}>{name || user?.email}</p>
@@ -357,6 +503,67 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
           <div className={`rounded-[28px] shadow-[0_20px_40px_rgba(15,23,42,0.06)] ring-1 p-7 ${panelClass}`}>
             <DetailHeader title={translate(language, 'settingsPage.profile')} />
             <form onSubmit={saveProfile} className="space-y-4">
+              <div>
+                <label className={`block text-xs font-semibold mb-1.5 ${panelSubtleClass}`}>
+                  {translate(language, 'settingsPage.avatar')}
+                </label>
+                <p className={`text-xs mb-3 ${panelMutedClass}`}>
+                  {translate(language, 'settingsPage.chooseAvatarPreset')}
+                </p>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className={`flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border ${darkMode ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-gray-50'}`}>
+                    {selectedAvatar ? (
+                      <img src={selectedAvatar} alt={translate(language, 'settingsPage.avatar')} className="h-full w-full object-cover" />
+                    ) : (
+                      <UserRound className={`w-8 h-8 ${darkMode ? 'text-slate-400' : 'text-gray-300'}`} />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className={`text-sm font-semibold ${panelSubtleClass}`}>
+                      {currentAvatarChoice ? translate(language, currentAvatarChoice.labelKey) : translate(language, 'settingsPage.avatarNone')}
+                    </p>
+                    <p className={`text-xs ${panelMutedClass}`}>
+                      {translate(language, 'settingsPage.avatarHint')}
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {AVATAR_CHOICES.map(choice => {
+                    const active = selectedAvatar === choice.src;
+                    return (
+                      <button
+                        key={choice.id}
+                        type="button"
+                        onClick={() => setAvatarUrl(choice.src)}
+                        className={`rounded-2xl border p-3 text-left transition ${
+                          active
+                            ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200 dark:border-blue-400 dark:bg-blue-950/40 dark:ring-blue-900/60'
+                            : darkMode
+                              ? 'border-slate-700 bg-slate-800 hover:border-blue-500 hover:bg-slate-700'
+                              : 'border-gray-200 bg-white hover:border-blue-200 hover:bg-blue-50/40'
+                        }`}
+                      >
+                        <div className="flex items-center justify-center">
+                          <img src={choice.src} alt={translate(language, choice.labelKey)} className="h-16 w-16 rounded-full shadow-sm" />
+                        </div>
+                        <div className="mt-2 flex items-center justify-between gap-2">
+                          <span className={`text-xs font-semibold ${darkMode ? 'text-slate-100' : 'text-gray-700'}`}>
+                            {translate(language, choice.labelKey)}
+                          </span>
+                          {active && <CheckCircle className="w-4 h-4 text-blue-600 shrink-0" />}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAvatarUrl('')}
+                  className={`mt-3 text-sm font-semibold transition ${darkMode ? 'text-slate-300 hover:text-slate-100' : 'text-gray-500 hover:text-gray-800'}`}
+                >
+                  {translate(language, 'settingsPage.avatarNone')}
+                </button>
+              </div>
               <div>
                 <label className={`block text-xs font-semibold mb-1.5 ${panelSubtleClass}`}>
                   {translate(language, 'settingsPage.name')}
