@@ -29,6 +29,8 @@ interface AuthContextType {
 
   signOut: () => Promise<void>;
 
+  deleteAccount: () => Promise<void>;
+
   refreshProfile: () => Promise<void>;
 }
 
@@ -263,6 +265,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   }
 
+  async function deleteAccount() {
+    if (!user) throw new Error('You must be signed in to delete your account.');
+
+    if (!isSupabaseEnabled) {
+      localStorage.removeItem(LOCAL_AUTH_KEY);
+      localStorage.removeItem('manabi-local-data');
+      localStorage.removeItem(`manabi-local-points:${user.id}`);
+      localStorage.removeItem(`manabi-local-daily-points:${user.id}`);
+      setProfile(null);
+      setUser(null);
+      setSession(null);
+      return;
+    }
+
+    const { error } = await supabase.rpc('delete_own_account');
+    if (error) throw error;
+
+    // The database deletion invalidates the remote account. Clear the local
+    // session as well so protected routes immediately return to sign-in.
+    await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+    setProfile(null);
+    setUser(null);
+    setSession(null);
+  }
+
   async function resetPassword(email: string) {
     if (!isSupabaseEnabled) {
       throw new Error('Password reset requires Supabase to be enabled.');
@@ -331,6 +358,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updatePassword,
         clearPasswordRecovery,
         signOut,
+        deleteAccount,
         refreshProfile,
       }}
     >

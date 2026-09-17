@@ -38,7 +38,7 @@ const materialFilesUrl = (import.meta.env.VITE_MATERIAL_FILES_URL || 'https://fi
 
 export interface Material {
   id: string;
-  uploader_id: string;
+  uploader_id: string | null;
   title: string;
   description: string | null;
   file_name: string;
