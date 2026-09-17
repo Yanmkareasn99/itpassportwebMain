@@ -247,7 +247,7 @@ export function findQuestionStarts(pages: OcrPage[]) {
     const nextDetectedNumber = candidates[index + 1]?.detectedNumber;
     const isTrailingZeroReadAsNine = expectedNumber % 10 === 0
       && candidate.detectedNumber === expectedNumber + 9
-      && nextDetectedNumber === expectedNumber + 1;
+      && (nextDetectedNumber === expectedNumber + 1 || nextDetectedNumber === undefined);
     if (isTrailingZeroReadAsNine) resolvedNumber = expectedNumber;
 
     const duplicate = byNumber.get(resolvedNumber);
@@ -347,7 +347,12 @@ async function ocrQuestionHeadings(
   const pages: OcrPage[] = [];
   for (let pageNumber = 1; pageNumber <= documentProxy.numPages; pageNumber += 1) {
     onProgress?.(`OCR: finding questions on page ${pageNumber} of ${documentProxy.numPages}…`);
-    const pageCanvas = await renderPage(documentProxy, pageNumber, 1.8);
+    // Question numbers are a small part of a full page. At 1.8x Tesseract
+    // frequently confused digits (especially 0/6/9) or missed the heading
+    // entirely, which then shifted answer matching for every later question.
+    // Render the narrow heading strip at a higher resolution while still
+    // releasing each page before moving to the next one.
+    const pageCanvas = await renderPage(documentProxy, pageNumber, 2.6);
     const stripWidth = Math.floor(pageCanvas.width * 0.36);
     const strip = cropCanvas(pageCanvas, 0, 0, stripWidth, pageCanvas.height);
     pageCanvas.width = 1;

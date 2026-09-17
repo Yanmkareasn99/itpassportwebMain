@@ -75,11 +75,13 @@ beforeEach(() => {
 });
 afterEach(() => { vi.useRealTimers(); });
 
-it('shows rankings ordered by wins with lifetime correct answers as the tiebreak statistic', async () => {
+it('shows rankings ordered by wins with battle correct answers as the tiebreak statistic', async () => {
   render(<BattlePage currentPage="battle" onNavigate={() => {}} />);
   await flush();
 
   expect(screen.getByText('Battle Rankings')).toBeTruthy();
+  expect(screen.getByText('Ranked by wins, then by correct answers in battles only.')).toBeTruthy();
+  expect(screen.getByText('Battle correct')).toBeTruthy();
   expect(screen.getByText('Alice')).toBeTruthy();
   expect(screen.getByText('100')).toBeTruthy();
   expect(screen.getByText('Me (You)')).toBeTruthy();

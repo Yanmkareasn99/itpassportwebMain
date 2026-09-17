@@ -121,6 +121,21 @@ describe('scanned PDF question detection', () => {
     expect(starts[19].warnings.join(' ')).toMatch(/read question 20 as 29/);
   });
 
+  it('recovers the final question when OCR reads its trailing zero as nine', () => {
+    const detected = [
+      ...Array.from({ length: 99 }, (_, index) => index + 1),
+      109,
+    ];
+    const starts = findQuestionStarts([{
+      pageNumber: 1,
+      lines: detected.map((number, index) => line(`問${number} 本文`, index / 110)),
+    }]);
+
+    expect(starts).toHaveLength(100);
+    expect(starts.at(-1)?.number).toBe(100);
+    expect(starts.at(-1)?.warnings.join(' ')).toMatch(/read question 100 as 109/);
+  });
+
   it('supports common OCR heading confusion and punctuation', () => {
     const starts = findQuestionStarts([{
       pageNumber: 1,
