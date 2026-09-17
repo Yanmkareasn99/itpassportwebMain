@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { BarChart2, BookOpen, Layers, Users, type LucideIcon } from 'lucide-react';
+import { BarChart2, BookOpen, Layers, Megaphone, Users, type LucideIcon } from 'lucide-react';
 import Layout from '../components/Layout';
 import QuestionsTab from '../components/admin/tabs/QuestionsTab';
 import MockExamTab from '../components/admin/tabs/MockExamTab';
 import StatsTab from '../components/admin/tabs/StatsTab';
 import SubjectsTab from '../components/admin/tabs/SubjectsTab';
 import UsersTab from '../components/admin/tabs/UsersTab';
+import AnnouncementsTab from '../components/admin/tabs/AnnouncementsTab';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { translate } from '../i18n';
@@ -16,12 +17,13 @@ interface AdminPageProps {
   onNavigate: (page: Page) => void;
 }
 
-type Tab = 'questions' | 'subjects' | 'users' | 'stats' | 'mock-exam';
+type Tab = 'questions' | 'subjects' | 'users' | 'stats' | 'mock-exam' | 'announcements';
 
 const tabs: { id: Tab; labelKey: Parameters<typeof translate>[1]; icon: LucideIcon }[] = [
   { id: 'questions', labelKey: 'adminPage.questions', icon: BookOpen },
   { id: 'subjects', labelKey: 'adminPage.subjects', icon: Layers },
   { id: 'users', labelKey: 'adminPage.users', icon: Users },
+  { id: 'announcements', labelKey: 'adminPage.announcements', icon: Megaphone },
   { id: 'mock-exam', labelKey: 'mockExamPage.mockExam', icon: BookOpen },
   { id: 'stats', labelKey: 'adminPage.stats', icon: BarChart2 },
 ];
@@ -82,6 +84,9 @@ export default function AdminPage({ currentPage, onNavigate }: AdminPageProps) {
             </div>
             <div className={tab === 'mock-exam' ? '' : 'hidden'}>
               {mountedTabs.has('mock-exam') && <MockExamTab />}
+            </div>
+            <div className={tab === 'announcements' ? '' : 'hidden'}>
+              {mountedTabs.has('announcements') && <AnnouncementsTab />}
             </div>
             <div className={tab === 'stats' ? '' : 'hidden'}>
               {mountedTabs.has('stats') && <StatsTab />}

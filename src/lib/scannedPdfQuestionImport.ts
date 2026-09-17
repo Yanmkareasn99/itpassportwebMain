@@ -194,7 +194,7 @@ export function isQuestionRangeHeading(value: string) {
   return /^[問間]\d{1,4}(?:(?:から|より)|[～〜~\-－—―])[問間]?\d{1,4}(?:まで)?/.test(compact);
 }
 
-export function findQuestionStarts(pages: OcrPage[]) {
+export function findQuestionStarts(pages: OcrPage[], repairForwardJumps = false) {
   const candidates: Array<QuestionStart & { detectedNumber: number }> = [];
   for (const page of pages) {
     for (let lineIndex = 0; lineIndex < page.lines.length; lineIndex += 1) {
@@ -250,6 +250,16 @@ export function findQuestionStarts(pages: OcrPage[]) {
       && (nextDetectedNumber === expectedNumber + 1 || nextDetectedNumber === undefined);
     if (isTrailingZeroReadAsNine) resolvedNumber = expectedNumber;
 
+    // In scanned exams the headings are physically ordered. One forward OCR
+    // error (for example, 20 -> 26) previously caused the real 21-26 headings
+    // to be discarded as out of order. Keep the existing false-positive
+    // look-ahead, but otherwise repair a forward jump from the page sequence.
+    const isForwardJumpCorrected = repairForwardJumps
+      && Boolean(previous)
+      && candidate.detectedNumber > expectedNumber
+      && nextDetectedNumber !== expectedNumber;
+    if (isForwardJumpCorrected) resolvedNumber = expectedNumber;
+
     const duplicate = byNumber.get(resolvedNumber);
     if (duplicate) {
       duplicate.warnings.push(`Question ${resolvedNumber} was detected more than once; review its crop.`);
@@ -285,6 +295,10 @@ export function findQuestionStarts(pages: OcrPage[]) {
     if (isTrailingZeroReadAsNine) {
       candidate.warnings.push(
         `OCR read question ${expectedNumber} as ${candidate.detectedNumber}; the number was corrected from its sequence.`,
+      );
+    } else if (isForwardJumpCorrected) {
+      candidate.warnings.push(
+        `OCR read question ${expectedNumber} as ${candidate.detectedNumber}; the number was corrected from its physical order.`,
       );
     }
 
@@ -476,7 +490,7 @@ export async function processScannedExamPdfs(
   try {
     await worker.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
     const headingPages = await ocrQuestionHeadings(questionDocument, worker, onProgress);
-    const starts = findQuestionStarts(headingPages);
+    const starts = findQuestionStarts(headingPages, true);
     if (!starts.length) {
       throw new Error('This scanned PDF could not be segmented into questions. Make sure the pages show headings such as “問1”.');
     }
