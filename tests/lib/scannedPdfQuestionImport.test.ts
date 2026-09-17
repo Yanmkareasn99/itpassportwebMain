@@ -3,6 +3,7 @@ import {
   findQuestionStarts,
   isQuestionRangeHeading,
   mergeExpectedAnswerMaps,
+  parseAnswerGridRow,
   selectAnswerTableLines,
 } from '../../src/lib/scannedPdfQuestionImport';
 
@@ -197,6 +198,12 @@ describe('scanned PDF answer reconciliation', () => {
     const tableLines = Array.from({ length: 27 }, (_, index) => 200 + index * 40);
 
     expect(selectAnswerTableLines([60, 110, ...tableLines, 1400])).toEqual(tableLines);
+  });
+
+  it('reads the printed question number instead of assigning answers by row position', () => {
+    expect(parseAnswerGridRow('問 1 ア')).toEqual({ number: 1, label: 'ア' });
+    expect(parseAnswerGridRow('１００ ウ')).toEqual({ number: 100, label: 'ウ' });
+    expect(parseAnswerGridRow('問番号 正解')).toBeNull();
   });
 
   it('reports a missing expected answer even when an unrelated entry makes the sizes equal', () => {
