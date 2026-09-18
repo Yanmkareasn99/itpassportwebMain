@@ -624,3 +624,22 @@ select {
     transform: none;
   }
 }
+
+
+
+.profile-card {
+  transition: all 0.25s ease;
+}
+
+.profile-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(79, 125, 243, 0.15);
+  filter: brightness(1.02);
+}
+
+
+.profile-card button:hover {
+  filter: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
