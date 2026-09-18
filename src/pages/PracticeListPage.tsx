@@ -71,7 +71,7 @@ const MAIN_CATEGORIES = [
     subjectIds: ['cc000003-0000-0000-0000-000000000001'],
   },
 ];
-
+                                    
 const KNOWN_ADDITIONAL_SUBJECTS = [
   {
     id: 'aa000000-0000-0000-0000-000000000001',

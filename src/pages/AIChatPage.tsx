@@ -25,6 +25,7 @@ interface StoredChatMessage {
 
 function ChatBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === 'user';
+
   return (
     <div className={`motion-message flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
@@ -60,6 +61,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
       createdAt: Date.now(),
     },
   ]);
+
   const [prompt, setPrompt] = useState('');
   const [sending, setSending] = useState(false);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -71,8 +73,15 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
     async function loadData() {
       const [{ data: subjectData }, { data: questionData }] = await Promise.all([
         supabase.from('subjects').select('*').order('name'),
-        supabase.from('questions').select('id, subject_id, question_number, question_text, question_type, image_url, explanation, difficulty, points').order('created_at', { ascending: false }).limit(8),
+        supabase
+          .from('questions')
+          .select(
+            'id, subject_id, question_number, question_text, question_type, image_url, explanation, difficulty, points'
+          )
+          .order('created_at', { ascending: false })
+          .limit(8),
       ]);
+
       if (subjectData) setSubjects(subjectData as Subject[]);
       if (questionData) setRecentQuestions(questionData as Question[]);
 
@@ -87,12 +96,15 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
             .limit(500);
 
           if (msgs && msgs.length > 0) {
-            const loaded = (msgs as StoredChatMessage[]).map(m => ({
-              id: `${new Date(m.created_at).getTime()}-${Math.random().toString(36).slice(2,6)}`,
+            const loaded = (msgs as StoredChatMessage[]).map((m) => ({
+              id: `${new Date(m.created_at).getTime()}-${Math.random()
+                .toString(36)
+                .slice(2, 6)}`,
               role: m.role as 'user' | 'assistant',
               content: m.content as string,
               createdAt: new Date(m.created_at).getTime(),
             }));
+
             setMessages(loaded);
           }
         } catch (err) {
@@ -122,9 +134,13 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
 
   async function sendMessage(text?: string) {
     const content = (text ?? prompt).trim();
+
     if (!content || sending) return;
 
-    const history = messages.map(message => ({ role: message.role, content: message.content }));
+    const history = messages.map((message) => ({
+      role: message.role,
+      content: message.content,
+    }));
 
     const userMessage: ChatMessage = {
       id: createId(),
@@ -133,7 +149,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
       createdAt: Date.now(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
     setPrompt('');
     setSending(true);
 
@@ -149,6 +165,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
     } catch (err) {
       console.warn('Failed to persist message', err);
     }
+
     const reply = await getChatReply(content, {
       language,
       profileName: profile?.name ?? translate(language, 'common.you'),
@@ -164,7 +181,8 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
       createdAt: Date.now(),
     };
 
-    setMessages(prev => [...prev, assistantMessage]);
+    setMessages((prev) => [...prev, assistantMessage]);
+
     // persist assistant message
     try {
       if (profile?.id) {
@@ -177,6 +195,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
     } catch (err) {
       console.warn('Failed to persist assistant message', err);
     }
+
     setSending(false);
   }
 
@@ -186,8 +205,12 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
         .from('ai_chat_messages')
         .delete()
         .eq('user_id', profileId);
-      if (error) console.warn('Failed to clear persisted chat messages', error);
+
+      if (error) {
+        console.warn('Failed to clear persisted chat messages', error);
+      }
     }
+
     setMessages([
       {
         id: createId(),
@@ -206,7 +229,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
       subtitle={translate(language, 'aiChatPage.studyAssistant')}
     >
       <div className="app-shell grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
-        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm flex flex-col min-h-[70vh] overflow-hidden">
+<div className="-mx-4 sm:mx-0 rounded-none sm:rounded-2xl border-0 sm:border sm:border-gray-100 dark:sm:border-slate-700 shadow-none sm:shadow-sm bg-transparent sm:bg-white dark:sm:bg-slate-900 flex flex-col min-h-[70vh] overflow-hidden">          {/* Header */}
           <div className="p-5 border-b border-gray-100 dark:border-slate-700 bg-gradient-to-r from-blue-50 to-violet-50 dark:from-slate-800 dark:to-slate-900">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div className="min-w-0">
@@ -214,9 +237,16 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
                   <Sparkles className="w-3.5 h-3.5" />
                   {translate(language, 'aiChatPage.studyAssistant')}
                 </div>
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-slate-100">{translate(language, 'aiChatPage.heroTitle')}</h2>
-                <p className="text-sm text-gray-500 dark:text-slate-300 mt-1">{translate(language, 'aiChatPage.heroDescription')}</p>
+
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-slate-100">
+                  {translate(language, 'aiChatPage.heroTitle')}
+                </h2>
+
+                <p className="text-sm text-gray-500 dark:text-slate-300 mt-1">
+                  {translate(language, 'aiChatPage.heroDescription')}
+                </p>
               </div>
+
               <button
                 onClick={() => void resetChat()}
                 className="shrink-0 self-start inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm font-medium text-gray-600 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-700 transition whitespace-nowrap"
@@ -227,8 +257,12 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
             </div>
           </div>
 
+          {/* Chat messages */}
           <div className="flex-1 p-5 space-y-4 bg-gray-50 dark:bg-slate-950 overflow-y-auto">
-            {messages.map(message => <ChatBubble key={message.id} message={message} />)}
+            {messages.map((message) => (
+              <ChatBubble key={message.id} message={message} />
+            ))}
+
             {sending && (
               <div className="flex justify-start">
                 <div className="bg-white dark:bg-slate-800 border border-gray-100 dark:border-slate-700 rounded-2xl px-4 py-3 text-sm text-gray-400 dark:text-slate-300 flex items-center gap-2 shadow-sm">
@@ -237,13 +271,16 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
                 </div>
               </div>
             )}
+
             <div ref={bottomRef} />
           </div>
 
-          <div className="p-4 border-t border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-900">
+          {/* Input */}
+       
+<div className="p-4 border-t-0 sm:border-t border-gray-100 dark:border-slate-700 bg-transparent">
             <form
               className="flex items-end gap-3"
-              onSubmit={e => {
+              onSubmit={(e) => {
                 e.preventDefault();
                 void sendMessage();
               }}
@@ -251,39 +288,46 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
               <textarea
                 ref={composerRef}
                 value={prompt}
-                onChange={e => setPrompt(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                onChange={(e) => setPrompt(e.target.value)}
+                onKeyDown={(e) => {
+                  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                     e.preventDefault();
                     void sendMessage();
                   }
                 }}
-                placeholder={
-                  translate(language, 'aiChatPage.exampleExplainThisQuestionCreateAStudyPlan')
-                }
-                className="flex-1 resize-none min-h-12 max-h-40 px-4 py-3 rounded-2xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-gray-700 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                rows={1}
+                placeholder={translate(
+                  language,
+                  'aiChatPage.exampleExplainThisQuestionCreateAStudyPlan'
+                )}
+                className="flex-1 resize-none min-h-[56px] max-h-40 px-4 py-3 rounded-2xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-gray-700 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                rows={2}
               />
+
               <button
                 type="submit"
                 disabled={sending || !prompt.trim()}
-                className="inline-flex h-12 shrink-0 items-center gap-2 px-5 rounded-2xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                aria-label={translate(language, 'aiChatPage.send')}
+                className="inline-flex items-center justify-center gap-2 shrink-0 w-12 h-12 sm:w-auto sm:h-auto px-0 sm:px-5 py-0 sm:py-3 rounded-2xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <Send className="w-4 h-4" />
-                {translate(language, 'aiChatPage.send')}
+                <span className="hidden sm:inline">
+                  {translate(language, 'aiChatPage.send')}
+                </span>
               </button>
             </form>
           </div>
         </div>
 
-        <div className="space-y-4">
+        {/* Quick Questions */}
+        <div className="hidden xl:block space-y-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm p-5">
             <div className="flex items-center gap-2 mb-3 text-gray-700 dark:text-slate-200 font-semibold">
               <Lightbulb className="w-4 h-4 text-amber-500" />
               {translate(language, 'aiChatPage.quickQuestions')}
             </div>
+
             <div className="space-y-2">
-              {starterPrompts.map(item => (
+              {starterPrompts.map((item) => (
                 <button
                   key={item}
                   onClick={() => void sendMessage(item)}
@@ -294,9 +338,6 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
               ))}
             </div>
           </div>
-
-          
-         
         </div>
       </div>
     </Layout>
