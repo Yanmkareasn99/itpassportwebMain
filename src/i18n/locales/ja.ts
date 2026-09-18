@@ -661,4 +661,5 @@ export const ja = {
   , "settingsPage.deleteAccountFailed": "アカウントの削除に失敗しました: {error}"
   , "settingsPage.deletingAccount": "アカウントを削除中..."
   , "settingsPage.deleteAccountAction": "アカウントを完全に削除する"
+  ,"aiChatPage.error": "エラーが発生しました。もう一度お試しください。",
 } as const;
