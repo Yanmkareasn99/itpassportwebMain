@@ -324,31 +324,35 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
               <p className={`text-[17px] font-semibold px-1 mb-3 ${darkMode ? 'text-slate-100' : 'text-gray-800'}`}>
                 {translate(language, 'settingsPage.account')}
               </p>
-              <button
-                type="button"
-                onClick={() => setView('profile')}
-                className="no-press-animation flex w-full items-center gap-4 rounded-2xl px-3 py-3.5 text-left transition profile-gradient hover:opacity-95"
-              >
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full profile-avatar-gradient shadow-inner">
-                  {profile?.avatar_url ? (
-                    <img src={profile.avatar_url} alt={translate(language, 'settingsPage.avatar')} className="h-full w-full object-cover" />
-                  ) : (
-                    <UserRound className="w-7 h-7" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className={`text-[15px] font-semibold truncate ${darkMode ? 'text-slate-100' : 'text-gray-800'}`}>{name || user?.email}</p>
-                  <p className={`text-[13px] ${darkMode ? 'text-slate-400' : 'text-gray-400'}`}>{translate(language, 'sidebar.student')}</p>
-                </div>
-                <ChevronRight className={`w-5 h-5 shrink-0 ${darkMode ? 'text-slate-500' : 'text-gray-300'}`} />
-              </button>
-              <SettingRow
-                icon={<Trash2 className="w-5 h-5" />}
-                iconBg="#fee2e2"
-                iconColor="#dc2626"
-                label={translate(language, 'settingsPage.deleteAccount')}
-                onClick={() => setView('deleteAccount')}
-              />
+              <div className="profile-card flex items-center gap-2 rounded-2xl px-3 py-3.5 profile-gradient">
+                <button
+                  type="button"
+                  onClick={() => setView('profile')}
+                    className="profile-account-button no-press-animation flex flex-1 min-w-0 items-center gap-4 bg-transparent text-left"
+>                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full profile-avatar-gradient shadow-inner">
+                    {profile?.avatar_url ? (
+                      <img src={profile.avatar_url} alt={translate(language, 'settingsPage.avatar')} className="h-full w-full object-cover" />
+                    ) : (
+                      <UserRound className="w-7 h-7" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-[15px] font-semibold truncate ${darkMode ? 'text-slate-100' : 'text-gray-800'}`}>{name || user?.email}</p>
+                    <p className={`text-[13px] ${darkMode ? 'text-slate-400' : 'text-gray-400'}`}>{translate(language, 'sidebar.student')}</p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setView('deleteAccount')}
+                  aria-label={translate(language, 'settingsPage.deleteAccount')}
+                  title={translate(language, 'settingsPage.deleteAccount')}
+                  className="no-press-animation flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition hover:opacity-80"
+                  style={{ backgroundColor: '#fee2e2', color: '#dc2626' }}
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             <div>

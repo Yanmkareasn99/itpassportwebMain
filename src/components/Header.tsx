@@ -313,8 +313,7 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
             </button>
 
             {isProfileMenuOpen && (
-              <div className="fixed inset-x-4 top-14 z-50 max-h-[calc(100dvh-4.5rem)] overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900 sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-3 sm:w-72">
-                <div className="border-b border-gray-100 px-4 py-3 dark:border-slate-700">
+<div className="fixed right-4 top-14 z-50 w-max min-w-[180px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900 sm:absolute sm:right-0 sm:top-auto sm:mt-3 sm:w-72">                <div className="border-b border-gray-100 px-4 py-3 dark:border-slate-700">
                   <div className="flex items-center gap-3">
                     <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full profile-avatar-gradient text-sm font-bold text-white shadow-inner">
                       {profile?.avatar_url ? (
