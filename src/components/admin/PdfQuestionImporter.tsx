@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CheckCircle,
   ChevronDown,
@@ -86,6 +86,13 @@ export default function PdfQuestionImporter({
   const [progress, setProgress] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const questionImageUrls = useRef<string[]>([]);
+
+  useEffect(() => () => {
+    for (const url of questionImageUrls.current) {
+      if (url.startsWith('blob:')) URL.revokeObjectURL(url);
+    }
+  }, []);
 
   const subjectRangesValid = useMemo(
     () => validateItPassportSubjectRanges(subjectRanges),
@@ -96,7 +103,10 @@ export default function PdfQuestionImporter({
     [questions],
   );
   const imageSizeMb = useMemo(
-    () => questions.reduce((sum, question) => sum + question.imageDataUrl.length * 0.75, 0) / 1024 / 1024,
+    () => questions.reduce(
+      (sum, question) => sum + (question.imageSizeBytes ?? question.imageDataUrl.length * 0.75),
+      0,
+    ) / 1024 / 1024,
     [questions],
   );
   const subjectNames = useMemo(
@@ -207,6 +217,10 @@ export default function PdfQuestionImporter({
       return;
     }
     setProcessing(true);
+    for (const url of questionImageUrls.current) {
+      if (url.startsWith('blob:')) URL.revokeObjectURL(url);
+    }
+    questionImageUrls.current = [];
     setQuestions([]);
     try {
       const { processExamPdfs } = await import('../../lib/pdfQuestionImport');
@@ -217,10 +231,12 @@ export default function PdfQuestionImporter({
         setProgress,
         importExam,
       );
-      setQuestions(result.questions.map(question => ({
+      const reviewedQuestions = result.questions.map(question => ({
         ...question,
         subjectId: detectedSubjectId(question.number),
-      })));
+      }));
+      questionImageUrls.current = reviewedQuestions.map(question => question.imageDataUrl);
+      setQuestions(reviewedQuestions);
       setExpandedIndex(result.questions.length ? 0 : null);
       setProgress('');
       if (!result.answerCount) {
@@ -251,7 +267,7 @@ export default function PdfQuestionImporter({
 
     try {
       const { createPdfImportCsvFiles } = await import('../../lib/pdfQuestionCsv');
-      const files = createPdfImportCsvFiles(questions, examDate);
+      const files = await createPdfImportCsvFiles(questions, examDate);
       const safeExamKey = examKey.trim().replace(/[^a-zA-Z0-9_-]/g, '-');
       for (const [filename, csv] of [
         [`${safeExamKey}-questions.csv`, files.questionsCsv],

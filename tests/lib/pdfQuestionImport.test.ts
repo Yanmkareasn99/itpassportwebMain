@@ -4,13 +4,13 @@ import { createPdfImportCsvFiles } from '../../src/lib/pdfQuestionCsv';
 import { parseCsv } from '../../src/lib/csv';
 
 describe('PDF question CSV export', () => {
-  it('creates matching question and answer-choice CSV files', () => {
+  it('creates matching question and answer-choice CSV files', async () => {
     const ids = [
       '10000000-0000-4000-8000-000000000001',
       '20000000-0000-4000-8000-000000000001',
       '20000000-0000-4000-8000-000000000002',
     ];
-    const files = createPdfImportCsvFiles([{
+    const files = await createPdfImportCsvFiles([{
       sourceKey: '2017H:Q1',
       number: 1,
       questionText: 'Question, with "quotes"\nand a new line',
