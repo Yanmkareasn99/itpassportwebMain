@@ -3,7 +3,6 @@ import {
   CheckCircle,
   ChevronDown,
   ChevronUp,
-  Download,
   FileText,
   Plus,
   RefreshCw,
@@ -249,48 +248,6 @@ export default function PdfQuestionImporter({
     }
   }
 
-  async function handleDownloadCsv() {
-    setError('');
-    setSuccess('');
-    if (importExam === 'it-passport' && !subjectRangesValid) {
-      setError(translate(language, 'adminPage.pdfInvalidSubjectRanges'));
-      return;
-    }
-    if (!examDate) {
-      setError(translate(language, 'adminPage.examDateRequired'));
-      return;
-    }
-    if (!questions.length || invalidCount) {
-      setError(translate(language, 'adminPage.pdfFixReviewErrors'));
-      return;
-    }
-
-    try {
-      const { createPdfImportCsvFiles } = await import('../../lib/pdfQuestionCsv');
-      const files = await createPdfImportCsvFiles(questions, examDate);
-      const safeExamKey = examKey.trim().replace(/[^a-zA-Z0-9_-]/g, '-');
-      for (const [filename, csv] of [
-        [`${safeExamKey}-questions.csv`, files.questionsCsv],
-        [`${safeExamKey}-answer-choices.csv`, files.answerChoicesCsv],
-      ] as const) {
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        URL.revokeObjectURL(url);
-      }
-      setSuccess(translate(language, 'adminPage.pdfCsvDownloaded', { count: questions.length }));
-    } catch (downloadError) {
-      setError(downloadError instanceof Error
-        ? downloadError.message
-        : translate(language, 'adminPage.pdfCsvDownloadFailed'));
-    }
-  }
-
   async function handleImport() {
     setError('');
     setSuccess('');
@@ -528,14 +485,6 @@ export default function PdfQuestionImporter({
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                onClick={handleDownloadCsv}
-                disabled={importing || invalidCount > 0 || (importExam === 'it-passport' && !subjectRangesValid)}
-                className="flex items-center gap-2 rounded-xl border border-emerald-600 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <Download className="h-4 w-4" />
-                {translate(language, 'adminPage.pdfDownloadCsv')}
-              </button>
               <button
                 onClick={handleImport}
                 disabled={importing || invalidCount > 0 || (importExam === 'it-passport' && !subjectRangesValid)}
