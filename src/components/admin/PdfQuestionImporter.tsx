@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useMemo, useState } from 'react';
 import {
   CheckCircle,
   ChevronDown,
   ChevronUp,
-  Download,
   FileText,
   Plus,
   RefreshCw,
@@ -15,32 +14,11 @@ import {
 import { useLanguage } from '../../contexts/LanguageContext';
 import { translate } from '../../i18n';
 import { isSupabaseEnabled, supabase } from '../../lib/supabase';
-import {
-  type PdfImportChoice,
-  type PdfImportQuestion,
+import type {
+  PdfImportChoice,
+  PdfImportQuestion,
 } from '../../lib/pdfQuestionImport';
-import { ensureDiagramChoiceLabels } from '../../lib/pdfQuestionImages';
 import type { Subject } from '../../types';
-import {
-  DEFAULT_IT_PASSPORT_SUBJECT_RANGES,
-  type ItPassportSubjectRange,
-  resolveImportedSubjectId,
-  type QuestionImportExam,
-  validateItPassportSubjectRanges,
-} from '../../lib/questionSubject';
-import { findDuplicateQuestionKeys, type ExistingQuestionIdentity } from '../../lib/questionDuplicates';
-import {
-  getPdfImportJobSnapshot,
-  startPdfImportJob,
-  subscribePdfImportJob,
-} from '../../lib/pdfImportJob';
-import { getErrorMessage } from '../../lib/errorHandling';
-import {
-  hasImportablePdfQuestionImage,
-  parsePdfImportArchive,
-  serializePdfImportArchive,
-  type ReviewPdfImportQuestion,
-} from '../../lib/pdfImportJson';
 
 interface PdfQuestionImporterProps {
   subjects: Subject[];
@@ -48,28 +26,7 @@ interface PdfQuestionImporterProps {
   onImported: () => Promise<void>;
 }
 
-async function fetchExistingQuestionIdentities() {
-  const questions: ExistingQuestionIdentity[] = [];
-  const pageSize = 1000;
-  for (let from = 0; ; from += pageSize) {
-    const { data, error } = await supabase
-      .from('questions')
-      .select('id, question_text, source_key')
-      .order('id')
-      .range(from, from + pageSize - 1);
-    if (error) throw error;
-    const page = (data ?? []) as Array<{ question_text: string; source_key: string | null }>;
-    questions.push(...page.map(question => ({
-      questionText: question.question_text,
-      sourceKey: question.source_key,
-    })));
-    if (page.length < pageSize) break;
-  }
-  return questions;
-}
-
-function questionProblem(question: ReviewPdfImportQuestion) {
-  if (!question.subjectId) return 'subject';
+function questionProblem(question: PdfImportQuestion) {
   if (!question.questionText.trim()) return 'text';
   if (question.choices.length < 2) return 'choices';
   if (!question.correctChoice || !question.choices.some(choice => choice.label === question.correctChoice)) {
@@ -103,149 +60,32 @@ export default function PdfQuestionImporter({
   onImported,
 }: PdfQuestionImporterProps) {
   const { language } = useLanguage();
-  const pdfJob = useSyncExternalStore(
-    subscribePdfImportJob,
-    getPdfImportJobSnapshot,
-    getPdfImportJobSnapshot,
-  );
-  const [importExam, setImportExam] = useState<QuestionImportExam>(() => pdfJob.importExam);
-  const [subjectRanges, setSubjectRanges] = useState<ItPassportSubjectRange[]>(() => (
-    (pdfJob.subjectRanges.length ? pdfJob.subjectRanges : DEFAULT_IT_PASSPORT_SUBJECT_RANGES)
-      .map(range => ({ ...range }))
-  ));
-  const [examKey, setExamKey] = useState(pdfJob.examKey);
-  const [examDate, setExamDate] = useState(pdfJob.examDate);
-  const [questionFile, setQuestionFile] = useState<File | null>(pdfJob.questionFile);
-  const [answerFile, setAnswerFile] = useState<File | null>(pdfJob.answerFile);
-  const [questions, setQuestions] = useState<ReviewPdfImportQuestion[]>([]);
+  const [subjectId, setSubjectId] = useState(subjects[0]?.id ?? '');
+  const [examKey, setExamKey] = useState('');
+  const [examDate, setExamDate] = useState('');
+  const [questionFile, setQuestionFile] = useState<File | null>(null);
+  const [answerFile, setAnswerFile] = useState<File | null>(null);
+  const [questions, setQuestions] = useState<PdfImportQuestion[]>([]);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [processing, setProcessing] = useState(false);
   const [importing, setImporting] = useState(false);
-  const [exportingJson, setExportingJson] = useState(false);
-  const [importProgress, setImportProgress] = useState('');
+  const [progress, setProgress] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const appliedJobId = useRef(0);
-  const initializedJobId = useRef(0);
-  const processing = pdfJob.status === 'processing';
 
-  useEffect(() => {
-    if (!pdfJob.id || appliedJobId.current === pdfJob.id) return;
-    if (pdfJob.status === 'processing') {
-      if (initializedJobId.current === pdfJob.id) return;
-      initializedJobId.current = pdfJob.id;
-      setQuestions([]);
-      setExpandedIndex(null);
-      setError('');
-      setSuccess('');
-      return;
-    }
-    if (pdfJob.status === 'error') {
-      appliedJobId.current = pdfJob.id;
-      setError(pdfJob.error || translate(language, 'adminPage.pdfProcessingFailed'));
-      return;
-    }
-    if (pdfJob.status === 'complete' && pdfJob.result) {
-      if (pdfJob.result.questions.length && !subjects.length) return;
-      const availableSubjectIds = subjects.map(subject => subject.id);
-      const reviewedQuestions = pdfJob.result.questions.map(question => ({
-        ...question,
-        subjectId: resolveImportedSubjectId(
-          null,
-          question.number,
-          availableSubjectIds,
-          pdfJob.importExam,
-          pdfJob.subjectRanges,
-        ) ?? '',
-      }));
-      appliedJobId.current = pdfJob.id;
-      setImportExam(pdfJob.importExam);
-      setSubjectRanges(pdfJob.subjectRanges.map(range => ({ ...range })));
-      setExamKey(pdfJob.examKey);
-      setExamDate(pdfJob.examDate);
-      setQuestionFile(pdfJob.questionFile);
-      setAnswerFile(pdfJob.answerFile);
-      setQuestions(reviewedQuestions);
-      setExpandedIndex(reviewedQuestions.length ? 0 : null);
-      if (!pdfJob.result.answerCount) {
-        setError(translate(language, 'adminPage.pdfAnswersNotDetected'));
-      }
-    }
-  }, [language, pdfJob, subjects]);
-
-  const subjectRangesValid = useMemo(
-    () => validateItPassportSubjectRanges(subjectRanges),
-    [subjectRanges],
-  );
   const invalidCount = useMemo(
     () => questions.filter(question => questionProblem(question)).length,
     [questions],
   );
-  const keptImageCount = useMemo(
-    () => questions.filter(question => question.keepImage).length,
+  const imageSizeMb = useMemo(
+    () => questions.reduce((sum, question) => sum + question.imageDataUrl.length * 0.75, 0) / 1024 / 1024,
     [questions],
-  );
-  const keptImageSizeMb = useMemo(
-    () => questions.reduce(
-      (sum, question) => question.keepImage
-        ? sum + (question.imageSizeBytes ?? question.imageDataUrl.length * 0.75)
-        : sum,
-      0,
-    ) / 1024 / 1024,
-    [questions],
-  );
-  const subjectNames = useMemo(
-    () => new Map(subjects.map(subject => [subject.id, subject.name])),
-    [subjects],
   );
 
-  function patchQuestion(index: number, patch: Partial<ReviewPdfImportQuestion>) {
+  function patchQuestion(index: number, patch: Partial<PdfImportQuestion>) {
     setQuestions(current => current.map((question, questionIndex) =>
       questionIndex === index ? { ...question, ...patch } : question,
     ));
-  }
-
-  function detectedSubjectId(
-    questionNumber: number,
-    exam = importExam,
-    ranges = subjectRanges,
-  ) {
-    const detected = resolveImportedSubjectId(
-      null,
-      questionNumber,
-      subjects.map(subject => subject.id),
-      exam,
-      ranges,
-    );
-    return detected ?? '';
-  }
-
-  function updateSubjectRange(
-    rangeIndex: number,
-    field: 'from' | 'to',
-    value: number,
-  ) {
-    const nextRanges = subjectRanges.map((range, index) => (
-      index === rangeIndex ? { ...range, [field]: value } : range
-    ));
-    setSubjectRanges(nextRanges);
-    if (importExam === 'it-passport') {
-      setQuestions(current => current.map(question => ({
-        ...question,
-        subjectId: detectedSubjectId(question.number, 'it-passport', nextRanges),
-      })));
-    }
-    setError('');
-    setSuccess('');
-  }
-
-  function changeImportExam(exam: QuestionImportExam) {
-    setImportExam(exam);
-    setQuestions(current => current.map(question => ({
-      ...question,
-      subjectId: detectedSubjectId(question.number, exam),
-    })));
-    setError('');
-    setSuccess('');
   }
 
   function patchChoice(questionIndex: number, choiceIndex: number, patch: Partial<PdfImportChoice>) {
@@ -271,17 +111,6 @@ export default function PdfQuestionImporter({
     }));
   }
 
-  function toggleQuestionImage(questionIndex: number, keepImage: boolean) {
-    setQuestions(current => current.map((question, currentIndex) => {
-      if (currentIndex !== questionIndex) return question;
-      return {
-        ...question,
-        keepImage,
-        choices: keepImage ? ensureDiagramChoiceLabels(question.choices) : question.choices,
-      };
-    }));
-  }
-
   function removeChoice(questionIndex: number, choiceIndex: number) {
     setQuestions(current => current.map((question, currentIndex) => {
       if (currentIndex !== questionIndex) return question;
@@ -296,7 +125,7 @@ export default function PdfQuestionImporter({
     }));
   }
 
-  function handleProcess() {
+  async function handleProcess() {
     setError('');
     setSuccess('');
     if (!questionFile) {
@@ -307,99 +136,38 @@ export default function PdfQuestionImporter({
       setError(translate(language, 'adminPage.pdfEnterExamKey'));
       return;
     }
-    if (importExam === 'it-passport' && !subjectRangesValid) {
-      setError(translate(language, 'adminPage.pdfInvalidSubjectRanges'));
-      return;
-    }
+    setProcessing(true);
     setQuestions([]);
-    void startPdfImportJob({
-      questionFile,
-      answerFile,
-      examKey: examKey.trim(),
-      examDate,
-      importExam,
-      subjectRanges: subjectRanges.map(range => ({ ...range })),
-    });
-  }
-
-  async function handleJsonFile(file: File | undefined) {
-    if (!file) return;
-    setError('');
-    setSuccess('');
     try {
-      const archive = parsePdfImportArchive(await file.text());
-      const availableSubjectIds = new Set(subjects.map(subject => subject.id));
-      const ranges = archive.subjectRanges.length
-        ? archive.subjectRanges
-        : DEFAULT_IT_PASSPORT_SUBJECT_RANGES.map(range => ({ ...range }));
-      const restoredQuestions = archive.questions.map(question => ({
-        ...question,
-        subjectId: availableSubjectIds.has(question.subjectId)
-          ? question.subjectId
-          : resolveImportedSubjectId(
-            null,
-            question.number,
-            availableSubjectIds,
-            archive.importExam,
-            ranges,
-          ) ?? '',
-      }));
-      appliedJobId.current = pdfJob.id;
-      initializedJobId.current = pdfJob.id;
-      setImportExam(archive.importExam);
-      setSubjectRanges(ranges.map(range => ({ ...range })));
-      setExamKey(archive.examKey);
-      setExamDate(archive.examDate);
-      setQuestionFile(null);
-      setAnswerFile(null);
-      setQuestions(restoredQuestions);
-      setExpandedIndex(restoredQuestions.length ? 0 : null);
-      setSuccess(translate(language, 'adminPage.pdfJsonLoaded', { count: restoredQuestions.length }));
-    } catch (jsonError) {
-      setError(translate(language, 'adminPage.pdfJsonLoadFailed', {
-        reason: getErrorMessage(jsonError, 'Invalid JSON.'),
-      }));
-    }
-  }
-
-  async function handleJsonDownload() {
-    setError('');
-    setSuccess('');
-    setExportingJson(true);
-    try {
-      const json = await serializePdfImportArchive({
-        examKey: examKey.trim(),
-        examDate,
-        importExam,
-        subjectRanges,
-        questions,
-      });
-      const url = URL.createObjectURL(new Blob([json], { type: 'application/json;charset=utf-8' }));
-      const link = document.createElement('a');
-      const safeExamKey = examKey.trim().replace(/[^a-zA-Z0-9_-]/g, '-') || 'questions';
-      link.href = url;
-      link.download = `${safeExamKey}-questions.json`;
-      link.click();
-      URL.revokeObjectURL(url);
-      setSuccess(translate(language, 'adminPage.pdfJsonSaved', { count: questions.length }));
-    } catch (jsonError) {
-      setError(translate(language, 'adminPage.pdfJsonSaveFailed', {
-        reason: getErrorMessage(jsonError, 'Unable to create JSON.'),
-      }));
+      const { processExamPdfs } = await import('../../lib/pdfQuestionImport');
+      const result = await processExamPdfs(
+        questionFile,
+        answerFile,
+        examKey.trim(),
+        setProgress,
+      );
+      setQuestions(result.questions);
+      setExpandedIndex(result.questions.length ? 0 : null);
+      setProgress('');
+      if (!result.answerCount) {
+        setError(translate(language, 'adminPage.pdfAnswersNotDetected'));
+      }
+    } catch (processError) {
+      setError(processError instanceof Error ? processError.message : translate(language, 'adminPage.pdfProcessingFailed'));
     } finally {
-      setExportingJson(false);
+      setProcessing(false);
     }
   }
 
   async function handleImport() {
     setError('');
     setSuccess('');
-    if (importExam === 'it-passport' && !subjectRangesValid) {
-      setError(translate(language, 'adminPage.pdfInvalidSubjectRanges'));
-      return;
-    }
     if (!isSupabaseEnabled) {
       setError(translate(language, 'adminPage.pdfRequiresSupabase'));
+      return;
+    }
+    if (!subjectId) {
+      setError(translate(language, 'adminPage.pleaseSelectASubject'));
       return;
     }
     if (!examDate) {
@@ -413,33 +181,13 @@ export default function PdfQuestionImporter({
 
     setImporting(true);
     try {
-      const duplicateQuestions = findDuplicateQuestionKeys(
-        questions.map(question => ({
-          key: `#${question.number}`,
-          questionText: question.questionText,
-          sourceKey: question.sourceKey,
-        })),
-        await fetchExistingQuestionIdentities(),
-        { allowMatchingSourceKey: true },
-      );
-      if (duplicateQuestions.length) {
-        throw Object.assign(
-          new Error(translate(language, 'adminPage.duplicateQuestionsFound', {
-            questions: duplicateQuestions.slice(0, 10).join(', '),
-          })),
-          { code: 'DUPLICATE_QUESTION' },
-        );
-      }
-
       for (let index = 0; index < questions.length; index += 1) {
         const question = questions[index];
-        setImportProgress(translate(language, 'adminPage.pdfImportProgress', {
+        setProgress(translate(language, 'adminPage.pdfImportProgress', {
           current: index + 1,
           total: questions.length,
         }));
-        const imageUrl = question.keepImage
-          ? await uploadQuestionImage(question, examKey.trim())
-          : null;
+        const imageUrl = await uploadQuestionImage(question, examKey.trim());
         const answerChoices = question.choices.map((choice, choiceIndex) => ({
           label: choice.label,
           text: choice.text.trim() || choice.label,
@@ -450,7 +198,7 @@ export default function PdfQuestionImporter({
         const { error: importError } = await supabase.from('question_import_staging').insert({
           source_key: question.sourceKey,
           exam_date: examDate,
-          subject_id: question.subjectId,
+          subject_id: subjectId,
           question_number: question.number,
           question_text: question.questionText.trim(),
           question_type: 'multiple_choice',
@@ -470,27 +218,18 @@ export default function PdfQuestionImporter({
           throw importError;
         }
       }
-      setImportProgress('');
+      setProgress('');
       setSuccess(translate(language, 'adminPage.pdfImportComplete', { count: questions.length }));
       await onImported();
     } catch (importError) {
-      const message = getErrorMessage(importError);
-      const errorCode = typeof importError === 'object' && importError !== null && 'code' in importError
-        ? String(importError.code)
-        : '';
+      const message = importError instanceof Error ? importError.message : '';
       setError(
-        errorCode === 'DUPLICATE_QUESTION'
-          ? message
-          : errorCode === '23505' || /already exists|duplicate|unique constraint/i.test(message)
-          ? translate(language, 'adminPage.duplicateQuestionExists')
-          : /question_import_staging|question-images|bucket not found/i.test(message)
+        /question_import_staging|question-images|bucket not found/i.test(message)
           ? translate(language, 'adminPage.pdfMigrationRequired')
-          : message
-            ? translate(language, 'adminPage.pdfImportFailedWithReason', { reason: message })
-            : translate(language, 'adminPage.pdfImportFailed'),
+          : message || translate(language, 'adminPage.pdfImportFailed'),
       );
     } finally {
-      setImportProgress('');
+      setProgress('');
       setImporting(false);
     }
   }
@@ -511,83 +250,21 @@ export default function PdfQuestionImporter({
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <label className="block text-xs font-semibold text-gray-600 md:col-span-2">
-          {translate(language, 'adminPage.pdfExamType')}
+        <label className="block text-xs font-semibold text-gray-600">
+          {translate(language, 'adminPage.subject')}
           <select
-            value={importExam}
-            onChange={event => changeImportExam(event.target.value as QuestionImportExam)}
-            disabled={processing}
+            value={subjectId}
+            onChange={event => setSubjectId(event.target.value)}
             className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
           >
-            <option value="it-passport">{translate(language, 'adminPage.pdfExamItPassport')}</option>
-            <option value="fundamental-a">{translate(language, 'adminPage.pdfExamFundamentalA')}</option>
-            <option value="fundamental-b">{translate(language, 'adminPage.pdfExamFundamentalB')}</option>
+            {subjects.map(subject => <option key={subject.id} value={subject.id}>{subject.name}</option>)}
           </select>
-          <span className="mt-1 block font-normal text-gray-500">
-            {translate(language, importExam === 'it-passport'
-              ? 'adminPage.pdfSubjectDetectionHelp'
-              : importExam === 'fundamental-a'
-                ? 'adminPage.pdfSubjectDetectionFundamentalA'
-                : 'adminPage.pdfSubjectDetectionFundamentalB')}
-          </span>
         </label>
-        {importExam === 'it-passport' && (
-          <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 md:col-span-2">
-            <p className="text-xs font-semibold text-gray-700">
-              {translate(language, 'adminPage.pdfSubjectRanges')}
-            </p>
-            <p className="mt-1 text-xs text-gray-500">
-              {translate(language, 'adminPage.pdfSubjectRangesHelp')}
-            </p>
-            <div className="mt-3 grid gap-2 md:grid-cols-3">
-              {subjectRanges.map((range, rangeIndex) => (
-                <div key={range.subjectId} className="rounded-lg border border-gray-200 bg-white p-3">
-                  <p className="truncate text-xs font-semibold text-gray-700">
-                    {subjectNames.get(range.subjectId) ?? translate(language, 'adminPage.subject')}
-                  </p>
-                  <div className="mt-2 grid grid-cols-[1fr_auto_1fr] items-end gap-2">
-                    <label className="text-[11px] text-gray-500">
-                      {translate(language, 'adminPage.pdfRangeFrom')}
-                      <input
-                        type="number"
-                        min={1}
-                        max={100}
-                        value={range.from || ''}
-                        onChange={event => updateSubjectRange(rangeIndex, 'from', Number(event.target.value))}
-                        disabled={processing}
-                        className="mt-1 w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
-                      />
-                    </label>
-                    <span className="pb-2 text-gray-400">–</span>
-                    <label className="text-[11px] text-gray-500">
-                      {translate(language, 'adminPage.pdfRangeTo')}
-                      <input
-                        type="number"
-                        min={1}
-                        max={100}
-                        value={range.to || ''}
-                        onChange={event => updateSubjectRange(rangeIndex, 'to', Number(event.target.value))}
-                        disabled={processing}
-                        className="mt-1 w-full rounded-lg border border-gray-200 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
-                      />
-                    </label>
-                  </div>
-                </div>
-              ))}
-            </div>
-            {!subjectRangesValid && (
-              <p className="mt-2 text-xs font-medium text-amber-700">
-                {translate(language, 'adminPage.pdfInvalidSubjectRanges')}
-              </p>
-            )}
-          </div>
-        )}
         <label className="block text-xs font-semibold text-gray-600">
           {translate(language, 'adminPage.pdfExamKey')}
           <input
             value={examKey}
             onChange={event => setExamKey(event.target.value.replace(/\s/g, ''))}
-            disabled={processing}
             placeholder="2026B"
             className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
           />
@@ -598,7 +275,6 @@ export default function PdfQuestionImporter({
             type="date"
             value={examDate}
             onChange={event => setExamDate(event.target.value)}
-            disabled={processing}
             className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
           />
         </label>
@@ -608,7 +284,6 @@ export default function PdfQuestionImporter({
             type="file"
             accept="application/pdf,.pdf"
             onChange={event => setQuestionFile(event.target.files?.[0] ?? null)}
-            disabled={processing}
             className="mt-1 block w-full rounded-xl border border-gray-200 px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-violet-50 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-violet-700"
           />
         </label>
@@ -618,25 +293,8 @@ export default function PdfQuestionImporter({
             type="file"
             accept="application/pdf,.pdf"
             onChange={event => setAnswerFile(event.target.files?.[0] ?? null)}
-            disabled={processing}
             className="mt-1 block w-full rounded-xl border border-gray-200 px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-violet-50 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-violet-700"
           />
-        </label>
-        <label className="block text-xs font-semibold text-gray-600 md:col-span-2">
-          {translate(language, 'adminPage.pdfJsonFile')}
-          <input
-            type="file"
-            accept="application/json,.json"
-            onChange={event => {
-              void handleJsonFile(event.target.files?.[0]);
-              event.target.value = '';
-            }}
-            disabled={processing || importing || exportingJson}
-            className="mt-1 block w-full rounded-xl border border-gray-200 px-3 py-2 text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-blue-700"
-          />
-          <span className="mt-1 block font-normal text-gray-500">
-            {translate(language, 'adminPage.pdfJsonFileHelp')}
-          </span>
         </label>
       </div>
 
@@ -647,7 +305,7 @@ export default function PdfQuestionImporter({
           className="flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:opacity-60"
         >
           {processing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-          {processing ? pdfJob.progress || translate(language, 'adminPage.pdfProcessing') : translate(language, 'adminPage.pdfProcess')}
+          {processing ? progress || translate(language, 'adminPage.pdfProcessing') : translate(language, 'adminPage.pdfProcess')}
         </button>
         <p className="text-xs text-gray-500">{translate(language, 'adminPage.pdfLocalProcessing')}</p>
       </div>
@@ -676,30 +334,17 @@ export default function PdfQuestionImporter({
                 {invalidCount
                   ? translate(language, 'adminPage.pdfReviewProblems', { count: invalidCount })
                   : translate(language, 'adminPage.pdfReadyToImport')}
-                {' · '}{translate(language, 'adminPage.pdfHybridImport', {
-                  count: keptImageCount,
-                  size: keptImageSizeMb.toFixed(1),
-                })}
+                {' · '}{imageSizeMb.toFixed(1)} MB
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                onClick={() => void handleJsonDownload()}
-                disabled={exportingJson || !examKey.trim() || questions.length === 0}
-                className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {exportingJson ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                {translate(language, 'adminPage.pdfJsonDownload')}
-              </button>
-              <button
-                onClick={handleImport}
-                disabled={importing || invalidCount > 0 || (importExam === 'it-passport' && !subjectRangesValid)}
-                className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {importing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                {importing ? importProgress : translate(language, 'adminPage.pdfImportButton')}
-              </button>
-            </div>
+            <button
+              onClick={handleImport}
+              disabled={importing || invalidCount > 0}
+              className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {importing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+              {importing ? progress : translate(language, 'adminPage.pdfImportButton')}
+            </button>
           </div>
 
           <div className="space-y-2">
@@ -712,9 +357,7 @@ export default function PdfQuestionImporter({
                   ? translate(language, 'adminPage.enterAtLeastTwoChoices')
                   : problem === 'correct'
                     ? translate(language, 'adminPage.selectAtLeastOneCorrectChoice')
-                    : problem === 'subject'
-                      ? translate(language, 'adminPage.pleaseSelectASubject')
-                      : '';
+                    : '';
               return (
                 <div key={question.sourceKey} className={`overflow-hidden rounded-xl border ${problem ? 'border-amber-200' : 'border-gray-200'}`}>
                   <button
@@ -724,9 +367,6 @@ export default function PdfQuestionImporter({
                     {problem
                       ? <XCircle className="h-4 w-4 shrink-0 text-amber-500" />
                       : <CheckCircle className="h-4 w-4 shrink-0 text-emerald-500" />}
-                    <span className="max-w-32 shrink-0 truncate rounded-full bg-violet-100 px-2 py-1 text-[10px] font-semibold text-violet-700">
-                      {subjectNames.get(question.subjectId) ?? translate(language, 'adminPage.subject')}
-                    </span>
                     <span className="w-14 shrink-0 text-sm font-bold text-gray-700">問 {question.number}</span>
                     <span className="min-w-0 flex-1 truncate text-xs text-gray-500">
                       {problemText || `${question.choices.length} ${translate(language, 'adminPage.choices')} · PDF ${question.sourcePages.join(', ')}`}
@@ -736,32 +376,9 @@ export default function PdfQuestionImporter({
 
                   {expanded && (
                     <div className="space-y-4 p-4">
-                      <label className="block text-xs font-semibold text-gray-600">
-                        {translate(language, 'adminPage.subject')}
-                        <select
-                          value={question.subjectId}
-                          onChange={event => patchQuestion(questionIndex, { subjectId: event.target.value })}
-                          className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
-                        >
-                          {subjects.map(subject => <option key={subject.id} value={subject.id}>{subject.name}</option>)}
-                        </select>
-                      </label>
                       <div className="max-h-[34rem] overflow-auto rounded-xl border border-gray-200 bg-gray-50 p-2">
                         <img src={question.imageDataUrl} alt={`Question ${question.number} PDF preview`} className="mx-auto h-auto max-w-full" />
                       </div>
-                      <label className="flex items-start gap-3 rounded-xl border border-violet-100 bg-violet-50 p-3 text-sm text-violet-900">
-                        <input
-                          type="checkbox"
-                          checked={question.keepImage}
-                          onChange={event => toggleQuestionImage(questionIndex, event.target.checked)}
-                          disabled={!hasImportablePdfQuestionImage(question)}
-                          className="mt-0.5 h-4 w-4 rounded border-violet-300 text-violet-600 focus:ring-violet-400"
-                        />
-                        <span>
-                          <span className="block font-semibold">{translate(language, 'adminPage.pdfKeepDiagram')}</span>
-                          <span className="mt-0.5 block text-xs text-violet-700">{translate(language, 'adminPage.pdfKeepDiagramHelp')}</span>
-                        </span>
-                      </label>
                       <label className="block text-xs font-semibold text-gray-600">
                         {translate(language, 'adminPage.questionText')}
                         <textarea
