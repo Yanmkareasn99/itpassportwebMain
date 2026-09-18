@@ -1,5 +1,58 @@
 import { describe, expect, it } from 'vitest';
 import { extractAnswerMap } from '../../src/lib/pdfAnswerText';
+import { createPdfImportCsvFiles } from '../../src/lib/pdfQuestionCsv';
+import { parseCsv } from '../../src/lib/csv';
+
+describe('PDF question CSV export', () => {
+  it('creates matching question and answer-choice CSV files', () => {
+    const ids = [
+      '10000000-0000-4000-8000-000000000001',
+      '20000000-0000-4000-8000-000000000001',
+      '20000000-0000-4000-8000-000000000002',
+    ];
+    const files = createPdfImportCsvFiles([{
+      sourceKey: '2017H:Q1',
+      number: 1,
+      questionText: 'Question, with "quotes"\nand a new line',
+      imageDataUrl: 'data:image/webp;base64,abc123',
+      sourcePages: [1],
+      subjectId: 'cc000001-0000-0000-0000-000000000001',
+      choices: [
+        { label: 'A', text: 'First', sortOrder: 1 },
+        { label: 'B', text: 'Second', sortOrder: 2 },
+      ],
+      correctChoice: 'B',
+      explanation: 'Because, B is correct.',
+      difficulty: 2,
+      points: 1,
+      warnings: [],
+    }], '2017-04-01', () => ids.shift()!);
+
+    const [question] = parseCsv(files.questionsCsv);
+    const answers = parseCsv(files.answerChoicesCsv);
+    expect(question.id).toBe('10000000-0000-4000-8000-000000000001');
+    expect(question.source_key).toBe('2017H:Q1');
+    expect(question.exam_date).toBe('2017-04-01');
+    expect(question.image_url).toBe('data:image/webp;base64,abc123');
+    expect(question.question_text).toBe('Question, with "quotes"\nand a new line');
+    expect(answers).toEqual([
+      expect.objectContaining({
+        id: '20000000-0000-4000-8000-000000000001',
+        question_id: question.id,
+        choice_text: 'First',
+        is_correct: 'false',
+        sort_order: '1',
+      }),
+      expect.objectContaining({
+        id: '20000000-0000-4000-8000-000000000002',
+        question_id: question.id,
+        choice_text: 'Second',
+        is_correct: 'true',
+        sort_order: '2',
+      }),
+    ]);
+  });
+});
 
 describe('PDF answer extraction', () => {
   it('preserves each row instead of overwriting it with the following row answers', () => {

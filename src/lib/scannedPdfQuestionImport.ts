@@ -272,10 +272,10 @@ export function findQuestionStarts(pages: OcrPage[], repairForwardJumps = false)
         }
         continue;
       }
-      const match = normalized.match(/^[問間]\s*(\d{1,4})(?:\D|$)/);
+      const match = normalized.match(/^[問間癌]\s*(\d{1,4})(?:\D|$)/);
       if (!match) continue;
       const detectedNumber = Number(match[1]);
-      if (detectedNumber < 1 || detectedNumber > 200) continue;
+      if (detectedNumber < 1 || detectedNumber > 999) continue;
       candidates.push({
         detectedNumber,
         number: 0,
@@ -348,6 +348,15 @@ export function findQuestionStarts(pages: OcrPage[], repairForwardJumps = false)
       && candidate.detectedNumber > 100;
     if (isFinalQuestionReadOutOfRange) resolvedNumber = expectedNumber;
 
+    // A duplicated or inserted digit can turn a normal heading into 341 or
+    // 388. If the following physical heading is exactly the next expected
+    // question, the surrounding sequence safely identifies the real number.
+    const isQuestionReadOutOfRange = repairForwardJumps
+      && Boolean(previous)
+      && candidate.detectedNumber > 200
+      && nextDetectedNumber === expectedNumber + 1;
+    if (isQuestionReadOutOfRange) resolvedNumber = expectedNumber;
+
     // Only repair a forward jump when the remaining headings prove that it is
     // an OCR digit error. For example, if question 20 is read as 26, the later
     // headings still contain 21-26 (including a second 26). A jump from 35 to
@@ -360,13 +369,20 @@ export function findQuestionStarts(pages: OcrPage[], repairForwardJumps = false)
       { length: Math.max(0, candidate.detectedNumber - expectedNumber - 1) },
       (_, offset) => expectedNumber + offset + 1,
     ).every(number => laterDetectedNumbers.has(number));
+    const nextContinuesExpectedSequence = nextDetectedNumber === expectedNumber + 1;
     const isForwardJumpCorrected = repairForwardJumps
       && Boolean(previous)
       && candidate.detectedNumber > expectedNumber
+      && candidate.detectedNumber <= 200
       && nextDetectedNumber !== expectedNumber
       && laterDetectedNumbers.has(candidate.detectedNumber)
-      && interveningNumbersRemain;
+      && (nextContinuesExpectedSequence || interveningNumbersRemain);
     if (isForwardJumpCorrected) resolvedNumber = expectedNumber;
+
+    // Keep large OCR values available as sequence evidence, but never emit
+    // them as actual questions unless the sequence correction above proved a
+    // supported number.
+    if (resolvedNumber > 200) continue;
 
     const duplicate = byNumber.get(resolvedNumber);
     if (duplicate) {
@@ -408,6 +424,10 @@ export function findQuestionStarts(pages: OcrPage[], repairForwardJumps = false)
       candidate.warnings.push(
         `OCR read question ${expectedNumber} as ${candidate.detectedNumber}; the final number was corrected from its physical order.`,
       );
+    } else if (isQuestionReadOutOfRange) {
+      candidate.warnings.push(
+        `OCR read question ${expectedNumber} as ${candidate.detectedNumber}; the number was corrected from its physical order.`,
+      );
     } else if (isForwardJumpCorrected) {
       candidate.warnings.push(
         `OCR read question ${expectedNumber} as ${candidate.detectedNumber}; the number was corrected from its physical order.`,
@@ -437,6 +457,30 @@ export function getQuestionHeadingRetryPages(starts: QuestionStart[]) {
     }
   }
   return [...pageNumbers].sort((left, right) => left - right);
+}
+
+export function getMissingExpectedQuestionNumbers(
+  starts: readonly Pick<QuestionStart, 'number'>[],
+  expectedCount: number,
+) {
+  const detected = new Set(starts.map(start => start.number));
+  return Array.from(
+    { length: expectedCount },
+    (_, index) => index + 1,
+  ).filter(number => !detected.has(number));
+}
+
+function hasCompleteExpectedSequence(starts: QuestionStart[], expectedCount: number) {
+  return starts.length === expectedCount
+    && starts.every((start, index) => start.number === index + 1);
+}
+
+function mergeOcrPages(primary: OcrPage[], additional: OcrPage[]) {
+  const additionalByPage = new Map(additional.map(page => [page.pageNumber, page.lines]));
+  return primary.map(page => ({
+    ...page,
+    lines: [...page.lines, ...(additionalByPage.get(page.pageNumber) ?? [])],
+  }));
 }
 
 export function mergeExpectedAnswerMaps(
@@ -613,6 +657,7 @@ export async function processScannedExamPdfs(
   answerDocument: PDFDocumentProxy | null,
   examKey: string,
   onProgress?: (message: string) => void,
+  expectedQuestionCount?: number,
 ): Promise<PdfImportResult> {
   onProgress?.('Starting Japanese OCR…');
   const { createWorker, PSM } = await import('tesseract.js');
@@ -620,7 +665,8 @@ export async function processScannedExamPdfs(
   try {
     await worker.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
     const headingPages = await ocrQuestionHeadings(questionDocument, worker, onProgress);
-    let starts = findQuestionStarts(headingPages, true);
+    let combinedHeadingPages = headingPages;
+    let starts = findQuestionStarts(combinedHeadingPages, true);
     const retryPageNumbers = getQuestionHeadingRetryPages(starts);
     if (retryPageNumbers.length > 0) {
       // AUTO segmentation can occasionally merge a section divider and its
@@ -633,12 +679,34 @@ export async function processScannedExamPdfs(
         stripRatio: 0.55,
       });
       await worker.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
-      const retryByPage = new Map(retryPages.map(page => [page.pageNumber, page.lines]));
-      const combinedPages = headingPages.map(page => ({
-        ...page,
-        lines: [...page.lines, ...(retryByPage.get(page.pageNumber) ?? [])],
-      }));
-      starts = findQuestionStarts(combinedPages, true);
+      combinedHeadingPages = mergeOcrPages(combinedHeadingPages, retryPages);
+      starts = findQuestionStarts(combinedHeadingPages, true);
+    }
+    if (expectedQuestionCount && !hasCompleteExpectedSequence(starts, expectedQuestionCount)) {
+      onProgress?.(
+        `OCR found ${starts.length} of ${expectedQuestionCount} expected questions; rereading the full PDF…`,
+      );
+      await worker.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT });
+      const fullRetryPages = await ocrQuestionHeadings(questionDocument, worker, onProgress, {
+        pageNumbers: Array.from(
+          { length: questionDocument.numPages },
+          (_, index) => index + 1,
+        ),
+        scale: 3.4,
+        stripRatio: 0.55,
+      });
+      await worker.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
+      combinedHeadingPages = mergeOcrPages(combinedHeadingPages, fullRetryPages);
+      starts = findQuestionStarts(combinedHeadingPages, true);
+    }
+    if (expectedQuestionCount && !hasCompleteExpectedSequence(starts, expectedQuestionCount)) {
+      const missing = getMissingExpectedQuestionNumbers(starts, expectedQuestionCount);
+      const missingMessage = missing.length
+        ? ` Missing question numbers: ${missing.join(', ')}.`
+        : '';
+      throw new Error(
+        `IT Passport imports must contain questions 1-${expectedQuestionCount}. OCR found ${starts.length}.${missingMessage}`,
+      );
     }
     if (!starts.length) {
       throw new Error('This scanned PDF could not be segmented into questions. Make sure the pages show headings such as “問1”.');

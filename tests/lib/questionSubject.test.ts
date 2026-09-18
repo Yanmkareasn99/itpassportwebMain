@@ -5,6 +5,7 @@ import {
   FUNDAMENTAL_IT_SUBJECT_IDS,
   IT_PASSPORT_SUBJECT_IDS,
   resolveImportedSubjectId,
+  validateItPassportSubjectRanges,
 } from '../../src/lib/questionSubject';
 
 describe('question subject detection', () => {
@@ -27,6 +28,44 @@ describe('question subject detection', () => {
     const available = Object.values(IT_PASSPORT_SUBJECT_IDS);
     expect(resolveImportedSubjectId(IT_PASSPORT_SUBJECT_IDS.technology, 1, available))
       .toBe(IT_PASSPORT_SUBJECT_IDS.technology);
+  });
+
+  it('uses admin-defined IT Passport subject ranges', () => {
+    const ranges = [
+      { subjectId: IT_PASSPORT_SUBJECT_IDS.strategy, from: 1, to: 29 },
+      { subjectId: IT_PASSPORT_SUBJECT_IDS.management, from: 30, to: 53 },
+      { subjectId: IT_PASSPORT_SUBJECT_IDS.technology, from: 54, to: 100 },
+    ];
+
+    expect(validateItPassportSubjectRanges(ranges)).toBe(true);
+    expect(detectItPassportSubjectId(29, ranges)).toBe(IT_PASSPORT_SUBJECT_IDS.strategy);
+    expect(detectItPassportSubjectId(30, ranges)).toBe(IT_PASSPORT_SUBJECT_IDS.management);
+    expect(detectItPassportSubjectId(54, ranges)).toBe(IT_PASSPORT_SUBJECT_IDS.technology);
+    expect(resolveImportedSubjectId(
+      '',
+      30,
+      Object.values(IT_PASSPORT_SUBJECT_IDS),
+      'it-passport',
+      ranges,
+    )).toBe(IT_PASSPORT_SUBJECT_IDS.management);
+  });
+
+  it('allows gaps as unassigned but rejects overlaps and invalid bounds', () => {
+    const makeRanges = (managementFrom: number, technologyFrom: number) => [
+      { subjectId: IT_PASSPORT_SUBJECT_IDS.strategy, from: 1, to: 35 },
+      { subjectId: IT_PASSPORT_SUBJECT_IDS.management, from: managementFrom, to: 55 },
+      { subjectId: IT_PASSPORT_SUBJECT_IDS.technology, from: technologyFrom, to: 100 },
+    ];
+
+    const rangesWithGap = makeRanges(37, 56);
+    expect(validateItPassportSubjectRanges(rangesWithGap)).toBe(true);
+    expect(detectItPassportSubjectId(36, rangesWithGap)).toBe(IT_PASSPORT_SUBJECT_IDS.unassigned);
+    expect(validateItPassportSubjectRanges(makeRanges(35, 56))).toBe(false);
+    expect(validateItPassportSubjectRanges(makeRanges(36, 55))).toBe(false);
+    expect(validateItPassportSubjectRanges([
+      { subjectId: IT_PASSPORT_SUBJECT_IDS.strategy, from: 0, to: 35 },
+      ...makeRanges(36, 56).slice(1),
+    ])).toBe(false);
   });
 
   it.each([
