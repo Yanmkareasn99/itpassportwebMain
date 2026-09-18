@@ -44,7 +44,19 @@ function rowsToCsv<Column extends string>(
     .join('\r\n')}\r\n`;
 }
 
-export function createPdfImportCsvFiles(
+function blobUrlToDataUrl(url: string) {
+  if (!url.startsWith('blob:')) return Promise.resolve(url);
+  return fetch(url)
+    .then(response => response.blob())
+    .then(blob => new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.addEventListener('load', () => resolve(String(reader.result ?? '')));
+      reader.addEventListener('error', () => reject(reader.error ?? new Error('Unable to read question image.')));
+      reader.readAsDataURL(blob);
+    }));
+}
+
+export async function createPdfImportCsvFiles(
   questions: readonly PdfImportCsvQuestion[],
   examDate: string,
   createId: () => string = () => crypto.randomUUID(),
@@ -60,7 +72,7 @@ export function createPdfImportCsvFiles(
       question_number: question.number,
       question_text: question.questionText,
       question_type: 'multiple_choice',
-      image_url: question.imageDataUrl,
+      image_url: await blobUrlToDataUrl(question.imageDataUrl),
       explanation: question.explanation,
       difficulty: question.difficulty,
       points: question.points,

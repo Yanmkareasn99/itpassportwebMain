@@ -629,7 +629,7 @@ async function ocrAnswerPages(
   return pages;
 }
 
-function renderQuestionCrop(
+async function renderQuestionCrop(
   page: HTMLCanvasElement,
   start: QuestionStart,
   next: QuestionStart | undefined,
@@ -642,14 +642,18 @@ function renderQuestionCrop(
   const bottom = Math.min(page.height, Math.ceil(page.height * bottomRatio));
   const cropped = cropCanvas(page, 0, top, page.width, bottom - top);
   const trimmed = trimWhitespace(cropped);
-  const dataUrl = trimmed.toDataURL('image/webp', 0.82);
+  const blob = await new Promise<Blob | null>(resolve => trimmed.toBlob(resolve, 'image/webp', 0.82));
+  const imageDataUrl = blob
+    ? URL.createObjectURL(blob)
+    : trimmed.toDataURL('image/webp', 0.82);
+  const imageSizeBytes = blob?.size ?? Math.ceil(imageDataUrl.length * 0.75);
   cropped.width = 1;
   cropped.height = 1;
   if (trimmed !== cropped) {
     trimmed.width = 1;
     trimmed.height = 1;
   }
-  return dataUrl;
+  return { imageDataUrl, imageSizeBytes };
 }
 
 export async function processScannedExamPdfs(
@@ -747,11 +751,12 @@ export async function processScannedExamPdfs(
         }
         onProgress?.(`Preparing question ${index + 1} of ${starts.length}…`);
         const correctChoice = answerResult.answers.get(start.number) ?? '';
+        const image = await renderQuestionCrop(renderedQuestionPage, start, next);
         questions.push({
           sourceKey: `${examKey}:Q${start.number}`,
           number: start.number,
           questionText: `${examKey} 問${start.number}`,
-          imageDataUrl: renderQuestionCrop(renderedQuestionPage, start, next),
+          ...image,
           sourcePages: [start.pageNumber],
           choices: [...ANSWER_LABELS].map((label, choiceIndex) => ({
             label,

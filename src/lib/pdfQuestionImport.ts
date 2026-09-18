@@ -22,6 +22,7 @@ export interface PdfImportQuestion {
   number: number;
   questionText: string;
   imageDataUrl: string;
+  imageSizeBytes?: number;
   sourcePages: number[];
   choices: PdfImportChoice[];
   correctChoice: string;
@@ -126,6 +127,13 @@ function createCanvas(width: number, height: number) {
   return canvas;
 }
 
+async function canvasToWebpUrl(canvas: HTMLCanvasElement) {
+  const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/webp', 0.82));
+  if (blob) return { imageDataUrl: URL.createObjectURL(blob), imageSizeBytes: blob.size };
+  const imageDataUrl = canvas.toDataURL('image/webp', 0.82);
+  return { imageDataUrl, imageSizeBytes: Math.ceil(imageDataUrl.length * 0.75) };
+}
+
 function trimCanvas(source: HTMLCanvasElement) {
   const context = source.getContext('2d', { willReadFrequently: true });
   if (!context) throw new Error('Canvas is unavailable in this browser.');
@@ -195,7 +203,14 @@ async function renderQuestionImage(document: PDFDocumentProxy, pageNumbers: numb
     context.drawImage(canvas, Math.floor((width - canvas.width) / 2), top);
     top += canvas.height + gap;
   }
-  return combined.toDataURL('image/webp', 0.82);
+  const image = await canvasToWebpUrl(combined);
+  combined.width = 1;
+  combined.height = 1;
+  for (const canvas of rendered) {
+    canvas.width = 1;
+    canvas.height = 1;
+  }
+  return image;
 }
 
 async function openPdf(file: File) {
@@ -269,11 +284,12 @@ export async function processExamPdfs(
       if (!correctChoice) warnings.push('Correct answer not detected. Select it below.');
       if (choices.length < 2) warnings.push('Fewer than two choices were detected. Add or edit choices below.');
 
+      const image = await renderQuestionImage(questionDocument, pages.map(page => page.pageNumber));
       questions.push({
         sourceKey: `${examKey}:Q${start.number}`,
         number: start.number,
         questionText: questionText || `${examKey} 問${start.number}`,
-        imageDataUrl: await renderQuestionImage(questionDocument, pages.map(page => page.pageNumber)),
+        ...image,
         sourcePages: pages.map(page => page.pageNumber),
         choices,
         correctChoice,
