@@ -192,7 +192,7 @@ export const en = {
   "adminPage.pdfReviewProblems": "{count} questions still need attention",
   "adminPage.pdfReadyToImport": "All questions are ready to import",
   "adminPage.pdfMarkCorrect": "Mark as the correct answer",
-  "adminPage.pdfImportButton": "Import/update all",
+  "adminPage.pdfImportButton": "Upload questions and answers",
   "adminPage.pdfDownloadCsv": "Download CSV files",
   "adminPage.pdfCsvDownloaded": "Downloaded {count} questions and their answers as two CSV files.",
   "adminPage.pdfCsvDownloadFailed": "Unable to create the question CSV.",

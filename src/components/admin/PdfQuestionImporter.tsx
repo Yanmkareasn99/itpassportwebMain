@@ -8,11 +8,13 @@ import {
   Plus,
   RefreshCw,
   Trash2,
+  Upload,
   X,
   XCircle,
 } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { translate } from '../../i18n';
+import { isSupabaseEnabled, supabase } from '../../lib/supabase';
 import type {
   PdfImportChoice,
   PdfImportQuestion,
@@ -29,6 +31,7 @@ import {
 interface PdfQuestionImporterProps {
   subjects: Subject[];
   onClose: () => void;
+  onImported: () => Promise<void>;
 }
 
 type ReviewPdfImportQuestion = PdfImportQuestion & { subjectId: string };
@@ -49,9 +52,23 @@ function nextChoiceLabel(choices: PdfImportChoice[]) {
     ?? String(choices.length + 1);
 }
 
+async function uploadQuestionImage(question: PdfImportQuestion, examKey: string) {
+  const response = await fetch(question.imageDataUrl);
+  const blob = await response.blob();
+  const safeExamKey = examKey.replace(/[^a-zA-Z0-9_-]/g, '-');
+  const extension = blob.type === 'image/png' ? 'png' : 'webp';
+  const path = `${safeExamKey}/question-${question.number}.${extension}`;
+  const { error } = await supabase.storage
+    .from('question-images')
+    .upload(path, blob, { contentType: blob.type, upsert: true });
+  if (error) throw error;
+  return supabase.storage.from('question-images').getPublicUrl(path).data.publicUrl;
+}
+
 export default function PdfQuestionImporter({
   subjects,
   onClose,
+  onImported,
 }: PdfQuestionImporterProps) {
   const { language } = useLanguage();
   const [importExam, setImportExam] = useState<QuestionImportExam>('it-passport');
@@ -65,6 +82,7 @@ export default function PdfQuestionImporter({
   const [questions, setQuestions] = useState<ReviewPdfImportQuestion[]>([]);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -257,6 +275,81 @@ export default function PdfQuestionImporter({
     }
   }
 
+  async function handleImport() {
+    setError('');
+    setSuccess('');
+    if (importExam === 'it-passport' && !subjectRangesValid) {
+      setError(translate(language, 'adminPage.pdfInvalidSubjectRanges'));
+      return;
+    }
+    if (!isSupabaseEnabled) {
+      setError(translate(language, 'adminPage.pdfRequiresSupabase'));
+      return;
+    }
+    if (!examDate) {
+      setError(translate(language, 'adminPage.examDateRequired'));
+      return;
+    }
+    if (!questions.length || invalidCount) {
+      setError(translate(language, 'adminPage.pdfFixReviewErrors'));
+      return;
+    }
+
+    setImporting(true);
+    try {
+      for (let index = 0; index < questions.length; index += 1) {
+        const question = questions[index];
+        setProgress(translate(language, 'adminPage.pdfImportProgress', {
+          current: index + 1,
+          total: questions.length,
+        }));
+        const imageUrl = await uploadQuestionImage(question, examKey.trim());
+        const answerChoices = question.choices.map((choice, choiceIndex) => ({
+          label: choice.label,
+          text: choice.text.trim() || choice.label,
+          image_url: null,
+          is_correct: choice.label === question.correctChoice,
+          sort_order: choiceIndex + 1,
+        }));
+        const { error: importError } = await supabase.from('question_import_staging').insert({
+          source_key: question.sourceKey,
+          exam_date: examDate,
+          subject_id: question.subjectId,
+          question_number: question.number,
+          question_text: question.questionText.trim(),
+          question_type: 'multiple_choice',
+          image_url: imageUrl,
+          answer_choices: answerChoices,
+          explanation: question.explanation.trim() || null,
+          explanation_ja: question.explanation.trim() || null,
+          explanation_en: null,
+          explanation_vi: null,
+          difficulty: question.difficulty,
+          points: question.points,
+        });
+        if (importError) {
+          if (importError.message.includes('question_import_staging')) {
+            throw new Error(translate(language, 'adminPage.pdfMigrationRequired'));
+          }
+          throw importError;
+        }
+      }
+      setProgress('');
+      setSuccess(translate(language, 'adminPage.pdfImportComplete', { count: questions.length }));
+      await onImported();
+    } catch (importError) {
+      const message = importError instanceof Error ? importError.message : '';
+      setError(
+        /question_import_staging|question-images|bucket not found/i.test(message)
+          ? translate(language, 'adminPage.pdfMigrationRequired')
+          : message || translate(language, 'adminPage.pdfImportFailed'),
+      );
+    } finally {
+      setProgress('');
+      setImporting(false);
+    }
+  }
+
   return (
     <section className="rounded-2xl border border-violet-200 bg-white p-5 shadow-sm">
       <div className="mb-5 flex items-start justify-between gap-4">
@@ -382,7 +475,7 @@ export default function PdfQuestionImporter({
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <button
           onClick={handleProcess}
-          disabled={processing}
+          disabled={processing || importing}
           className="flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:opacity-60"
         >
           {processing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
@@ -418,14 +511,24 @@ export default function PdfQuestionImporter({
                 {' · '}{imageSizeMb.toFixed(1)} MB
               </p>
             </div>
-            <button
-              onClick={handleDownloadCsv}
-              disabled={invalidCount > 0 || (importExam === 'it-passport' && !subjectRangesValid)}
-              className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Download className="h-4 w-4" />
-              {translate(language, 'adminPage.pdfDownloadCsv')}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={handleDownloadCsv}
+                disabled={importing || invalidCount > 0 || (importExam === 'it-passport' && !subjectRangesValid)}
+                className="flex items-center gap-2 rounded-xl border border-emerald-600 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Download className="h-4 w-4" />
+                {translate(language, 'adminPage.pdfDownloadCsv')}
+              </button>
+              <button
+                onClick={handleImport}
+                disabled={importing || invalidCount > 0 || (importExam === 'it-passport' && !subjectRangesValid)}
+                className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {importing ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                {importing ? progress : translate(language, 'adminPage.pdfImportButton')}
+              </button>
+            </div>
           </div>
 
           <div className="space-y-2">
