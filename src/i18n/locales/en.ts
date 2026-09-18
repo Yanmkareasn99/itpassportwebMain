@@ -662,4 +662,5 @@ export const en = {
   , "settingsPage.deleteAccountFailed": "Failed to delete account: {error}"
   , "settingsPage.deletingAccount": "Deleting account..."
   , "settingsPage.deleteAccountAction": "Permanently delete my account"
+  ,"aiChatPage.error": "An error occurred. Please try again.",
 } as const;

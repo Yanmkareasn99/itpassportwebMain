@@ -662,4 +662,6 @@ export const vi = {
   , "settingsPage.deleteAccountFailed": "Không thể xóa tài khoản: {error}"
   , "settingsPage.deletingAccount": "Đang xóa tài khoản..."
   , "settingsPage.deleteAccountAction": "Xóa vĩnh viễn tài khoản của tôi"
+  ,"aiChatPage.error": "Đã xảy ra lỗi. Vui lòng thử lại.",
+  
 } as const;

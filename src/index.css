@@ -643,3 +643,37 @@ select {
   box-shadow: none !important;
   background: transparent !important;
 }
+
+/* =========================================================
+   Mobile input zoom prevention
+   iOS Safari / Android Chrome
+   ========================================================= */
+
+@media (max-width: 767px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    font-size: 16px;
+  }
+}
+
+/* Prevent accidental horizontal overflow on mobile */
+html,
+body {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Make mobile form controls behave consistently */
+input,
+textarea,
+select {
+  max-width: 100%;
+  box-sizing: border-box;
+}
