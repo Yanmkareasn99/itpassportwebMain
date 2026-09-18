@@ -1,21 +1,42 @@
-import { translateMessage, translate } from '../i18n';
-import { useState, useEffect, useMemo, useRef } from 'react';
-import { ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertCircle, Flag, ArrowLeft, Sparkles, Loader } from 'lucide-react';
-import Layout from '../components/Layout';
-import { supabase } from '../lib/supabase';
-import { useAuth } from '../contexts/AuthContext';
-import { useLanguage } from '../contexts/LanguageContext';
-import { getLocalizedExplanation } from '../lib/localizedQuestion';
-import { getQuestionExplanation, loadAiImageInputs } from '../lib/aiChat';
-import { practiceErrorMessage, type PracticeAnswer } from '../lib/practice';
-import { awardLocalAnswerPoints } from '../lib/points';
-import { Question, AnswerChoice, Page } from '../types';
-import { AnswerChoiceContent, QuestionImage } from '../components/QuestionMedia';
-import { formatExamDate } from '../lib/examDate';
-import { getAnswerChoiceImageUrl, getQuestionImageUrl } from '../lib/questionImages';
-import { createAnswerChoiceOrders, getRandomizeAnswerChoicesPreference } from '../lib/questionRandomization';
-import { loadQuestionFlags, QUESTION_FLAG_LEVELS, setQuestionFlag, type QuestionFlagLevel } from '../lib/questionFlags';
-
+import { translateMessage, translate } from "../i18n";
+import { useState, useEffect, useMemo, useRef } from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle,
+  XCircle,
+  Flag,
+  ArrowLeft,
+  Sparkles,
+  Loader,
+} from "lucide-react";
+import Layout from "../components/Layout";
+import { supabase } from "../lib/supabase";
+import { useAuth } from "../contexts/AuthContext";
+import { useLanguage } from "../contexts/LanguageContext";
+import { getQuestionExplanation, loadAiImageInputs } from "../lib/aiChat";
+import { practiceErrorMessage, type PracticeAnswer } from "../lib/practice";
+import { awardLocalAnswerPoints } from "../lib/points";
+import { Question, AnswerChoice, Page } from "../types";
+import {
+  AnswerChoiceContent,
+  QuestionImage,
+} from "../components/QuestionMedia";
+import { formatExamDate } from "../lib/examDate";
+import {
+  getAnswerChoiceImageUrl,
+  getQuestionImageUrl,
+} from "../lib/questionImages";
+import {
+  createAnswerChoiceOrders,
+  getRandomizeAnswerChoicesPreference,
+} from "../lib/questionRandomization";
+import {
+  loadQuestionFlags,
+  QUESTION_FLAG_LEVELS,
+  setQuestionFlag,
+  type QuestionFlagLevel,
+} from "../lib/questionFlags";
 
 interface PracticeQuestionPageProps {
   currentPage: Page;
@@ -200,11 +221,15 @@ export default function PracticeQuestionPage({
   const [aiExplanation, setAiExplanation] = useState<string | null>(null);
   const savingRef = useRef(false);
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState('');
-  const [questionFlags, setQuestionFlags] = useState<Record<string, QuestionFlagLevel>>({});
+  const [saveError, setSaveError] = useState("");
+  const [questionFlags, setQuestionFlags] = useState<
+    Record<string, QuestionFlagLevel>
+  >({});
   const [flagSaving, setFlagSaving] = useState(false);
-  const [flagError, setFlagError] = useState('');
-  const [randomizeAnswerChoices] = useState(getRandomizeAnswerChoicesPreference);
+  const [flagError, setFlagError] = useState("");
+  const [randomizeAnswerChoices] = useState(
+    getRandomizeAnswerChoicesPreference,
+  );
   const answerChoiceOrders = useMemo(
     () => createAnswerChoiceOrders(questions, randomizeAnswerChoices),
     [questions, randomizeAnswerChoices],
@@ -236,32 +261,41 @@ export default function PracticeQuestionPage({
     questionMapStart + QUESTION_MAP_PAGE_SIZE,
   );
   const label = {
-    completed: translate(language, 'practiceQuestionPage.practiceComplete'),
-    practice: translate(language, 'practiceQuestionPage.practice'),
-    questionTitle: translate(language, 'practiceQuestionPage.practiceQuestion'),
-    question: translate(language, 'practiceQuestionPage.question'),
-    accuracy: translate(language, 'practiceQuestionPage.accuracy'),
-    showExplanation: translate(language, 'practiceQuestionPage.showExplanation'),
-    hideExplanation: translate(language, 'practiceQuestionPage.hideExplanation'),
-    answer: translate(language, 'practiceQuestionPage.answer'),
-    next: translate(language, 'practiceQuestionPage.next'),
-    result: translate(language, 'practiceQuestionPage.seeResults'),
-    previous: translate(language, 'practiceQuestionPage.previous'),
-    correct: translate(language, 'practiceQuestionPage.correct'),
-    incorrect: translate(language, 'practiceQuestionPage.incorrect'),
-    correctAnswer: translate(language, 'practiceQuestionPage.correctAnswer'),
-    questionList: translate(language, 'practiceQuestionPage.questionList'),
-    currentAccuracy: translate(language, 'practiceQuestionPage.currentAccuracy'),
-    doneMessage: translate(language, 'practiceQuestionPage.greatWork'),
-    total: translate(language, 'practiceQuestionPage.questions'),
-    correctShort: translate(language, 'practiceQuestionPage.correct2'),
-    wrongShort: translate(language, 'practiceQuestionPage.incorrect'),
-    backToSubjects: translate(language, 'practiceQuestionPage.backToSubjects'),
-    home: translate(language, 'practiceQuestionPage.home'),
-    flagQuestion: translate(language, 'practiceQuestionPage.flagQuestion'),
-    clearFlag: translate(language, 'practiceQuestionPage.clearFlag'),
-    askAi: translate(language, 'practiceQuestionPage.askAi'),
-    aiThinking: translate(language, 'practiceQuestionPage.aiThinking'),
+    completed: translate(language, "practiceQuestionPage.practiceComplete"),
+    practice: translate(language, "practiceQuestionPage.practice"),
+    questionTitle: translate(language, "practiceQuestionPage.practiceQuestion"),
+    question: translate(language, "practiceQuestionPage.question"),
+    accuracy: translate(language, "practiceQuestionPage.accuracy"),
+    showExplanation: translate(
+      language,
+      "practiceQuestionPage.showExplanation",
+    ),
+    hideExplanation: translate(
+      language,
+      "practiceQuestionPage.hideExplanation",
+    ),
+    answer: translate(language, "practiceQuestionPage.answer"),
+    next: translate(language, "practiceQuestionPage.next"),
+    result: translate(language, "practiceQuestionPage.seeResults"),
+    previous: translate(language, "practiceQuestionPage.previous"),
+    correct: translate(language, "practiceQuestionPage.correct"),
+    incorrect: translate(language, "practiceQuestionPage.incorrect"),
+    correctAnswer: translate(language, "practiceQuestionPage.correctAnswer"),
+    questionList: translate(language, "practiceQuestionPage.questionList"),
+    currentAccuracy: translate(
+      language,
+      "practiceQuestionPage.currentAccuracy",
+    ),
+    doneMessage: translate(language, "practiceQuestionPage.greatWork"),
+    total: translate(language, "practiceQuestionPage.questions"),
+    correctShort: translate(language, "practiceQuestionPage.correct2"),
+    wrongShort: translate(language, "practiceQuestionPage.incorrect"),
+    backToSubjects: translate(language, "practiceQuestionPage.backToSubjects"),
+    home: translate(language, "practiceQuestionPage.home"),
+    flagQuestion: translate(language, "practiceQuestionPage.flagQuestion"),
+    clearFlag: translate(language, "practiceQuestionPage.clearFlag"),
+    askAi: translate(language, "practiceQuestionPage.askAi"),
+    aiThinking: translate(language, "practiceQuestionPage.aiThinking"),
   };
 
   useEffect(() => {
@@ -271,18 +305,26 @@ export default function PracticeQuestionPage({
   useEffect(() => {
     if (!user?.id) return;
     let cancelled = false;
-    loadQuestionFlags(user.id).then(flags => {
-      if (!cancelled) {
-        setQuestionFlags(Object.fromEntries(flags.map(flag => [flag.question_id, flag.level])));
-      }
-    }).catch(error => {
-      if (!cancelled) setFlagError(practiceErrorMessage(error, 'Unable to load question flags.'));
-    });
-    return () => { cancelled = true; };
+    loadQuestionFlags(user.id)
+      .then((flags) => {
+        if (!cancelled) {
+          setQuestionFlags(
+            Object.fromEntries(
+              flags.map((flag) => [flag.question_id, flag.level]),
+            ),
+          );
+        }
+      })
+      .catch((error) => {
+        if (!cancelled)
+          setFlagError(
+            practiceErrorMessage(error, "Unable to load question flags."),
+          );
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id]);
-  
-
-  
 
   async function handleAnswer(choiceId: string) {
     if (answered || savingRef.current || !question) return;
@@ -322,23 +364,25 @@ export default function PracticeQuestionPage({
   async function handleAIExplanation() {
     setIsLoadingAI(true);
     try {
-      const selectedIndex = choices.findIndex(c => c.id === selectedChoiceId);
-      const correctIndex = choices.findIndex(c => c.is_correct);
-      
-      const optionTexts = choices.map(c => c.choice_text);
+      const selectedIndex = choices.findIndex((c) => c.id === selectedChoiceId);
+      const correctIndex = choices.findIndex((c) => c.is_correct);
+
+      const optionTexts = choices.map((c) => c.choice_text);
       let images;
       try {
         const imageUrls = await Promise.all([
           getQuestionImageUrl(question),
-          ...choices.map(choice => getAnswerChoiceImageUrl(question, choice)),
+          ...choices.map((choice) => getAnswerChoiceImageUrl(question, choice)),
         ]);
         images = await loadAiImageInputs(imageUrls);
       } catch (imageError) {
-        console.error('Unable to prepare question image for AI:', imageError);
-        setAiExplanation(translate(language, 'practiceQuestionPage.aiImageFailed'));
+        console.error("Unable to prepare question image for AI:", imageError);
+        setAiExplanation(
+          translate(language, "practiceQuestionPage.aiImageFailed"),
+        );
         return;
       }
-      
+
       const reply = await getQuestionExplanation(
         question.question_text,
         optionTexts,
@@ -351,8 +395,10 @@ export default function PracticeQuestionPage({
 
       setAiExplanation(reply);
     } catch (err) {
-      console.error('AI explanation error:', err);
-      setAiExplanation(translate(language, 'practiceQuestionPage.aiExplanationFailed'));
+      console.error("AI explanation error:", err);
+      setAiExplanation(
+        translate(language, "practiceQuestionPage.aiExplanationFailed"),
+      );
     } finally {
       setIsLoadingAI(false);
     }
@@ -362,17 +408,19 @@ export default function PracticeQuestionPage({
     if (!user || !question || flagSaving) return;
     const nextLevel = questionFlags[question.id] === level ? null : level;
     setFlagSaving(true);
-    setFlagError('');
+    setFlagError("");
     try {
       await setQuestionFlag(user.id, question.id, nextLevel);
-      setQuestionFlags(current => {
+      setQuestionFlags((current) => {
         const next = { ...current };
         if (nextLevel) next[question.id] = nextLevel;
         else delete next[question.id];
         return next;
       });
     } catch (error) {
-      setFlagError(practiceErrorMessage(error, 'Unable to save the question flag.'));
+      setFlagError(
+        practiceErrorMessage(error, "Unable to save the question flag."),
+      );
     } finally {
       setFlagSaving(false);
     }
@@ -499,10 +547,36 @@ export default function PracticeQuestionPage({
     answered && choices.find((c) => c.id === selectedChoiceId)?.is_correct;
 
   return (
-    <Layout currentPage={currentPage} onNavigate={onNavigate} title={label.questionTitle} subtitle={label.practice}>
-      {saveError && <p role="alert" className="max-w-5xl mx-auto mb-4 p-3 rounded-xl bg-red-50 text-red-600">{translateMessage(language, saveError)}</p>}
-      {flagError && <p role="alert" className="max-w-5xl mx-auto mb-4 p-3 rounded-xl bg-red-50 text-red-600">{translateMessage(language, flagError)}</p>}
-      {saving && <p role="status" className="max-w-5xl mx-auto mb-2 text-sm text-gray-500">{translate(language, 'ui.savingAnswer')}</p>}
+    <Layout
+      currentPage={currentPage}
+      onNavigate={onNavigate}
+      title={label.questionTitle}
+      subtitle={label.practice}
+    >
+      {saveError && (
+        <p
+          role="alert"
+          className="max-w-5xl mx-auto mb-4 p-3 rounded-xl bg-red-50 text-red-600"
+        >
+          {translateMessage(language, saveError)}
+        </p>
+      )}
+      {flagError && (
+        <p
+          role="alert"
+          className="max-w-5xl mx-auto mb-4 p-3 rounded-xl bg-red-50 text-red-600"
+        >
+          {translateMessage(language, flagError)}
+        </p>
+      )}
+      {saving && (
+        <p
+          role="status"
+          className="max-w-5xl mx-auto mb-2 text-sm text-gray-500"
+        >
+          {translate(language, "ui.savingAnswer")}
+        </p>
+      )}
 
       <div className="max-w-6xl mx-auto">
         {/* Progress bar */}
@@ -527,15 +601,30 @@ export default function PracticeQuestionPage({
                 </span>
               </span>
               {user && (
-                <div className="flex items-center gap-1" aria-label={label.flagQuestion}>
-                  {QUESTION_FLAG_LEVELS.map(level => {
+                <div
+                  className="flex items-center gap-1"
+                  aria-label={label.flagQuestion}
+                >
+                  {QUESTION_FLAG_LEVELS.map((level) => {
                     const active = questionFlags[question.id] === level;
                     const colors = {
-                      green: active ? 'bg-emerald-500 text-white border-emerald-500' : 'text-emerald-600 border-emerald-200 hover:bg-emerald-50',
-                      orange: active ? 'bg-orange-500 text-white border-orange-500' : 'text-orange-600 border-orange-200 hover:bg-orange-50',
-                      red: active ? 'bg-red-500 text-white border-red-500' : 'text-red-600 border-red-200 hover:bg-red-50',
+                      green: active
+                        ? "bg-emerald-500 text-white border-emerald-500"
+                        : "text-emerald-600 border-emerald-200 hover:bg-emerald-50",
+                      orange: active
+                        ? "bg-orange-500 text-white border-orange-500"
+                        : "text-orange-600 border-orange-200 hover:bg-orange-50",
+                      red: active
+                        ? "bg-red-500 text-white border-red-500"
+                        : "text-red-600 border-red-200 hover:bg-red-50",
                     } as const;
-                    const levelLabel = translate(language, `practiceQuestionPage.flag${level[0].toUpperCase()}${level.slice(1)}` as 'practiceQuestionPage.flagGreen' | 'practiceQuestionPage.flagOrange' | 'practiceQuestionPage.flagRed');
+                    const levelLabel = translate(
+                      language,
+                      `practiceQuestionPage.flag${level[0].toUpperCase()}${level.slice(1)}` as
+                        | "practiceQuestionPage.flagGreen"
+                        | "practiceQuestionPage.flagOrange"
+                        | "practiceQuestionPage.flagRed",
+                    );
                     return (
                       <button
                         key={level}
@@ -543,11 +632,21 @@ export default function PracticeQuestionPage({
                         onClick={() => void handleQuestionFlag(level)}
                         disabled={flagSaving}
                         aria-pressed={active}
-                        aria-label={active ? `${levelLabel}: ${label.clearFlag}` : levelLabel}
-                        title={active ? `${levelLabel}: ${label.clearFlag}` : levelLabel}
+                        aria-label={
+                          active
+                            ? `${levelLabel}: ${label.clearFlag}`
+                            : levelLabel
+                        }
+                        title={
+                          active
+                            ? `${levelLabel}: ${label.clearFlag}`
+                            : levelLabel
+                        }
                         className={`flex h-8 w-8 items-center justify-center rounded-lg border transition disabled:opacity-50 ${colors[level]}`}
                       >
-                        <Flag className={`h-4 w-4 ${active ? 'fill-current' : ''}`} />
+                        <Flag
+                          className={`h-4 w-4 ${active ? "fill-current" : ""}`}
+                        />
                       </button>
                     );
                   })}
@@ -797,7 +896,8 @@ export default function PracticeQuestionPage({
                     const questionIndex = questionMapStart + offset;
                     const answer = answersByQuestionId.get(mappedQuestion.id);
                     const mappedFlag = questionFlags[mappedQuestion.id];
-                    let stateClass = 'bg-white text-gray-500 border-gray-100 hover:border-blue-300 hover:text-blue-600 hover:-translate-y-0.5';
+                    let stateClass =
+                      "bg-white text-gray-500 border-gray-100 hover:border-blue-300 hover:text-blue-600 hover:-translate-y-0.5";
                     if (questionIndex === currentIndex) {
                       stateClass =
                         "bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-200 ring-2 ring-blue-100";
@@ -822,9 +922,15 @@ export default function PracticeQuestionPage({
                       >
                         {questionIndex + 1}
                         {mappedFlag && (
-                          <span className={`absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full ${
-                            mappedFlag === 'green' ? 'bg-emerald-500' : mappedFlag === 'orange' ? 'bg-orange-500' : 'bg-red-500'
-                          }`} />
+                          <span
+                            className={`absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full ${
+                              mappedFlag === "green"
+                                ? "bg-emerald-500"
+                                : mappedFlag === "orange"
+                                  ? "bg-orange-500"
+                                  : "bg-red-500"
+                            }`}
+                          />
                         )}
                       </button>
                     );
