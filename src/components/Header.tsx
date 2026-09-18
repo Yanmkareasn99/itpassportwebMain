@@ -1,6 +1,6 @@
 import { translate } from '../i18n';
 import { useEffect, useRef, useState } from 'react';
-import { Bell, Coins, LogOut, ShieldCheck, UserRound } from 'lucide-react';
+import { Bell, Coins, LogOut, UserRound } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getCachedPointBalance, getPointBalance } from '../lib/points';
@@ -34,7 +34,7 @@ function readSavedNotificationIds(storageKey: string) {
 }
 
 export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
-  const { profile, isAdmin, signOut } = useAuth();
+  const { profile, signOut } = useAuth();
   const { language } = useLanguage();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -339,20 +339,6 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
                 </div>
 
                 <div className="p-2">
-                  {isAdmin && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsProfileMenuOpen(false);
-                        onNavigate('admin');
-                      }}
-                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50 dark:text-slate-200 dark:hover:bg-slate-800"
-                    >
-                      <ShieldCheck className="h-4 w-4" />
-                      <span>{translate(language, 'adminPage.admin')}</span>
-                    </button>
-                  )}
-
                   <button
                     type="button"
                     onClick={() => {
