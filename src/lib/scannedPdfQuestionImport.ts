@@ -1,9 +1,7 @@
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import { extractAnswerMap, extractPages } from './pdfAnswerText';
-import {
-  type PdfImportQuestion,
-  type PdfImportResult,
-} from './pdfQuestionImport';
+import type { PdfImportQuestion, PdfImportResult } from './pdfQuestionImport';
+import { ensureDiagramChoiceLabels, shouldKeepQuestionImage } from './pdfQuestionImages';
 
 export interface OcrLine {
   text: string;
@@ -24,6 +22,69 @@ export interface QuestionStart {
 }
 
 const ANSWER_LABELS = 'アイウエ';
+
+function cleanOcrLine(value: string) {
+  return value.normalize('NFKC').replace(/[ \t]+/g, ' ').trim();
+}
+
+export function parseScannedQuestionText(rawText: string, questionNumber: number) {
+  const questionParts: string[] = [];
+  const choices: PdfImportQuestion['choices'] = [];
+  let currentChoice: { label: string; parts: string[] } | null = null;
+  const choiceMarker = /(?:^|\s)([アイウエ])(?=\s|[^\p{Script=Katakana}])/gu;
+
+  const commitChoice = () => {
+    if (!currentChoice) return;
+    const text = currentChoice.parts.join(' ').replace(/\s+/g, ' ').trim();
+    if (text && !choices.some(choice => choice.label === currentChoice?.label)) {
+      choices.push({
+        label: currentChoice.label,
+        text,
+        sortOrder: choices.length + 1,
+      });
+    }
+    currentChoice = null;
+  };
+
+  for (const rawLine of rawText.split(/\r?\n/)) {
+    let line = cleanOcrLine(rawLine);
+    if (!line) continue;
+    if (/^[－—-]?\s*\d+\s*[－—-]?$/.test(line)) continue;
+    if (line.includes('無断転載を禁ず') || line.includes('試験問題に記載されている会社名')) continue;
+    line = line.replace(new RegExp(`^[問間]\\s*${questionNumber}(?:\\s*[.:：、])?\\s*`), '');
+    if (!line) continue;
+
+    const matches = [...line.matchAll(choiceMarker)];
+    if (!matches.length) {
+      if (currentChoice) currentChoice.parts.push(line);
+      else questionParts.push(line);
+      continue;
+    }
+
+    const beforeFirst = line.slice(0, matches[0].index).trim();
+    if (beforeFirst) {
+      if (currentChoice) currentChoice.parts.push(beforeFirst);
+      else questionParts.push(beforeFirst);
+    }
+
+    for (let index = 0; index < matches.length; index += 1) {
+      commitChoice();
+      const match = matches[index];
+      const contentStart = (match.index ?? 0) + match[0].length;
+      const contentEnd = matches[index + 1]?.index ?? line.length;
+      currentChoice = {
+        label: match[1],
+        parts: [line.slice(contentStart, contentEnd).trim()],
+      };
+    }
+  }
+  commitChoice();
+
+  return {
+    questionText: questionParts.join('\n').replace(/\n{3,}/g, '\n\n').trim(),
+    choices,
+  };
+}
 
 function createCanvas(width: number, height: number) {
   const canvas = document.createElement('canvas');
@@ -98,6 +159,44 @@ function trimWhitespace(source: HTMLCanvasElement) {
   const cropRight = Math.min(source.width, right + margin);
   const cropBottom = Math.min(source.height, bottom + margin);
   return cropCanvas(source, cropLeft, cropTop, cropRight - cropLeft, cropBottom - cropTop);
+}
+
+function hasDiagramLikeLines(canvas: HTMLCanvasElement) {
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  if (!context) return false;
+  const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+  const isDark = (x: number, y: number) => {
+    const offset = (y * canvas.width + x) * 4;
+    return pixels[offset] < 175 && pixels[offset + 1] < 175 && pixels[offset + 2] < 175;
+  };
+  const minimumHorizontal = Math.max(80, Math.floor(canvas.width * 0.14));
+  const minimumVertical = Math.max(80, Math.floor(canvas.height * 0.12));
+  let longRules = 0;
+
+  for (let y = 0; y < canvas.height; y += 3) {
+    let run = 0;
+    for (let x = 0; x < canvas.width; x += 1) {
+      run = isDark(x, y) ? run + 1 : 0;
+      if (run >= minimumHorizontal) {
+        longRules += 1;
+        break;
+      }
+    }
+    if (longRules >= 2) return true;
+  }
+
+  for (let x = 0; x < canvas.width; x += 3) {
+    let run = 0;
+    for (let y = 0; y < canvas.height; y += 1) {
+      run = isDark(x, y) ? run + 1 : 0;
+      if (run >= minimumVertical) {
+        longRules += 1;
+        break;
+      }
+    }
+    if (longRules >= 2) return true;
+  }
+  return false;
 }
 
 function parseTsv(tsv: string | null | undefined, imageHeight: number): OcrLine[] {
@@ -633,6 +732,7 @@ async function renderQuestionCrop(
   page: HTMLCanvasElement,
   start: QuestionStart,
   next: QuestionStart | undefined,
+  worker: Awaited<ReturnType<(typeof import('tesseract.js'))['createWorker']>>,
 ) {
   const topRatio = Math.max(0, start.topRatio - 0.025);
   const bottomRatio = next?.pageNumber === start.pageNumber
@@ -642,6 +742,8 @@ async function renderQuestionCrop(
   const bottom = Math.min(page.height, Math.ceil(page.height * bottomRatio));
   const cropped = cropCanvas(page, 0, top, page.width, bottom - top);
   const trimmed = trimWhitespace(cropped);
+  const hasDiagram = hasDiagramLikeLines(trimmed);
+  const ocrResult = await worker.recognize(trimmed);
   const blob = await new Promise<Blob | null>(resolve => trimmed.toBlob(resolve, 'image/webp', 0.82));
   const imageDataUrl = blob
     ? URL.createObjectURL(blob)
@@ -653,7 +755,13 @@ async function renderQuestionCrop(
     trimmed.width = 1;
     trimmed.height = 1;
   }
-  return { imageDataUrl, imageSizeBytes };
+  return {
+    imageDataUrl,
+    imageSizeBytes,
+    ocrText: ocrResult.data.text,
+    hasDiagram,
+    ocrConfidence: ocrResult.data.confidence,
+  };
 }
 
 export async function processScannedExamPdfs(
@@ -746,31 +854,39 @@ export async function processScannedExamPdfs(
           }
           // Several questions commonly share one PDF page. Render that page
           // once and reuse it for every crop instead of decoding it repeatedly.
-          renderedQuestionPage = await renderPage(questionDocument, start.pageNumber, 1.65);
+          renderedQuestionPage = await renderPage(questionDocument, start.pageNumber, 2.4);
           renderedQuestionPageNumber = start.pageNumber;
         }
-        onProgress?.(`Preparing question ${index + 1} of ${starts.length}…`);
+        onProgress?.(`OCR: reading question ${index + 1} of ${starts.length}…`);
         const correctChoice = answerResult.answers.get(start.number) ?? '';
-        const image = await renderQuestionCrop(renderedQuestionPage, start, next);
+        const {
+          ocrText,
+          hasDiagram,
+          ocrConfidence,
+          ...image
+        } = await renderQuestionCrop(renderedQuestionPage, start, next, worker);
+        const parsed = parseScannedQuestionText(ocrText, start.number);
+        const keepImage = hasDiagram
+          || ocrConfidence < 70
+          || shouldKeepQuestionImage(parsed.questionText, parsed.choices);
+        const choices = keepImage ? ensureDiagramChoiceLabels(parsed.choices) : parsed.choices;
+        const warnings = [...start.warnings];
+        if (!parsed.questionText) warnings.push('Question text was not detected. Enter it below.');
+        if (parsed.choices.length < 2) warnings.push('Fewer than two answer choices were detected. Add or edit them below.');
+        if (!correctChoice) warnings.push('Correct answer not detected. Select it below.');
         questions.push({
           sourceKey: `${examKey}:Q${start.number}`,
           number: start.number,
-          questionText: `${examKey} 問${start.number}`,
+          questionText: parsed.questionText,
           ...image,
+          keepImage,
           sourcePages: [start.pageNumber],
-          choices: [...ANSWER_LABELS].map((label, choiceIndex) => ({
-            label,
-            text: label,
-            sortOrder: choiceIndex + 1,
-          })),
+          choices,
           correctChoice,
           explanation: '',
           difficulty: 2,
           points: 1,
-          warnings: [
-            ...start.warnings,
-            ...(correctChoice ? [] : ['Correct answer not detected. Select it below.']),
-          ],
+          warnings,
         });
       }
     } finally {

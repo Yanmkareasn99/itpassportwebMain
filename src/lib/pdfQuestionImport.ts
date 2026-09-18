@@ -6,6 +6,7 @@ import {
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { extractAnswerMap, extractPages, type PageText } from './pdfAnswerText';
 import type { QuestionImportExam } from './questionSubject';
+import { ensureDiagramChoiceLabels, shouldKeepQuestionImage } from './pdfQuestionImages';
 
 GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -23,6 +24,7 @@ export interface PdfImportQuestion {
   questionText: string;
   imageDataUrl: string;
   imageSizeBytes?: number;
+  keepImage: boolean;
   sourcePages: number[];
   choices: PdfImportChoice[];
   correctChoice: string;
@@ -285,13 +287,15 @@ export async function processExamPdfs(
       if (choices.length < 2) warnings.push('Fewer than two choices were detected. Add or edit choices below.');
 
       const image = await renderQuestionImage(questionDocument, pages.map(page => page.pageNumber));
+      const keepImage = shouldKeepQuestionImage(questionText, choices);
       questions.push({
         sourceKey: `${examKey}:Q${start.number}`,
         number: start.number,
         questionText: questionText || `${examKey} 問${start.number}`,
         ...image,
+        keepImage,
         sourcePages: pages.map(page => page.pageNumber),
-        choices,
+        choices: keepImage ? ensureDiagramChoiceLabels(choices) : choices,
         correctChoice,
         explanation: '',
         difficulty: 2,

@@ -6,8 +6,10 @@ import {
   isQuestionRangeHeading,
   mergeExpectedAnswerMaps,
   parseAnswerGridRow,
+  parseScannedQuestionText,
   selectAnswerTableLines,
 } from '../../src/lib/scannedPdfQuestionImport';
+import { ensureDiagramChoiceLabels, shouldKeepQuestionImage } from '../../src/lib/pdfQuestionImages';
 
 function line(text: string, topRatio = 0.1) {
   return { text, topRatio, bottomRatio: topRatio + 0.02 };
@@ -321,5 +323,58 @@ describe('scanned PDF answer reconciliation', () => {
     const result = mergeExpectedAnswerMaps([1, 2], new Map(), new Map([[1, 'ア'], [2, 'イ']]));
     expect(result.answerCount).toBe(2);
     expect(result.missingNumbers).toEqual([]);
+  });
+});
+
+describe('scanned question text extraction', () => {
+  it('separates OCR question text and choices, including two choices on one line', () => {
+    const parsed = parseScannedQuestionText(`問88 M社で計画している特売コーナでは，利益を最大化する必要がある。
+表2 候補商品の数量と利益
+A 90 1 60
+B 50 2 40
+ア商品Aと商品B    イ商品Aと商品D
+ウ商品Bと商品C    エ商品Cと商品D`, 88);
+
+    expect(parsed.questionText).toContain('利益を最大化する必要がある');
+    expect(parsed.questionText).toContain('A 90 1 60');
+    expect(parsed.choices).toEqual([
+      { label: 'ア', text: '商品Aと商品B', sortOrder: 1 },
+      { label: 'イ', text: '商品Aと商品D', sortOrder: 2 },
+      { label: 'ウ', text: '商品Bと商品C', sortOrder: 3 },
+      { label: 'エ', text: '商品Cと商品D', sortOrder: 4 },
+    ]);
+  });
+
+  it('keeps wrapped choice text with the preceding choice', () => {
+    const parsed = parseScannedQuestionText(`問1 次の記述のうち，適切なものはどれか。
+ア 最初の選択肢の
+続きの文章
+イ 二番目の選択肢`, 1);
+
+    expect(parsed.questionText).toBe('次の記述のうち,適切なものはどれか。');
+    expect(parsed.choices.map(choice => choice.text)).toEqual([
+      '最初の選択肢の 続きの文章',
+      '二番目の選択肢',
+    ]);
+  });
+
+  it('keeps diagrams while leaving complete text-only questions image-free', () => {
+    const textChoices = [
+      { label: 'ア', text: '最初の説明', sortOrder: 1 },
+      { label: 'イ', text: '二番目の説明', sortOrder: 2 },
+    ];
+
+    expect(shouldKeepQuestionImage('次の記述のうち適切なものはどれか。', textChoices)).toBe(false);
+    expect(shouldKeepQuestionImage('表2を参照して答えよ。', textChoices)).toBe(true);
+    expect(shouldKeepQuestionImage('正しい組合せを選べ。', [{ label: 'ア', text: 'ア', sortOrder: 1 }])).toBe(true);
+  });
+
+  it('provides selectable labels when diagram choices have no readable text', () => {
+    expect(ensureDiagramChoiceLabels([{ label: 'イ', text: 'OCR text', sortOrder: 1 }])).toEqual([
+      { label: 'ア', text: 'ア', sortOrder: 1 },
+      { label: 'イ', text: 'OCR text', sortOrder: 2 },
+      { label: 'ウ', text: 'ウ', sortOrder: 3 },
+      { label: 'エ', text: 'エ', sortOrder: 4 },
+    ]);
   });
 });

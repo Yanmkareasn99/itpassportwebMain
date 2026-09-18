@@ -186,7 +186,7 @@ export const vi = {
   "adminPage.pdfProcess": "Đọc PDF",
   "adminPage.pdfProcessing": "Đang đọc PDF…",
   "adminPage.pdfProcessingFailed": "Không thể xử lý các tệp PDF.",
-  "adminPage.pdfLocalProcessing": "PDF chỉ được xử lý trong trình duyệt cho đến khi bạn nhập dữ liệu.",
+  "adminPage.pdfLocalProcessing": "Bạn có thể chuyển sang trang khác khi OCR đang chạy. Hãy giữ tab trình duyệt này mở và không tải lại trang.",
   "adminPage.pdfAnswersNotDetected": "Đã nhận diện câu hỏi nhưng chưa đọc được đáp án. Hãy chọn đáp án đúng khi xem lại.",
   "adminPage.pdfReviewCount": "Xem lại {count} câu hỏi đã nhận diện",
   "adminPage.pdfReviewProblems": "Còn {count} câu hỏi cần kiểm tra",
@@ -196,6 +196,7 @@ export const vi = {
   "adminPage.pdfImportProgress": "Đang nhập {current}/{total}…",
   "adminPage.pdfImportComplete": "Đã nhập thành công {count} câu hỏi.",
   "adminPage.pdfImportFailed": "Nhập câu hỏi PDF thất bại.",
+  "adminPage.pdfImportFailedWithReason": "Nhập câu hỏi PDF thất bại: {reason}",
   "adminPage.pdfFixReviewErrors": "Hãy sửa các mục được đánh dấu trước khi nhập.",
   "adminPage.pdfRequiresSupabase": "Tính năng nhập PDF yêu cầu bật Supabase.",
   "adminPage.pdfMigrationRequired": "Thiếu bảng nhập PDF. Hãy chạy migration 20260903010000_add_single_csv_question_import.sql trên Supabase trước.",
@@ -682,4 +683,20 @@ export const vi = {
   , "settingsPage.deleteAccountAction": "Xóa vĩnh viễn tài khoản của tôi"
   ,"aiChatPage.error": "Đã xảy ra lỗi. Vui lòng thử lại.",
   
+  "practiceQuestionPage.flagQuestion": "Gắn cờ câu hỏi này"
+  , "practiceQuestionPage.clearFlag": "nhấn lại để bỏ cờ"
+  , "practiceQuestionPage.flagGreen": "Cờ xanh"
+  , "practiceQuestionPage.flagOrange": "Cờ cam"
+  , "practiceQuestionPage.flagRed": "Cờ đỏ"
+  , "practiceListPage.flaggedQuestions": "Câu hỏi đã gắn cờ"
+  , "practiceListPage.flaggedCount": "{count} câu hỏi đã gắn cờ"
+  , "practiceListPage.noFlaggedQuestions": "Không có câu hỏi nào được lưu với cờ này."
+  , "practiceListPage.flaggedLoadFailed": "Không thể tải câu hỏi đã gắn cờ."
+  , "practiceQuestionPage.askAi": "Yêu cầu AI giải thích"
+  , "practiceQuestionPage.aiThinking": "AI đang đọc câu hỏi..."
+  , "practiceQuestionPage.aiImageFailed": "Không thể đọc hình ảnh câu hỏi. Vui lòng tải lại trang và thử lại."
+  , "practiceQuestionPage.aiExplanationFailed": "Không thể nhận lời giải thích từ AI. Vui lòng thử lại."
+  , "adminPage.pdfHybridImport": "Giữ {count} hình sơ đồ ({size} MB)"
+  , "adminPage.pdfKeepDiagram": "Giữ hình ảnh câu hỏi này"
+  , "adminPage.pdfKeepDiagramHelp": "Bật cho sơ đồ, biểu đồ, bảng, công thức hoặc lựa chọn trả lời bằng hình ảnh. Câu hỏi chỉ có văn bản sẽ không tải ảnh xem trước lên."
 } as const;

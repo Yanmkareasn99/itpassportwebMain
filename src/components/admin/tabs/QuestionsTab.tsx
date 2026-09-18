@@ -10,6 +10,7 @@ import type { AnswerChoice, Question, Subject } from '../../../types';
 import { emptyQuestionForm, type ChoiceForm, type CsvImportData, type QuestionForm } from '../forms';
 import { resolveImportedSubjectId } from '../../../lib/questionSubject';
 import { findDuplicateQuestionKeys } from '../../../lib/questionDuplicates';
+import { getPdfImportJobSnapshot } from '../../../lib/pdfImportJob';
 
 const QUESTION_FETCH_PAGE_SIZE = 1000;
 const QUESTION_LIST_PAGE_SIZE = 50;
@@ -73,7 +74,9 @@ export default function QuestionsTab() {
   const [error, setError] = useState('');
   const [importData, setImportData] = useState<CsvImportData | null>(null);
   const [importing, setImporting] = useState(false);
-  const [showPdfImporter, setShowPdfImporter] = useState(false);
+  const [showPdfImporter, setShowPdfImporter] = useState(
+    () => getPdfImportJobSnapshot().status !== 'idle',
+  );
   const questionCsvInput = useRef<HTMLInputElement>(null);
   const choiceCsvInput = useRef<HTMLInputElement>(null);
 
