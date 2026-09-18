@@ -77,6 +77,8 @@ const KNOWN_ADDITIONAL_SUBJECTS = [
     id: 'aa000000-0000-0000-0000-000000000001',
     name: '基本情報技術者 科目A',
     color: '#3B82F6',
+    
+    
   },
 ];
 
@@ -136,10 +138,10 @@ function CategoryCard({
       } rounded-2xl p-4 sm:p-5 xl:p-6 text-left transition-all group disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 hover:shadow-lg hover:border-slate-300 dark:hover:border-slate-500 dark:hover:bg-slate-900/60`}
     >
       <div className="flex items-center gap-2.5 mb-3">
-        <div className={`w-8 h-8 rounded-full ${category.dotColor} flex items-center justify-center`}>
+        <div className={`w-8 h-8 shrink-0 rounded-full ${category.dotColor} flex items-center justify-center`}>
           <Icon className="w-4 h-4 text-white" />
         </div>
-        <span className={`font-bold text-base ${category.labelColor}`}>
+        <span className={`font-bold text-base ${category.labelColor} min-w-0 truncate`}>
           {categoryLabel}
         </span>
       </div>
@@ -189,10 +191,10 @@ function ReviewCard({
       className="w-full min-w-0 bg-purple-50 border border-slate-200 shadow-sm rounded-2xl p-4 sm:p-5 xl:p-6 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg hover:border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-slate-900/40 dark:border-slate-600/80 dark:shadow-slate-900/30 dark:hover:border-slate-500 dark:hover:bg-slate-900/60"
     >
       <div className="flex items-center gap-2.5 mb-3">
-        <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center">
+        <div className="w-8 h-8 shrink-0 rounded-full bg-purple-500 flex items-center justify-center">
           <RefreshCw className="w-4 h-4 text-white" />
         </div>
-        <span className="font-bold text-base text-purple-600 dark:text-purple-300">
+        <span className="font-bold text-base text-purple-600 dark:text-purple-300 min-w-0 truncate">
           {translate(language, 'practiceListPage.reviewMistakes')}
         </span>
       </div>
