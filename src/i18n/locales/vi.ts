@@ -192,7 +192,7 @@ export const vi = {
   "adminPage.pdfReviewProblems": "Còn {count} câu hỏi cần kiểm tra",
   "adminPage.pdfReadyToImport": "Tất cả câu hỏi đã sẵn sàng để nhập",
   "adminPage.pdfMarkCorrect": "Đánh dấu là đáp án đúng",
-  "adminPage.pdfImportButton": "Nhập/cập nhật tất cả",
+  "adminPage.pdfImportButton": "Tải câu hỏi và đáp án lên",
   "adminPage.pdfDownloadCsv": "Tải các tệp CSV",
   "adminPage.pdfCsvDownloaded": "Đã tải {count} câu hỏi và đáp án dưới dạng hai tệp CSV.",
   "adminPage.pdfCsvDownloadFailed": "Không thể tạo CSV câu hỏi.",

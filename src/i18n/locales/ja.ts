@@ -192,7 +192,7 @@ export const ja = {
   "adminPage.pdfReviewProblems": "{count}問の確認が必要です",
   "adminPage.pdfReadyToImport": "すべての問題を取り込めます",
   "adminPage.pdfMarkCorrect": "正解として選択",
-  "adminPage.pdfImportButton": "すべて取込み・更新",
+  "adminPage.pdfImportButton": "問題と解答をアップロード",
   "adminPage.pdfDownloadCsv": "CSVファイルをダウンロード",
   "adminPage.pdfCsvDownloaded": "{count}問と解答を2つのCSVファイルとしてダウンロードしました。",
   "adminPage.pdfCsvDownloadFailed": "問題CSVを作成できませんでした。",

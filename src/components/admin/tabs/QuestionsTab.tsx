@@ -656,6 +656,7 @@ export default function QuestionsTab() {
         <PdfQuestionImporter
           subjects={subjects}
           onClose={() => setShowPdfImporter(false)}
+          onImported={load}
         />
       )}
 
