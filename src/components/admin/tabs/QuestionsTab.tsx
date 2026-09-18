@@ -425,6 +425,7 @@ export default function QuestionsTab() {
         id: choice.id,
         question_id: choice.question_id,
         choice_text: choice.choice_text,
+        image_url: choice.image_url || null,
         is_correct: choice.is_correct.toLowerCase() === 'true',
         sort_order: Number(choice.sort_order),
       }));
