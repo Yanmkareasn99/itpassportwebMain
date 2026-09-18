@@ -290,7 +290,14 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={(e) => {
-                  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                  if (
+                    e.key === 'Enter'
+                    && !e.shiftKey
+                    && !e.ctrlKey
+                    && !e.metaKey
+                    && !e.altKey
+                    && !e.nativeEvent.isComposing
+                  ) {
                     e.preventDefault();
                     void sendMessage();
                   }
@@ -299,15 +306,15 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
                   language,
                   'aiChatPage.exampleExplainThisQuestionCreateAStudyPlan'
                 )}
-                className="flex-1 resize-none min-h-[56px] max-h-40 px-4 py-3 rounded-2xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-gray-700 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                rows={2}
+                className="flex-1 resize-none min-h-12 max-h-40 px-4 py-3 rounded-2xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-gray-700 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                rows={1}
               />
 
               <button
                 type="submit"
                 disabled={sending || !prompt.trim()}
                 aria-label={translate(language, 'aiChatPage.send')}
-                className="inline-flex items-center justify-center gap-2 shrink-0 w-12 h-12 sm:w-auto sm:h-auto px-0 sm:px-5 py-0 sm:py-3 rounded-2xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                className="inline-flex h-12 w-12 shrink-0 items-center justify-center gap-2 px-0 sm:w-auto sm:px-5 rounded-2xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <Send className="w-4 h-4" />
                 <span className="hidden sm:inline">
