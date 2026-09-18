@@ -19,6 +19,10 @@ import type {
   PdfImportQuestion,
 } from '../../lib/pdfQuestionImport';
 import type { Subject } from '../../types';
+import {
+  resolveImportedSubjectId,
+  type QuestionImportExam,
+} from '../../lib/questionSubject';
 
 interface PdfQuestionImporterProps {
   subjects: Subject[];
@@ -26,7 +30,10 @@ interface PdfQuestionImporterProps {
   onImported: () => Promise<void>;
 }
 
-function questionProblem(question: PdfImportQuestion) {
+type ReviewPdfImportQuestion = PdfImportQuestion & { subjectId: string };
+
+function questionProblem(question: ReviewPdfImportQuestion) {
+  if (!question.subjectId) return 'subject';
   if (!question.questionText.trim()) return 'text';
   if (question.choices.length < 2) return 'choices';
   if (!question.correctChoice || !question.choices.some(choice => choice.label === question.correctChoice)) {
@@ -60,12 +67,13 @@ export default function PdfQuestionImporter({
   onImported,
 }: PdfQuestionImporterProps) {
   const { language } = useLanguage();
+  const [importExam, setImportExam] = useState<QuestionImportExam>('it-passport');
   const [subjectId, setSubjectId] = useState(subjects[0]?.id ?? '');
   const [examKey, setExamKey] = useState('');
   const [examDate, setExamDate] = useState('');
   const [questionFile, setQuestionFile] = useState<File | null>(null);
   const [answerFile, setAnswerFile] = useState<File | null>(null);
-  const [questions, setQuestions] = useState<PdfImportQuestion[]>([]);
+  const [questions, setQuestions] = useState<ReviewPdfImportQuestion[]>([]);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [processing, setProcessing] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -81,11 +89,35 @@ export default function PdfQuestionImporter({
     () => questions.reduce((sum, question) => sum + question.imageDataUrl.length * 0.75, 0) / 1024 / 1024,
     [questions],
   );
+  const subjectNames = useMemo(
+    () => new Map(subjects.map(subject => [subject.id, subject.name])),
+    [subjects],
+  );
 
-  function patchQuestion(index: number, patch: Partial<PdfImportQuestion>) {
+  function patchQuestion(index: number, patch: Partial<ReviewPdfImportQuestion>) {
     setQuestions(current => current.map((question, questionIndex) =>
       questionIndex === index ? { ...question, ...patch } : question,
     ));
+  }
+
+  function detectedSubjectId(questionNumber: number, exam = importExam) {
+    const detected = resolveImportedSubjectId(
+      null,
+      questionNumber,
+      subjects.map(subject => subject.id),
+      exam,
+    );
+    return detected ?? (exam === 'it-passport' ? subjectId : '');
+  }
+
+  function changeImportExam(exam: QuestionImportExam) {
+    setImportExam(exam);
+    setQuestions(current => current.map(question => ({
+      ...question,
+      subjectId: detectedSubjectId(question.number, exam),
+    })));
+    setError('');
+    setSuccess('');
   }
 
   function patchChoice(questionIndex: number, choiceIndex: number, patch: Partial<PdfImportChoice>) {
@@ -146,7 +178,10 @@ export default function PdfQuestionImporter({
         examKey.trim(),
         setProgress,
       );
-      setQuestions(result.questions);
+      setQuestions(result.questions.map(question => ({
+        ...question,
+        subjectId: detectedSubjectId(question.number),
+      })));
       setExpandedIndex(result.questions.length ? 0 : null);
       setProgress('');
       if (!result.answerCount) {
@@ -198,7 +233,7 @@ export default function PdfQuestionImporter({
         const { error: importError } = await supabase.from('question_import_staging').insert({
           source_key: question.sourceKey,
           exam_date: examDate,
-          subject_id: subjectId,
+          subject_id: question.subjectId,
           question_number: question.number,
           question_text: question.questionText.trim(),
           question_type: 'multiple_choice',
@@ -250,16 +285,37 @@ export default function PdfQuestionImporter({
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <label className="block text-xs font-semibold text-gray-600">
-          {translate(language, 'adminPage.subject')}
+        <label className="block text-xs font-semibold text-gray-600 md:col-span-2">
+          {translate(language, 'adminPage.pdfExamType')}
           <select
-            value={subjectId}
-            onChange={event => setSubjectId(event.target.value)}
+            value={importExam}
+            onChange={event => changeImportExam(event.target.value as QuestionImportExam)}
             className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
           >
-            {subjects.map(subject => <option key={subject.id} value={subject.id}>{subject.name}</option>)}
+            <option value="it-passport">{translate(language, 'adminPage.pdfExamItPassport')}</option>
+            <option value="fundamental-a">{translate(language, 'adminPage.pdfExamFundamentalA')}</option>
+            <option value="fundamental-b">{translate(language, 'adminPage.pdfExamFundamentalB')}</option>
           </select>
+          <span className="mt-1 block font-normal text-gray-500">
+            {translate(language, importExam === 'it-passport'
+              ? 'adminPage.pdfSubjectDetectionHelp'
+              : importExam === 'fundamental-a'
+                ? 'adminPage.pdfSubjectDetectionFundamentalA'
+                : 'adminPage.pdfSubjectDetectionFundamentalB')}
+          </span>
         </label>
+        {importExam === 'it-passport' && (
+          <label className="block text-xs font-semibold text-gray-600">
+            {translate(language, 'adminPage.pdfSubjectFallback')}
+            <select
+              value={subjectId}
+              onChange={event => setSubjectId(event.target.value)}
+              className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+            >
+              {subjects.map(subject => <option key={subject.id} value={subject.id}>{subject.name}</option>)}
+            </select>
+          </label>
+        )}
         <label className="block text-xs font-semibold text-gray-600">
           {translate(language, 'adminPage.pdfExamKey')}
           <input
@@ -357,7 +413,9 @@ export default function PdfQuestionImporter({
                   ? translate(language, 'adminPage.enterAtLeastTwoChoices')
                   : problem === 'correct'
                     ? translate(language, 'adminPage.selectAtLeastOneCorrectChoice')
-                    : '';
+                    : problem === 'subject'
+                      ? translate(language, 'adminPage.pleaseSelectASubject')
+                      : '';
               return (
                 <div key={question.sourceKey} className={`overflow-hidden rounded-xl border ${problem ? 'border-amber-200' : 'border-gray-200'}`}>
                   <button
@@ -367,6 +425,9 @@ export default function PdfQuestionImporter({
                     {problem
                       ? <XCircle className="h-4 w-4 shrink-0 text-amber-500" />
                       : <CheckCircle className="h-4 w-4 shrink-0 text-emerald-500" />}
+                    <span className="max-w-32 shrink-0 truncate rounded-full bg-violet-100 px-2 py-1 text-[10px] font-semibold text-violet-700">
+                      {subjectNames.get(question.subjectId) ?? translate(language, 'adminPage.subject')}
+                    </span>
                     <span className="w-14 shrink-0 text-sm font-bold text-gray-700">問 {question.number}</span>
                     <span className="min-w-0 flex-1 truncate text-xs text-gray-500">
                       {problemText || `${question.choices.length} ${translate(language, 'adminPage.choices')} · PDF ${question.sourcePages.join(', ')}`}
@@ -376,6 +437,16 @@ export default function PdfQuestionImporter({
 
                   {expanded && (
                     <div className="space-y-4 p-4">
+                      <label className="block text-xs font-semibold text-gray-600">
+                        {translate(language, 'adminPage.subject')}
+                        <select
+                          value={question.subjectId}
+                          onChange={event => patchQuestion(questionIndex, { subjectId: event.target.value })}
+                          className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
+                        >
+                          {subjects.map(subject => <option key={subject.id} value={subject.id}>{subject.name}</option>)}
+                        </select>
+                      </label>
                       <div className="max-h-[34rem] overflow-auto rounded-xl border border-gray-200 bg-gray-50 p-2">
                         <img src={question.imageDataUrl} alt={`Question ${question.number} PDF preview`} className="mx-auto h-auto max-w-full" />
                       </div>

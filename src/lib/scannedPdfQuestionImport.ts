@@ -229,6 +229,7 @@ export function isQuestionRangeHeading(value: string) {
 
 export function findQuestionStarts(pages: OcrPage[], repairForwardJumps = false) {
   const candidates: Array<QuestionStart & { detectedNumber: number }> = [];
+  const rangeHints: Array<QuestionStart & { detectedNumber: number }> = [];
   for (const page of pages) {
     for (let lineIndex = 0; lineIndex < page.lines.length; lineIndex += 1) {
       const line = page.lines[lineIndex];
@@ -237,16 +238,40 @@ export function findQuestionStarts(pages: OcrPage[], repairForwardJumps = false)
       const nextLine = page.lines[lineIndex + 1]?.text ?? '';
       // Section dividers such as "問1から問34までは、ストラテジ系の問題です。"
       // are not questions. Treating one as a start shifts every later question and answer.
+      const ownRangeHeading = isQuestionRangeHeading(normalized);
+      const nextRangeHeading = isQuestionRangeHeading(`${normalized} ${nextLine}`);
+      const previousRangeHeading = !isQuestionRangeHeading(previousLine)
+        && isQuestionRangeHeading(`${previousLine} ${normalized}`);
       if (
-        isQuestionRangeHeading(normalized)
-        || isQuestionRangeHeading(`${normalized} ${nextLine}`)
+        ownRangeHeading
+        || nextRangeHeading
         // Only join the previous line when it is an incomplete range heading.
         // A complete section heading immediately above a real question (for
         // example, "問1から問34まで..." followed by "問1 ...") must not
         // consume that question as part of the range.
-        || (!isQuestionRangeHeading(previousLine)
-          && isQuestionRangeHeading(`${previousLine} ${normalized}`))
-      ) continue;
+        || previousRangeHeading
+      ) {
+        if (repairForwardJumps) {
+          const rangeText = ownRangeHeading
+            ? normalized
+            : nextRangeHeading
+              ? `${normalized} ${nextLine}`
+              : `${previousLine} ${normalized}`;
+          const rangeStart = Number(rangeText.normalize('NFKC').match(/\d{1,4}/)?.[0]);
+          if (rangeStart >= 1 && rangeStart <= 200) {
+            rangeHints.push({
+              detectedNumber: rangeStart,
+              number: 0,
+              pageNumber: page.pageNumber,
+              topRatio: previousRangeHeading
+                ? (page.lines[lineIndex - 1]?.topRatio ?? line.topRatio)
+                : line.topRatio,
+              warnings: [],
+            });
+          }
+        }
+        continue;
+      }
       const match = normalized.match(/^[問間]\s*(\d{1,4})(?:\D|$)/);
       if (!match) continue;
       const detectedNumber = Number(match[1]);
@@ -264,6 +289,35 @@ export function findQuestionStarts(pages: OcrPage[], repairForwardJumps = false)
   candidates.sort((left, right) => (
     left.pageNumber - right.pageNumber || left.topRatio - right.topRatio
   ));
+
+  // OCR sometimes merges the first question of a section into its divider or
+  // misses that question heading entirely. A divider such as "questions
+  // 36-55" gives us a reliable crop boundary only when question 35 is before
+  // it and question 37 is after it. Keep this recovery deliberately narrow so
+  // a genuinely missing heading elsewhere never shifts all subsequent crops.
+  const isBefore = (
+    left: Pick<QuestionStart, 'pageNumber' | 'topRatio'>,
+    right: Pick<QuestionStart, 'pageNumber' | 'topRatio'>,
+  ) => left.pageNumber < right.pageNumber
+    || (left.pageNumber === right.pageNumber && left.topRatio < right.topRatio);
+  for (const hint of rangeHints) {
+    if (candidates.some(candidate => candidate.detectedNumber === hint.detectedNumber)) continue;
+    const previous = candidates.find(candidate => (
+      candidate.detectedNumber === hint.detectedNumber - 1 && isBefore(candidate, hint)
+    ));
+    const next = candidates.find(candidate => (
+      candidate.detectedNumber === hint.detectedNumber + 1 && isBefore(hint, candidate)
+    ));
+    if (!previous || !next) continue;
+    hint.warnings.push(
+      `Question ${hint.detectedNumber} heading was recovered from its section divider; review its crop.`,
+    );
+    candidates.push(hint);
+  }
+  candidates.sort((left, right) => (
+    left.pageNumber - right.pageNumber || left.topRatio - right.topRatio
+  ));
+
   const starts: QuestionStart[] = [];
   const byNumber = new Map<number, QuestionStart>();
   for (let index = 0; index < candidates.length; index += 1) {
@@ -282,6 +336,17 @@ export function findQuestionStarts(pages: OcrPage[], repairForwardJumps = false)
       && candidate.detectedNumber === expectedNumber + 9
       && (nextDetectedNumber === expectedNumber + 1 || nextDetectedNumber === undefined);
     if (isTrailingZeroReadAsNine) resolvedNumber = expectedNumber;
+
+    // A heavily blurred final "100" can be recognized as values such as
+    // "196". When questions 1-99 are already contiguous, a final value above
+    // the supported 100-question range cannot be a real heading in the exam
+    // types handled by this importer, so recover it from physical order.
+    const isFinalQuestionReadOutOfRange = repairForwardJumps
+      && Boolean(previous)
+      && nextDetectedNumber === undefined
+      && expectedNumber === 100
+      && candidate.detectedNumber > 100;
+    if (isFinalQuestionReadOutOfRange) resolvedNumber = expectedNumber;
 
     // Only repair a forward jump when the remaining headings prove that it is
     // an OCR digit error. For example, if question 20 is read as 26, the later
@@ -339,6 +404,10 @@ export function findQuestionStarts(pages: OcrPage[], repairForwardJumps = false)
       candidate.warnings.push(
         `OCR read question ${expectedNumber} as ${candidate.detectedNumber}; the number was corrected from its sequence.`,
       );
+    } else if (isFinalQuestionReadOutOfRange) {
+      candidate.warnings.push(
+        `OCR read question ${expectedNumber} as ${candidate.detectedNumber}; the final number was corrected from its physical order.`,
+      );
     } else if (isForwardJumpCorrected) {
       candidate.warnings.push(
         `OCR read question ${expectedNumber} as ${candidate.detectedNumber}; the number was corrected from its physical order.`,
@@ -355,6 +424,19 @@ export function findQuestionStarts(pages: OcrPage[], repairForwardJumps = false)
     byNumber.set(start.number, start);
   }
   return starts;
+}
+
+export function getQuestionHeadingRetryPages(starts: QuestionStart[]) {
+  const pageNumbers = new Set<number>();
+  for (let index = 1; index < starts.length; index += 1) {
+    const previous = starts[index - 1];
+    const current = starts[index];
+    if (current.number <= previous.number + 1) continue;
+    for (let pageNumber = previous.pageNumber; pageNumber <= current.pageNumber; pageNumber += 1) {
+      pageNumbers.add(pageNumber);
+    }
+  }
+  return [...pageNumbers].sort((left, right) => left - right);
 }
 
 export function mergeExpectedAnswerMaps(
@@ -400,17 +482,24 @@ async function ocrQuestionHeadings(
   documentProxy: PDFDocumentProxy,
   worker: Awaited<ReturnType<(typeof import('tesseract.js'))['createWorker']>>,
   onProgress?: (message: string) => void,
+  options: {
+    pageNumbers?: readonly number[];
+    scale?: number;
+    stripRatio?: number;
+  } = {},
 ) {
   const pages: OcrPage[] = [];
-  for (let pageNumber = 1; pageNumber <= documentProxy.numPages; pageNumber += 1) {
+  const pageNumbers = options.pageNumbers
+    ?? Array.from({ length: documentProxy.numPages }, (_, index) => index + 1);
+  for (const pageNumber of pageNumbers) {
     onProgress?.(`OCR: finding questions on page ${pageNumber} of ${documentProxy.numPages}…`);
     // Question numbers are a small part of a full page. At 1.8x Tesseract
     // frequently confused digits (especially 0/6/9) or missed the heading
     // entirely, which then shifted answer matching for every later question.
     // Render the narrow heading strip at a higher resolution while still
     // releasing each page before moving to the next one.
-    const pageCanvas = await renderPage(documentProxy, pageNumber, 2.6);
-    const stripWidth = Math.floor(pageCanvas.width * 0.36);
+    const pageCanvas = await renderPage(documentProxy, pageNumber, options.scale ?? 2.6);
+    const stripWidth = Math.floor(pageCanvas.width * (options.stripRatio ?? 0.36));
     const strip = cropCanvas(pageCanvas, 0, 0, stripWidth, pageCanvas.height);
     pageCanvas.width = 1;
     pageCanvas.height = 1;
@@ -496,12 +585,11 @@ async function ocrAnswerPages(
   return pages;
 }
 
-async function renderQuestionCrop(
-  documentProxy: PDFDocumentProxy,
+function renderQuestionCrop(
+  page: HTMLCanvasElement,
   start: QuestionStart,
   next: QuestionStart | undefined,
 ) {
-  const page = await renderPage(documentProxy, start.pageNumber, 1.65);
   const topRatio = Math.max(0, start.topRatio - 0.025);
   const bottomRatio = next?.pageNumber === start.pageNumber
     ? Math.max(topRatio + 0.08, next.topRatio - 0.02)
@@ -509,8 +597,6 @@ async function renderQuestionCrop(
   const top = Math.floor(page.height * topRatio);
   const bottom = Math.min(page.height, Math.ceil(page.height * bottomRatio));
   const cropped = cropCanvas(page, 0, top, page.width, bottom - top);
-  page.width = 1;
-  page.height = 1;
   const trimmed = trimWhitespace(cropped);
   const dataUrl = trimmed.toDataURL('image/webp', 0.82);
   cropped.width = 1;
@@ -534,7 +620,26 @@ export async function processScannedExamPdfs(
   try {
     await worker.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
     const headingPages = await ocrQuestionHeadings(questionDocument, worker, onProgress);
-    const starts = findQuestionStarts(headingPages, true);
+    let starts = findQuestionStarts(headingPages, true);
+    const retryPageNumbers = getQuestionHeadingRetryPages(starts);
+    if (retryPageNumbers.length > 0) {
+      // AUTO segmentation can occasionally merge a section divider and its
+      // first question or omit a small heading. Retry only pages around an
+      // observed numbering gap with a larger image and sparse-text layout.
+      await worker.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT });
+      const retryPages = await ocrQuestionHeadings(questionDocument, worker, onProgress, {
+        pageNumbers: retryPageNumbers,
+        scale: 3.4,
+        stripRatio: 0.55,
+      });
+      await worker.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
+      const retryByPage = new Map(retryPages.map(page => [page.pageNumber, page.lines]));
+      const combinedPages = headingPages.map(page => ({
+        ...page,
+        lines: [...page.lines, ...(retryByPage.get(page.pageNumber) ?? [])],
+      }));
+      starts = findQuestionStarts(combinedPages, true);
+    }
     if (!starts.length) {
       throw new Error('This scanned PDF could not be segmented into questions. Make sure the pages show headings such as “問1”.');
     }
@@ -556,31 +661,50 @@ export async function processScannedExamPdfs(
     }
 
     const questions: PdfImportQuestion[] = [];
-    for (let index = 0; index < starts.length; index += 1) {
-      const start = starts[index];
-      const next = starts[index + 1];
-      onProgress?.(`Preparing question ${index + 1} of ${starts.length}…`);
-      const correctChoice = answerResult.answers.get(start.number) ?? '';
-      questions.push({
-        sourceKey: `${examKey}:Q${start.number}`,
-        number: start.number,
-        questionText: `${examKey} 問${start.number}`,
-        imageDataUrl: await renderQuestionCrop(questionDocument, start, next),
-        sourcePages: [start.pageNumber],
-        choices: [...ANSWER_LABELS].map((label, choiceIndex) => ({
-          label,
-          text: label,
-          sortOrder: choiceIndex + 1,
-        })),
-        correctChoice,
-        explanation: '',
-        difficulty: 2,
-        points: 1,
-        warnings: [
-          ...start.warnings,
-          ...(correctChoice ? [] : ['Correct answer not detected. Select it below.']),
-        ],
-      });
+    let renderedQuestionPage: HTMLCanvasElement | null = null;
+    let renderedQuestionPageNumber = 0;
+    try {
+      for (let index = 0; index < starts.length; index += 1) {
+        const start = starts[index];
+        const next = starts[index + 1];
+        if (!renderedQuestionPage || renderedQuestionPageNumber !== start.pageNumber) {
+          if (renderedQuestionPage) {
+            renderedQuestionPage.width = 1;
+            renderedQuestionPage.height = 1;
+          }
+          // Several questions commonly share one PDF page. Render that page
+          // once and reuse it for every crop instead of decoding it repeatedly.
+          renderedQuestionPage = await renderPage(questionDocument, start.pageNumber, 1.65);
+          renderedQuestionPageNumber = start.pageNumber;
+        }
+        onProgress?.(`Preparing question ${index + 1} of ${starts.length}…`);
+        const correctChoice = answerResult.answers.get(start.number) ?? '';
+        questions.push({
+          sourceKey: `${examKey}:Q${start.number}`,
+          number: start.number,
+          questionText: `${examKey} 問${start.number}`,
+          imageDataUrl: renderQuestionCrop(renderedQuestionPage, start, next),
+          sourcePages: [start.pageNumber],
+          choices: [...ANSWER_LABELS].map((label, choiceIndex) => ({
+            label,
+            text: label,
+            sortOrder: choiceIndex + 1,
+          })),
+          correctChoice,
+          explanation: '',
+          difficulty: 2,
+          points: 1,
+          warnings: [
+            ...start.warnings,
+            ...(correctChoice ? [] : ['Correct answer not detected. Select it below.']),
+          ],
+        });
+      }
+    } finally {
+      if (renderedQuestionPage) {
+        renderedQuestionPage.width = 1;
+        renderedQuestionPage.height = 1;
+      }
     }
     return { questions, answerCount: answerResult.answerCount };
   } finally {
