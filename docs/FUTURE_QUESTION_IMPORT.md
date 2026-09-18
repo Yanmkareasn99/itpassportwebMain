@@ -20,6 +20,22 @@ Image-only scanned PDFs are handled with Japanese OCR in the browser. They take
 longer to process than searchable PDFs, and unclear scans may need manual fixes
 on the review screen.
 
+## Save the conversion as JSON
+
+After reading and reviewing the PDFs, click **Download JSON** to save a portable
+`manabi-question-archive-v2` archive. Its readable fields include `exam`,
+`year`, `wareki`, `season`, `question_count`, `text`, a label-to-text `choices`
+object, `correct_answer`, `has_figure`, `confidence`, and `warnings`. It also
+retains the database-ready exam date/type, subject assignments, explanations,
+source pages, scoring fields, and any question images selected with **Keep
+diagram**. Unselected page-preview images are omitted to keep the JSON
+reasonably small. Older `manabi-pdf-import-v1` archives remain supported.
+
+For a later import, return to **Admin → Questions → Import PDFs**, select the
+archive under **Saved question JSON**, continue reviewing if needed, and click
+**Upload questions and answers**. PDF files are not required when reloading the
+JSON archive.
+
 ## One-time setup
 
 Apply
