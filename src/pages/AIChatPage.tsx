@@ -466,8 +466,12 @@ const errorMessage: ChatMessage = {
                 }
                 onKeyDown={(e) => {
                   if (
-                    (e.ctrlKey || e.metaKey) &&
                     e.key === 'Enter'
+                    && !e.shiftKey
+                    && !e.ctrlKey
+                    && !e.metaKey
+                    && !e.altKey
+                    && !e.nativeEvent.isComposing
                   ) {
                     e.preventDefault();
                     void sendMessage();
