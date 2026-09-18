@@ -26,6 +26,7 @@ import {
   type QuestionImportExam,
   validateItPassportSubjectRanges,
 } from '../../lib/questionSubject';
+import { findDuplicateQuestionKeys, type ExistingQuestionIdentity } from '../../lib/questionDuplicates';
 
 interface PdfQuestionImporterProps {
   subjects: Subject[];
@@ -34,6 +35,26 @@ interface PdfQuestionImporterProps {
 }
 
 type ReviewPdfImportQuestion = PdfImportQuestion & { subjectId: string };
+
+async function fetchExistingQuestionIdentities() {
+  const questions: ExistingQuestionIdentity[] = [];
+  const pageSize = 1000;
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from('questions')
+      .select('id, question_text, source_key')
+      .order('id')
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    const page = (data ?? []) as Array<{ question_text: string; source_key: string | null }>;
+    questions.push(...page.map(question => ({
+      questionText: question.question_text,
+      sourceKey: question.source_key,
+    })));
+    if (page.length < pageSize) break;
+  }
+  return questions;
+}
 
 function questionProblem(question: ReviewPdfImportQuestion) {
   if (!question.subjectId) return 'subject';
@@ -270,6 +291,21 @@ export default function PdfQuestionImporter({
 
     setImporting(true);
     try {
+      const duplicateQuestions = findDuplicateQuestionKeys(
+        questions.map(question => ({
+          key: `#${question.number}`,
+          questionText: question.questionText,
+          sourceKey: question.sourceKey,
+        })),
+        await fetchExistingQuestionIdentities(),
+        { allowMatchingSourceKey: true },
+      );
+      if (duplicateQuestions.length) {
+        throw new Error(translate(language, 'adminPage.duplicateQuestionsFound', {
+          questions: duplicateQuestions.slice(0, 10).join(', '),
+        }));
+      }
+
       for (let index = 0; index < questions.length; index += 1) {
         const question = questions[index];
         setProgress(translate(language, 'adminPage.pdfImportProgress', {
@@ -313,7 +349,9 @@ export default function PdfQuestionImporter({
     } catch (importError) {
       const message = importError instanceof Error ? importError.message : '';
       setError(
-        /question_import_staging|question-images|bucket not found/i.test(message)
+        /already exists|duplicate/i.test(message)
+          ? translate(language, 'adminPage.duplicateQuestionExists')
+          : /question_import_staging|question-images|bucket not found/i.test(message)
           ? translate(language, 'adminPage.pdfMigrationRequired')
           : message || translate(language, 'adminPage.pdfImportFailed'),
       );
