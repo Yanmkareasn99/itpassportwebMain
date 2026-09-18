@@ -186,7 +186,7 @@ export const en = {
   "adminPage.pdfProcess": "Read PDFs",
   "adminPage.pdfProcessing": "Reading PDFs…",
   "adminPage.pdfProcessingFailed": "The PDFs could not be processed.",
-  "adminPage.pdfLocalProcessing": "PDF processing stays in this browser until you import.",
+  "adminPage.pdfLocalProcessing": "You can navigate elsewhere while OCR runs. Keep this browser tab open and do not refresh it.",
   "adminPage.pdfAnswersNotDetected": "The questions were detected, but the answer key was not. Select each correct answer during review.",
   "adminPage.pdfReviewCount": "Review {count} detected questions",
   "adminPage.pdfReviewProblems": "{count} questions still need attention",
@@ -196,6 +196,7 @@ export const en = {
   "adminPage.pdfImportProgress": "Importing {current} of {total}…",
   "adminPage.pdfImportComplete": "Successfully imported {count} questions.",
   "adminPage.pdfImportFailed": "PDF question import failed.",
+  "adminPage.pdfImportFailedWithReason": "PDF question import failed: {reason}",
   "adminPage.pdfFixReviewErrors": "Fix the highlighted review items before importing.",
   "adminPage.pdfRequiresSupabase": "PDF import requires Supabase to be enabled.",
   "adminPage.pdfMigrationRequired": "The PDF import table is missing or unavailable. Run migration 20260903010000_add_single_csv_question_import.sql in Supabase first.",
@@ -681,4 +682,20 @@ export const en = {
   , "settingsPage.deletingAccount": "Deleting account..."
   , "settingsPage.deleteAccountAction": "Permanently delete my account"
   ,"aiChatPage.error": "An error occurred. Please try again.",
+  "practiceQuestionPage.flagQuestion": "Flag this question"
+  , "practiceQuestionPage.clearFlag": "click again to clear"
+  , "practiceQuestionPage.flagGreen": "Green flag"
+  , "practiceQuestionPage.flagOrange": "Orange flag"
+  , "practiceQuestionPage.flagRed": "Red flag"
+  , "practiceListPage.flaggedQuestions": "Flagged questions"
+  , "practiceListPage.flaggedCount": "{count} flagged questions"
+  , "practiceListPage.noFlaggedQuestions": "No questions are saved with this flag."
+  , "practiceListPage.flaggedLoadFailed": "Unable to load flagged questions."
+  , "practiceQuestionPage.askAi": "Ask AI for explanation"
+  , "practiceQuestionPage.aiThinking": "AI is reading the question..."
+  , "practiceQuestionPage.aiImageFailed": "The question image could not be read. Please reload the page and try again."
+  , "practiceQuestionPage.aiExplanationFailed": "Failed to get an AI explanation. Please try again."
+  , "adminPage.pdfHybridImport": "{count} diagram images kept ({size} MB)"
+  , "adminPage.pdfKeepDiagram": "Keep this question image"
+  , "adminPage.pdfKeepDiagramHelp": "Enable this for diagrams, charts, tables, formulas, or image-based answer choices. Text-only questions will not upload the preview."
 } as const;

@@ -186,7 +186,7 @@ export const ja = {
   "adminPage.pdfProcess": "PDFを読み取る",
   "adminPage.pdfProcessing": "PDFを読み取り中…",
   "adminPage.pdfProcessingFailed": "PDFを処理できませんでした。",
-  "adminPage.pdfLocalProcessing": "取込みを実行するまで、PDF処理はこのブラウザー内だけで行われます。",
+  "adminPage.pdfLocalProcessing": "OCR中も別のページへ移動できます。このブラウザータブを閉じたり再読み込みしたりしないでください。",
   "adminPage.pdfAnswersNotDetected": "問題は検出されましたが、解答を読み取れませんでした。確認画面で各正解を選択してください。",
   "adminPage.pdfReviewCount": "検出した{count}問を確認",
   "adminPage.pdfReviewProblems": "{count}問の確認が必要です",
@@ -196,6 +196,7 @@ export const ja = {
   "adminPage.pdfImportProgress": "{total}問中{current}問を取込み中…",
   "adminPage.pdfImportComplete": "{count}問を取り込みました。",
   "adminPage.pdfImportFailed": "PDF問題の取込みに失敗しました。",
+  "adminPage.pdfImportFailedWithReason": "PDF問題の取込みに失敗しました: {reason}",
   "adminPage.pdfFixReviewErrors": "取り込む前に、確認が必要な項目を修正してください。",
   "adminPage.pdfRequiresSupabase": "PDF取込みにはSupabaseを有効にする必要があります。",
   "adminPage.pdfMigrationRequired": "PDF取込み用テーブルがありません。Supabaseで20260903010000_add_single_csv_question_import.sqlを先に実行してください。",
@@ -680,4 +681,20 @@ export const ja = {
   , "settingsPage.deletingAccount": "アカウントを削除中..."
   , "settingsPage.deleteAccountAction": "アカウントを完全に削除する"
   ,"aiChatPage.error": "エラーが発生しました。もう一度お試しください。",
+  "practiceQuestionPage.flagQuestion": "この問題にフラグを付ける"
+  , "practiceQuestionPage.clearFlag": "もう一度押すと解除"
+  , "practiceQuestionPage.flagGreen": "緑フラグ"
+  , "practiceQuestionPage.flagOrange": "オレンジフラグ"
+  , "practiceQuestionPage.flagRed": "赤フラグ"
+  , "practiceListPage.flaggedQuestions": "フラグ付き問題"
+  , "practiceListPage.flaggedCount": "{count}問にフラグがあります"
+  , "practiceListPage.noFlaggedQuestions": "このフラグの問題はありません。"
+  , "practiceListPage.flaggedLoadFailed": "フラグ付き問題を読み込めませんでした。"
+  , "practiceQuestionPage.askAi": "AIに解説を依頼"
+  , "practiceQuestionPage.aiThinking": "AIが問題を読み取っています..."
+  , "practiceQuestionPage.aiImageFailed": "問題画像を読み取れませんでした。ページを再読み込みして、もう一度お試しください。"
+  , "practiceQuestionPage.aiExplanationFailed": "AI解説を取得できませんでした。もう一度お試しください。"
+  , "adminPage.pdfHybridImport": "図表画像を{count}件保存（{size} MB）"
+  , "adminPage.pdfKeepDiagram": "この問題画像を保存する"
+  , "adminPage.pdfKeepDiagramHelp": "図、グラフ、表、数式、または画像形式の選択肢がある場合に有効にします。テキストのみの問題ではプレビュー画像を保存しません。"
 } as const;

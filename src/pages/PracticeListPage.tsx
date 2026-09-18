@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Play,
   TrendingUp,
+  Flag,
   type LucideIcon,
 } from 'lucide-react';
 import Layout from '../components/Layout';
@@ -22,6 +23,7 @@ import { Question, Page } from '../types';
 import { formatExamDate, UNCATEGORIZED_EXAM_DATE } from '../lib/examDate';
 import { orderPracticeQuestions } from '../lib/questionRandomization';
 import { IT_PASSPORT_SUBJECT_IDS } from '../lib/questionSubject';
+import { loadFlaggedQuestions, loadQuestionFlags, QUESTION_FLAG_LEVELS, type QuestionFlagLevel } from '../lib/questionFlags';
 
 interface PracticeListPageProps {
   currentPage: Page;
@@ -211,6 +213,61 @@ function ReviewCard({
   );
 }
 
+function FlaggedQuestionsCard({
+  counts,
+  onStart,
+  loading,
+  language,
+}: {
+  counts: Record<QuestionFlagLevel, number>;
+  onStart: (level?: QuestionFlagLevel) => void;
+  loading: boolean;
+  language: LanguageCode;
+}) {
+  const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+  const styles = {
+    green: 'bg-emerald-500 hover:bg-emerald-600',
+    orange: 'bg-orange-500 hover:bg-orange-600',
+    red: 'bg-red-500 hover:bg-red-600',
+  } as const;
+  return (
+    <div className="w-full min-w-0 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left shadow-sm dark:border-slate-600/80 dark:bg-slate-900/40 sm:p-5 xl:p-6">
+      <button
+        type="button"
+        onClick={() => onStart()}
+        disabled={loading || total === 0}
+        className="flex w-full items-center gap-2.5 text-left disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-600 text-white">
+          <Flag className="h-4 w-4 fill-current" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-base font-bold text-slate-700 dark:text-slate-200">
+            {translate(language, 'practiceListPage.flaggedQuestions')}
+          </span>
+          <span className="text-xs text-gray-500 dark:text-slate-300">
+            {translate(language, 'practiceListPage.flaggedCount', { count: total })}
+          </span>
+        </span>
+      </button>
+      <div className="mt-3 grid grid-cols-3 gap-1.5">
+        {QUESTION_FLAG_LEVELS.map(level => (
+          <button
+            key={level}
+            type="button"
+            onClick={() => onStart(level)}
+            disabled={loading || counts[level] === 0}
+            aria-label={translate(language, `practiceQuestionPage.flag${level[0].toUpperCase()}${level.slice(1)}` as 'practiceQuestionPage.flagGreen' | 'practiceQuestionPage.flagOrange' | 'practiceQuestionPage.flagRed')}
+            className={`rounded-lg px-2 py-1.5 text-xs font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-30 ${styles[level]}`}
+          >
+            {counts[level]}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function SelectDropdown({
   label,
   value,
@@ -352,6 +409,7 @@ export default function PracticeListPage({
   const [totalQuestionCount, setTotalQuestionCount] = useState(0);
   const [sessionStats, setSessionStats] = useState<Record<string, { answered: number; correct: number }>>({});
   const [incorrectCount, setIncorrectCount] = useState(0);
+  const [flagCounts, setFlagCounts] = useState<Record<QuestionFlagLevel, number>>({ green: 0, orange: 0, red: 0 });
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -509,8 +567,24 @@ export default function PracticeListPage({
       }
     }
 
+    async function loadFlagStats() {
+      if (!user) {
+        if (!cancelled) setFlagCounts({ green: 0, orange: 0, red: 0 });
+        return;
+      }
+      try {
+        const flags = await loadQuestionFlags(user.id);
+        const counts: Record<QuestionFlagLevel, number> = { green: 0, orange: 0, red: 0 };
+        for (const flag of flags) counts[flag.level] += 1;
+        if (!cancelled) setFlagCounts(counts);
+      } catch (error) {
+        if (!cancelled) setProgressWarning(practiceErrorMessage(error, 'Unable to load flagged questions.'));
+      }
+    }
+
     void loadQuestionCounts();
     void loadUserStats();
+    void loadFlagStats();
 
     return () => {
       cancelled = true;
@@ -612,6 +686,24 @@ export default function PracticeListPage({
     }
   }
 
+  async function startFlagged(level?: QuestionFlagLevel) {
+    if (!user || starting) return;
+    setStarting(`flagged-${level ?? 'all'}`);
+    setError('');
+    try {
+      const flaggedQuestions = await loadFlaggedQuestions(user.id, level);
+      if (!flaggedQuestions.length) {
+        setError(translate(currentLanguage, 'practiceListPage.noFlaggedQuestions'));
+        return;
+      }
+      await onStartPractice('flagged', orderPracticeQuestions(flaggedQuestions, false));
+    } catch (flagError) {
+      setError(practiceErrorMessage(flagError, translate(currentLanguage, 'practiceListPage.flaggedLoadFailed')));
+    } finally {
+      setStarting(null);
+    }
+  }
+
   const categories: PracticeCategory[] = [...MAIN_CATEGORIES, ...additionalCategories];
 
   const summaryRows = categories.map((cat) => {
@@ -660,6 +752,12 @@ export default function PracticeListPage({
           <ReviewCard
             count={incorrectCount}
             onStart={startReview}
+            language={currentLanguage}
+          />
+          <FlaggedQuestionsCard
+            counts={flagCounts}
+            onStart={level => void startFlagged(level)}
+            loading={loading || !!starting}
             language={currentLanguage}
           />
         </div>
