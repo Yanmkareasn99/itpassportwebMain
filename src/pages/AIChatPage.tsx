@@ -65,6 +65,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [recentQuestions, setRecentQuestions] = useState<Question[]>([]);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -106,6 +107,16 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, sending]);
+
+  useEffect(() => {
+    const composer = composerRef.current;
+    if (!composer) return;
+
+    composer.style.height = '48px';
+    const nextHeight = Math.min(Math.max(composer.scrollHeight, 48), 160);
+    composer.style.height = `${nextHeight}px`;
+    composer.style.overflowY = composer.scrollHeight > 160 ? 'auto' : 'hidden';
+  }, [prompt]);
 
   const selectedSubject = useMemo(() => subjects[0] ?? null, [subjects]);
 
@@ -238,10 +249,11 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
               }}
             >
               <textarea
+                ref={composerRef}
                 value={prompt}
                 onChange={e => setPrompt(e.target.value)}
                 onKeyDown={e => {
-                  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                  if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                     e.preventDefault();
                     void sendMessage();
                   }
@@ -249,13 +261,13 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
                 placeholder={
                   translate(language, 'aiChatPage.exampleExplainThisQuestionCreateAStudyPlan')
                 }
-                className="flex-1 resize-none min-h-[56px] max-h-40 px-4 py-3 rounded-2xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-gray-700 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                rows={2}
+                className="flex-1 resize-none min-h-12 max-h-40 px-4 py-3 rounded-2xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-gray-700 dark:text-slate-100 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                rows={1}
               />
               <button
                 type="submit"
                 disabled={sending || !prompt.trim()}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                className="inline-flex h-12 shrink-0 items-center gap-2 px-5 rounded-2xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <Send className="w-4 h-4" />
                 {translate(language, 'aiChatPage.send')}
