@@ -67,6 +67,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [recentQuestions, setRecentQuestions] = useState<Question[]>([]);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -118,6 +119,16 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, sending]);
+
+  useEffect(() => {
+    const composer = composerRef.current;
+    if (!composer) return;
+
+    composer.style.height = '48px';
+    const nextHeight = Math.min(Math.max(composer.scrollHeight, 48), 160);
+    composer.style.height = `${nextHeight}px`;
+    composer.style.overflowY = composer.scrollHeight > 160 ? 'auto' : 'hidden';
+  }, [prompt]);
 
   const selectedSubject = useMemo(() => subjects[0] ?? null, [subjects]);
 
@@ -275,6 +286,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
               }}
             >
               <textarea
+                ref={composerRef}
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={(e) => {

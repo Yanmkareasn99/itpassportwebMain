@@ -8,12 +8,9 @@ import {
   Trophy,
   FileText,
   Settings,
-  LogOut,
-  ShieldCheck,
   X,
 } from "lucide-react";
 
-import { useAuth } from "../contexts/AuthContext";
 import { useLanguage } from "../contexts/LanguageContext";
 import { Page } from "../types";
 
@@ -26,7 +23,6 @@ export default function MobileTabBar({
   currentPage,
   onNavigate,
 }: MobileTabBarProps) {
-  const { isAdmin, signOut } = useAuth();
   const { t } = useLanguage();
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -41,7 +37,6 @@ export default function MobileTabBar({
     { icon: Trophy, label: t('mobileTabBar.battle'), page: "battle" as Page },
     { icon: FileText, label: t('mobileTabBar.materials'), page: "materials" as Page },
     { icon: Settings, label: t('mobileTabBar.settings'), page: "settings" as Page },
-    ...(isAdmin ? [{ icon: ShieldCheck, label: t('adminPage.admin'), page: "admin" as Page }] : []),
   ];
 
   function go(page: Page) {
@@ -94,15 +89,6 @@ export default function MobileTabBar({
               ))}
             </div>
 
-            <button
-              onClick={signOut}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 mt-2"
-            >
-              <LogOut size={18} />
-              <span className="text-sm font-medium">
-                {t('mobileTabBar.signOut')}
-              </span>
-            </button>
           </div>
         </div>
       )}

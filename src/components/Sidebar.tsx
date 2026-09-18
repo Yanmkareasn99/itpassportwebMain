@@ -6,7 +6,6 @@ import {
   BarChart2,
   MessageCircle,
   Settings,
-  LogOut,
   ShieldCheck,
   FileText,
 } from "lucide-react";
@@ -25,7 +24,7 @@ export default function Sidebar({
   currentPage,
   onNavigate,
 }: SidebarProps) {
-  const { isAdmin, signOut } = useAuth();
+  const { isAdmin } = useAuth();
   const { language } = useLanguage();
 
   const navItems = [
@@ -136,15 +135,6 @@ export default function Sidebar({
           </span>
         </button>
 
-        <button
-          onClick={signOut}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
-        >
-          <LogOut size={20} />
-          <span>
-            {translate(language, 'sidebar.signOut')}
-          </span>
-        </button>
       </div>
     </aside>
   );

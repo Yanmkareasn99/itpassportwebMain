@@ -14,7 +14,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import Layout from '../components/Layout';
-import { fetchPracticeQuestions, loadExamDates, loadLatestAnswerStatus, loadPracticeProgress, practiceErrorMessage, type ExamDateFilter, type FormatFilter, type ModeFilter } from '../lib/practice';
+import { fetchPracticeQuestions, loadExamDates, loadLatestAnswerStatus, loadPracticeProgress, practiceErrorMessage, type ExamDateFilter, type ModeFilter } from '../lib/practice';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -358,11 +358,10 @@ export default function PracticeListPage({
 
   const [selectedExamDates, setSelectedExamDates] = useState<string[]>([]);
   const [examDates, setExamDates] = useState<string[]>([]);
-  const [formatFilter, setFormatFilter] = useState<FormatFilter>('all');
   const [modeFilter, setModeFilter] = useState<ModeFilter>('all');
   const [filterResult, setFilterResult] = useState<{ key: string; questions: Question[]; error: string } | null>(null);
   const examDateFilter: ExamDateFilter = selectedExamDates.length > 0 ? selectedExamDates : 'all';
-  const filterKey = JSON.stringify([user?.id, selectedExamDates, formatFilter, modeFilter]);
+  const filterKey = JSON.stringify([user?.id, selectedExamDates, modeFilter]);
   const currentResult = filterResult?.key === filterKey ? filterResult : null;
   const matchingQuestions = currentResult?.questions ?? [];
   const userId = user?.id;
@@ -372,7 +371,7 @@ export default function PracticeListPage({
     let cancelled = false;
     const timer = window.setTimeout(async () => {
       try {
-        let questions = await fetchPracticeQuestions(null, examDateFilter, formatFilter);
+        let questions = await fetchPracticeQuestions(null, examDateFilter, 'all');
         if (modeFilter !== 'all') {
           const latest = await loadLatestAnswerStatus(userId);
           questions = questions.filter(question => modeFilter === 'new'
@@ -384,7 +383,7 @@ export default function PracticeListPage({
       }
     }, 200);
     return () => { cancelled = true; window.clearTimeout(timer); };
-  }, [userId, examDateFilter, formatFilter, modeFilter, filterKey]);
+  }, [userId, examDateFilter, modeFilter, filterKey]);
 
   async function startFilteredPractice() {
     if (!user || starting || !currentResult || currentResult.error || !matchingQuestions.length) return;
@@ -554,7 +553,7 @@ export default function PracticeListPage({
     setError('');
 
     try {
-      let selectedQuestions = await fetchPracticeQuestions(subjectIds, key === 'all' ? 'all' : examDateFilter, key === 'all' ? 'all' : formatFilter);
+      let selectedQuestions = await fetchPracticeQuestions(subjectIds, key === 'all' ? 'all' : examDateFilter, 'all');
 
       if (key !== 'all' && modeFilter !== 'all') {
         const latestAnswers = await loadLatestAnswerStatus(user!.id);
@@ -686,31 +685,6 @@ export default function PracticeListPage({
                   value: date,
                   label: formatExamDate(date, currentLanguage),
                 })),
-              ]}
-            />
-
-            <SelectDropdown
-              label={
-                translate(currentLanguage, 'practiceListPage.questionType')
-              }
-              value={formatFilter}
-              onChange={(v) => { setFormatFilter(v as FormatFilter); setError(''); }}
-              options={[
-                {
-                  value: 'all',
-                  label:
-                    translate(currentLanguage, 'practiceListPage.all'),
-                },
-                {
-                  value: 'multiple_choice',
-                  label:
-                    translate(currentLanguage, 'practiceListPage.multipleChoice'),
-                },
-                {
-                  value: 'tree',
-                  label:
-                    translate(currentLanguage, 'practiceListPage.treeQuestion'),
-                },
               ]}
             />
 

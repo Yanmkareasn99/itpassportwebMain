@@ -247,11 +247,21 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
   }
 
   function DetailHeader({ title }: { title: string }) {
+    function goBack() {
+      if (currentPage === 'profile' && (view === 'password' || view === 'deleteAccount')) {
+        setView('profile');
+      } else if (currentPage === 'profile') {
+        onNavigate('settings');
+      } else {
+        setView('home');
+      }
+    }
+
     return (
       <div className="flex items-center gap-3 mb-7">
         <button
           type="button"
-          onClick={() => (currentPage === 'profile' ? onNavigate('settings') : setView('home'))}
+          onClick={goBack}
           aria-label="Back"
           className={`flex h-10 w-10 items-center justify-center rounded-full transition ${darkMode ? 'text-slate-300 hover:bg-slate-800' : 'text-gray-500 hover:bg-gray-100'}`}
         >
@@ -313,48 +323,13 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
     <Layout
       currentPage={currentPage}
       onNavigate={onNavigate}
-      title={translate(language, 'settingsPage.settings')}
-      subtitle={translate(language, 'settingsPage.account')}
+      title={translate(language, currentPage === 'profile' ? 'settingsPage.profile' : 'settingsPage.settings')}
+      subtitle={translate(language, currentPage === 'profile' ? 'settingsPage.account' : 'settingsPage.preferences')}
     >
       <div className="app-shell max-w-3xl mx-auto space-y-6">
 
         {view === 'home' && (
           <div className={`rounded-[28px] shadow-[0_20px_40px_rgba(15,23,42,0.06)] ring-1 p-7 space-y-8 ${panelClass}`}>
-            <div>
-              <p className={`text-[17px] font-semibold px-1 mb-3 ${darkMode ? 'text-slate-100' : 'text-gray-800'}`}>
-                {translate(language, 'settingsPage.account')}
-              </p>
-              <div className="profile-card flex items-center gap-2 rounded-2xl px-3 py-3.5 profile-gradient">
-                <button
-                  type="button"
-                  onClick={() => setView('profile')}
-                    className="profile-account-button no-press-animation flex flex-1 min-w-0 items-center gap-4 bg-transparent text-left"
->                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full profile-avatar-gradient shadow-inner">
-                    {profile?.avatar_url ? (
-                      <img src={profile.avatar_url} alt={translate(language, 'settingsPage.avatar')} className="h-full w-full object-cover" />
-                    ) : (
-                      <UserRound className="w-7 h-7" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-[15px] font-semibold truncate ${darkMode ? 'text-slate-100' : 'text-gray-800'}`}>{name || user?.email}</p>
-                    <p className={`text-[13px] ${darkMode ? 'text-slate-400' : 'text-gray-400'}`}>{translate(language, 'sidebar.student')}</p>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setView('deleteAccount')}
-                  aria-label={translate(language, 'settingsPage.deleteAccount')}
-                  title={translate(language, 'settingsPage.deleteAccount')}
-                  className="no-press-animation flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition hover:opacity-80"
-                  style={{ backgroundColor: '#fee2e2', color: '#dc2626' }}
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
             <div>
               <p className={`text-[17px] font-semibold px-1 mb-3 ${darkMode ? 'text-slate-100' : 'text-gray-800'}`}>
                 {translate(language, 'settingsPage.preferences')}
@@ -431,13 +406,6 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
                   label={translate(language, 'settingsPage.targetExamDate')}
                   value={targetDate || undefined}
                   onClick={() => setView('target')}
-                />
-                <SettingRow
-                  icon={<Lock className="w-5 h-5" />}
-                  iconBg="#fef3c7"
-                  iconColor="#d97706"
-                  label={translate(language, 'settingsPage.changePassword')}
-                  onClick={() => setView('password')}
                 />
                 <SettingRow
                   icon={<HelpCircle className="w-5 h-5" />}
@@ -569,6 +537,36 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
                 {profileSaving ? translate(language, 'settingsPage.saving') : translate(language, 'settingsPage.saveAction')}
               </button>
             </form>
+
+            <div className={`mt-8 border-t pt-6 ${darkMode ? 'border-slate-700' : 'border-gray-100'}`}>
+              <p className={`mb-2 px-1 text-[17px] font-semibold ${darkMode ? 'text-slate-100' : 'text-gray-800'}`}>
+                {translate(language, 'settingsPage.account')}
+              </p>
+              <SettingRow
+                icon={<Lock className="w-5 h-5" />}
+                iconBg="#fef3c7"
+                iconColor="#d97706"
+                label={translate(language, 'settingsPage.changePassword')}
+                onClick={() => setView('password')}
+              />
+
+              <div className={`mt-5 rounded-2xl border p-4 ${darkMode ? 'border-red-900/60 bg-red-950/20' : 'border-red-100 bg-red-50/60'}`}>
+                <p className={`text-sm font-semibold ${darkMode ? 'text-red-300' : 'text-red-700'}`}>
+                  {translate(language, 'settingsPage.deleteAccount')}
+                </p>
+                <p className={`mt-1 text-xs leading-5 ${darkMode ? 'text-red-300/70' : 'text-red-600/80'}`}>
+                  {translate(language, 'settingsPage.deleteAccountWarningBody')}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setView('deleteAccount')}
+                  className="mt-3 flex items-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-100 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-950/70"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {translate(language, 'settingsPage.deleteAccount')}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
