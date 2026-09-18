@@ -5,8 +5,11 @@ import {
 } from 'pdfjs-dist';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { extractAnswerMap, extractPages, type PageText } from './pdfAnswerText';
+import type { QuestionImportExam } from './questionSubject';
 
 GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+
+const PDF_CMAP_URL = `${import.meta.env.BASE_URL}pdfjs/cmaps/`;
 
 export interface PdfImportChoice {
   label: string;
@@ -197,7 +200,11 @@ async function renderQuestionImage(document: PDFDocumentProxy, pageNumbers: numb
 
 async function openPdf(file: File) {
   const bytes = new Uint8Array(await file.arrayBuffer());
-  return getDocument({ data: bytes }).promise;
+  return getDocument({
+    data: bytes,
+    cMapUrl: PDF_CMAP_URL,
+    cMapPacked: true,
+  }).promise;
 }
 
 export async function processExamPdfs(
@@ -205,6 +212,7 @@ export async function processExamPdfs(
   answerFile: File | null,
   examKey: string,
   onProgress?: (message: string) => void,
+  exam: QuestionImportExam = 'it-passport',
 ): Promise<PdfImportResult> {
   const questionDocument = await openPdf(questionFile);
   const answerDocument = answerFile ? await openPdf(answerFile) : null;
@@ -212,13 +220,19 @@ export async function processExamPdfs(
     onProgress?.('Reading question text…');
     const questionPages = await extractPages(questionDocument);
     const starts = findQuestionStarts(questionPages);
-    if (!starts.length) {
+    const requiresScannedRetry = !starts.length
+      || (exam === 'it-passport' && (
+        starts.length !== 100
+        || starts.some((start, index) => start.number !== index + 1)
+      ));
+    if (requiresScannedRetry) {
       const { processScannedExamPdfs } = await import('./scannedPdfQuestionImport');
       return await processScannedExamPdfs(
         questionDocument,
         answerDocument,
         examKey,
         onProgress,
+        exam === 'it-passport' ? 100 : undefined,
       );
     }
 

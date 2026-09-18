@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   findQuestionStarts,
+  getMissingExpectedQuestionNumbers,
   getQuestionHeadingRetryPages,
   isQuestionRangeHeading,
   mergeExpectedAnswerMaps,
@@ -175,6 +176,38 @@ describe('scanned PDF question detection', () => {
     expect(starts[35].warnings.join(' ')).toMatch(/read question 36 as 37/);
   });
 
+  it('recovers the heading errors observed in the 2009 spring exam PDF', () => {
+    const detected = [
+      '問29 本文',
+      '問30 本文',
+      '問341 本文',
+      '問32 本文',
+      '問33 本文',
+      '問44 本文',
+      '問35 本文',
+      '問36 本文',
+      '問37 本文',
+      '問388 本文',
+      '問39 本文',
+      '問40 本文',
+      '癌 41 本文',
+      '問42 本文',
+      '問43 本文',
+      '問44 本文',
+    ];
+    const starts = findQuestionStarts([{
+      pageNumber: 12,
+      lines: detected.map((text, index) => line(text, index / 20)),
+    }], true);
+
+    expect(starts.map(start => start.number)).toEqual(
+      Array.from({ length: 16 }, (_, index) => index + 29),
+    );
+    expect(starts.find(start => start.number === 31)?.warnings.join(' ')).toMatch(/as 341/);
+    expect(starts.find(start => start.number === 34)?.warnings.join(' ')).toMatch(/as 44/);
+    expect(starts.find(start => start.number === 38)?.warnings.join(' ')).toMatch(/as 388/);
+  });
+
   it('does not shift later crops when a question heading is genuinely missing', () => {
     const detected = [
       ...Array.from({ length: 35 }, (_, index) => index + 1),
@@ -216,6 +249,17 @@ describe('scanned PDF question detection', () => {
     ];
 
     expect(getQuestionHeadingRetryPages(starts)).toEqual([17, 18, 19, 20]);
+  });
+
+  it('identifies every missing number from an expected 100-question exam', () => {
+    const starts = Array.from({ length: 100 }, (_, index) => ({
+      number: index + 1,
+      pageNumber: 1,
+      topRatio: index / 100,
+      warnings: [],
+    })).filter(start => ![34, 41, 100].includes(start.number));
+
+    expect(getMissingExpectedQuestionNumbers(starts, 100)).toEqual([34, 41, 100]);
   });
 
   it('supports common OCR heading confusion and punctuation', () => {

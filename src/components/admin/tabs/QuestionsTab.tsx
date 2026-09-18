@@ -323,6 +323,8 @@ export default function QuestionsTab() {
         explanation_vi: question.explanation_vi || null,
         difficulty: Number(question.difficulty) || 2,
         points: parseQuestionPoints(question.points),
+        exam_date: question.exam_date || null,
+        source_key: question.source_key || null,
       }));
       const { error: questionError } = await supabase.from('questions').insert(questionPayloads);
       if (questionError) throw questionError;
@@ -654,7 +656,6 @@ export default function QuestionsTab() {
         <PdfQuestionImporter
           subjects={subjects}
           onClose={() => setShowPdfImporter(false)}
-          onImported={load}
         />
       )}
 
