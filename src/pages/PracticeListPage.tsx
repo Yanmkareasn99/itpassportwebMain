@@ -21,6 +21,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { Question, Page } from '../types';
 import { formatExamDate, UNCATEGORIZED_EXAM_DATE } from '../lib/examDate';
 import { orderPracticeQuestions } from '../lib/questionRandomization';
+import { IT_PASSPORT_SUBJECT_IDS } from '../lib/questionSubject';
 
 interface PracticeListPageProps {
   currentPage: Page;
@@ -42,7 +43,7 @@ const MAIN_CATEGORIES = [
     labelColor: 'text-blue-600',
     dotColor: 'bg-blue-500',
     borderless: true,
-    subjectIds: ['cc000001-0000-0000-0000-000000000001'],
+    subjectIds: [IT_PASSPORT_SUBJECT_IDS.strategy],
   },
   {
     id: 'management',
@@ -55,7 +56,7 @@ const MAIN_CATEGORIES = [
     labelColor: 'text-emerald-600',
     dotColor: 'bg-emerald-500',
     borderless: true,
-    subjectIds: ['cc000002-0000-0000-0000-000000000001'],
+    subjectIds: [IT_PASSPORT_SUBJECT_IDS.management],
   },
   {
     id: 'technology',
@@ -68,7 +69,7 @@ const MAIN_CATEGORIES = [
     labelColor: 'text-amber-600',
     dotColor: 'bg-amber-500',
     borderless: true,
-    subjectIds: ['cc000003-0000-0000-0000-000000000001'],
+    subjectIds: [IT_PASSPORT_SUBJECT_IDS.technology],
   },
 ];
                                     
@@ -452,7 +453,7 @@ export default function PracticeListPage({
           totalResult.count ?? Object.values(counts).reduce((sum, count) => sum + count, 0),
         );
 
-        const mainSubjectIds = new Set(MAIN_CATEGORIES.flatMap(category => category.subjectIds));
+        const mainSubjectIds = new Set<string>(MAIN_CATEGORIES.flatMap(category => category.subjectIds));
         setAdditionalCategories([...subjectMap.values()]
           .filter(subject => !mainSubjectIds.has(subject.id) && (counts[subject.id] ?? 0) > 0)
           .map(subject => ({

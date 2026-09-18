@@ -8,6 +8,7 @@ import { readCsvFile } from '../../../lib/csv';
 import { supabase } from '../../../lib/supabase';
 import type { AnswerChoice, Question, Subject } from '../../../types';
 import { emptyQuestionForm, type ChoiceForm, type CsvImportData, type QuestionForm } from '../forms';
+import { resolveImportedSubjectId } from '../../../lib/questionSubject';
 
 const QUESTION_FETCH_PAGE_SIZE = 1000;
 
@@ -249,7 +250,7 @@ export default function QuestionsTab() {
   }
 
   function validateCsvImport(data: CsvImportData) {
-    const requiredQuestionColumns = ['id', 'subject_id', 'question_number', 'question_text'];
+    const requiredQuestionColumns = ['id', 'question_number', 'question_text'];
     const requiredChoiceColumns = ['id', 'question_id', 'choice_text', 'is_correct', 'sort_order'];
     for (const column of requiredQuestionColumns) {
       if (!(column in (data.questions[0] ?? {}))) throw new Error(`questions.csv is missing the "${column}" column.`);
@@ -261,9 +262,19 @@ export default function QuestionsTab() {
     const questionIds = new Set<string>();
     for (const question of data.questions) {
       if (!question.id || questionIds.has(question.id)) throw new Error('questions.csv contains a missing or duplicate question id.');
-      if (!subjectIds.has(question.subject_id)) throw new Error(`Unknown subject_id in questions.csv: ${question.subject_id}`);
       if (!question.question_text) throw new Error(`Question ${question.id} has no question_text.`);
       if (!Number.isInteger(Number(question.question_number))) throw new Error(`Question ${question.id} has an invalid question_number.`);
+      const resolvedSubjectId = resolveImportedSubjectId(
+        question.subject_id,
+        Number(question.question_number),
+        subjectIds,
+      );
+      if (!resolvedSubjectId) {
+        if (question.subject_id?.trim()) {
+          throw new Error(`Unknown subject_id in questions.csv: ${question.subject_id}`);
+        }
+        throw new Error(`Unable to detect a subject for question ${question.id}. Add a valid subject_id.`);
+      }
       questionIds.add(question.id);
     }
 
@@ -294,9 +305,14 @@ export default function QuestionsTab() {
     try {
       validateCsvImport(importData);
       setImporting(true);
+      const subjectIds = subjects.map(subject => subject.id);
       const questionPayloads = importData.questions.map(question => ({
         id: question.id,
-        subject_id: question.subject_id,
+        subject_id: resolveImportedSubjectId(
+          question.subject_id,
+          Number(question.question_number),
+          subjectIds,
+        )!,
         question_number: Number(question.question_number),
         question_text: question.question_text,
         question_type: question.question_type || 'multiple_choice',
