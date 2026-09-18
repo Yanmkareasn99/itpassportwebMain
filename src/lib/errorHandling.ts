@@ -192,6 +192,22 @@ export function getUserMessage(error: AppError | Error): string {
   return message;
 }
 
+/** Extract useful diagnostics from Error instances and API error objects. */
+export function getErrorMessage(error: unknown, fallback = ''): string {
+  if (error instanceof Error) return error.message || fallback;
+  if (typeof error === 'string') return error || fallback;
+  if (typeof error === 'object' && error !== null) {
+    const value = error as Record<string, unknown>;
+    const message = typeof value.message === 'string' ? value.message.trim() : '';
+    const details = typeof value.details === 'string' ? value.details.trim() : '';
+    const hint = typeof value.hint === 'string' ? value.hint.trim() : '';
+    return [message, details, hint]
+      .filter((part, index, parts) => part && parts.indexOf(part) === index)
+      .join(' — ') || fallback;
+  }
+  return fallback;
+}
+
 /**
  * Report error to monitoring service (e.g., Sentry)
  */

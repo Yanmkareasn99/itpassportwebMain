@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
   findQuestionStarts,
+  getMissingExpectedQuestionNumbers,
+  getQuestionHeadingRetryPages,
   isQuestionRangeHeading,
   mergeExpectedAnswerMaps,
   parseAnswerGridRow,
+  parseScannedQuestionText,
   selectAnswerTableLines,
 } from '../../src/lib/scannedPdfQuestionImport';
+import { ensureDiagramChoiceLabels, shouldKeepQuestionImage } from '../../src/lib/pdfQuestionImages';
 
 function line(text: string, topRatio = 0.1) {
   return { text, topRatio, bottomRatio: topRatio + 0.02 };
@@ -138,6 +142,21 @@ describe('scanned PDF question detection', () => {
     expect(starts.at(-1)?.warnings.join(' ')).toMatch(/read question 100 as 109/);
   });
 
+  it('recovers question 100 when OCR reads it as 196', () => {
+    const detected = [
+      ...Array.from({ length: 99 }, (_, index) => index + 1),
+      196,
+    ];
+    const starts = findQuestionStarts([{
+      pageNumber: 1,
+      lines: detected.map((number, index) => line(`問${number} 本文`, index / 110)),
+    }], true);
+
+    expect(starts).toHaveLength(100);
+    expect(starts.at(-1)?.number).toBe(100);
+    expect(starts.at(-1)?.warnings.join(' ')).toMatch(/read question 100 as 196/);
+  });
+
   it('repairs forward OCR jumps without discarding the following headings', () => {
     const detected = Array.from({ length: 100 }, (_, index) => {
       const actualNumber = index + 1;
@@ -159,6 +178,38 @@ describe('scanned PDF question detection', () => {
     expect(starts[35].warnings.join(' ')).toMatch(/read question 36 as 37/);
   });
 
+  it('recovers the heading errors observed in the 2009 spring exam PDF', () => {
+    const detected = [
+      '問29 本文',
+      '問30 本文',
+      '問341 本文',
+      '問32 本文',
+      '問33 本文',
+      '問44 本文',
+      '問35 本文',
+      '問36 本文',
+      '問37 本文',
+      '問388 本文',
+      '問39 本文',
+      '問40 本文',
+      '癌 41 本文',
+      '問42 本文',
+      '問43 本文',
+      '問44 本文',
+    ];
+    const starts = findQuestionStarts([{
+      pageNumber: 12,
+      lines: detected.map((text, index) => line(text, index / 20)),
+    }], true);
+
+    expect(starts.map(start => start.number)).toEqual(
+      Array.from({ length: 16 }, (_, index) => index + 29),
+    );
+    expect(starts.find(start => start.number === 31)?.warnings.join(' ')).toMatch(/as 341/);
+    expect(starts.find(start => start.number === 34)?.warnings.join(' ')).toMatch(/as 44/);
+    expect(starts.find(start => start.number === 38)?.warnings.join(' ')).toMatch(/as 388/);
+  });
+
   it('does not shift later crops when a question heading is genuinely missing', () => {
     const detected = [
       ...Array.from({ length: 35 }, (_, index) => index + 1),
@@ -172,6 +223,45 @@ describe('scanned PDF question detection', () => {
     expect(starts.map(start => start.number)).toEqual(detected);
     expect(starts[35]).toMatchObject({ number: 37, pageNumber: 17 });
     expect(starts[35].warnings.join(' ')).toMatch(/Question 36 was not detected/);
+  });
+
+  it('recovers question 36 from its section divider when OCR skips its heading', () => {
+    const pages = [{
+      pageNumber: 17,
+      lines: [
+        line('\u554f35 \u672c\u6587', 0.1),
+        line('\u554f36\u304b\u3089\u554f55\u307e\u3067\u306f\u3001\u30de\u30cd\u30b8\u30e1\u30f3\u30c8\u7cfb\u306e\u554f\u984c\u3067\u3059\u3002', 0.2),
+        line('\u554f37 \u672c\u6587', 0.4),
+      ],
+    }];
+
+    const starts = findQuestionStarts(pages, true);
+
+    expect(starts.map(start => start.number)).toEqual([35, 36, 37]);
+    expect(starts[1]).toMatchObject({ number: 36, pageNumber: 17, topRatio: 0.2 });
+    expect(starts[1].warnings.join(' ')).toMatch(/recovered from its section divider/);
+  });
+
+  it('retries OCR on every page surrounding a missing question heading', () => {
+    const starts = [
+      { number: 35, pageNumber: 17, topRatio: 0.7, warnings: [] },
+      { number: 37, pageNumber: 18, topRatio: 0.3, warnings: [] },
+      { number: 38, pageNumber: 18, topRatio: 0.6, warnings: [] },
+      { number: 41, pageNumber: 20, topRatio: 0.2, warnings: [] },
+    ];
+
+    expect(getQuestionHeadingRetryPages(starts)).toEqual([17, 18, 19, 20]);
+  });
+
+  it('identifies every missing number from an expected 100-question exam', () => {
+    const starts = Array.from({ length: 100 }, (_, index) => ({
+      number: index + 1,
+      pageNumber: 1,
+      topRatio: index / 100,
+      warnings: [],
+    })).filter(start => ![34, 41, 100].includes(start.number));
+
+    expect(getMissingExpectedQuestionNumbers(starts, 100)).toEqual([34, 41, 100]);
   });
 
   it('supports common OCR heading confusion and punctuation', () => {
@@ -233,5 +323,58 @@ describe('scanned PDF answer reconciliation', () => {
     const result = mergeExpectedAnswerMaps([1, 2], new Map(), new Map([[1, 'ア'], [2, 'イ']]));
     expect(result.answerCount).toBe(2);
     expect(result.missingNumbers).toEqual([]);
+  });
+});
+
+describe('scanned question text extraction', () => {
+  it('separates OCR question text and choices, including two choices on one line', () => {
+    const parsed = parseScannedQuestionText(`問88 M社で計画している特売コーナでは，利益を最大化する必要がある。
+表2 候補商品の数量と利益
+A 90 1 60
+B 50 2 40
+ア商品Aと商品B    イ商品Aと商品D
+ウ商品Bと商品C    エ商品Cと商品D`, 88);
+
+    expect(parsed.questionText).toContain('利益を最大化する必要がある');
+    expect(parsed.questionText).toContain('A 90 1 60');
+    expect(parsed.choices).toEqual([
+      { label: 'ア', text: '商品Aと商品B', sortOrder: 1 },
+      { label: 'イ', text: '商品Aと商品D', sortOrder: 2 },
+      { label: 'ウ', text: '商品Bと商品C', sortOrder: 3 },
+      { label: 'エ', text: '商品Cと商品D', sortOrder: 4 },
+    ]);
+  });
+
+  it('keeps wrapped choice text with the preceding choice', () => {
+    const parsed = parseScannedQuestionText(`問1 次の記述のうち，適切なものはどれか。
+ア 最初の選択肢の
+続きの文章
+イ 二番目の選択肢`, 1);
+
+    expect(parsed.questionText).toBe('次の記述のうち,適切なものはどれか。');
+    expect(parsed.choices.map(choice => choice.text)).toEqual([
+      '最初の選択肢の 続きの文章',
+      '二番目の選択肢',
+    ]);
+  });
+
+  it('keeps diagrams while leaving complete text-only questions image-free', () => {
+    const textChoices = [
+      { label: 'ア', text: '最初の説明', sortOrder: 1 },
+      { label: 'イ', text: '二番目の説明', sortOrder: 2 },
+    ];
+
+    expect(shouldKeepQuestionImage('次の記述のうち適切なものはどれか。', textChoices)).toBe(false);
+    expect(shouldKeepQuestionImage('表2を参照して答えよ。', textChoices)).toBe(true);
+    expect(shouldKeepQuestionImage('正しい組合せを選べ。', [{ label: 'ア', text: 'ア', sortOrder: 1 }])).toBe(true);
+  });
+
+  it('provides selectable labels when diagram choices have no readable text', () => {
+    expect(ensureDiagramChoiceLabels([{ label: 'イ', text: 'OCR text', sortOrder: 1 }])).toEqual([
+      { label: 'ア', text: 'ア', sortOrder: 1 },
+      { label: 'イ', text: 'OCR text', sortOrder: 2 },
+      { label: 'ウ', text: 'ウ', sortOrder: 3 },
+      { label: 'エ', text: 'エ', sortOrder: 4 },
+    ]);
   });
 });

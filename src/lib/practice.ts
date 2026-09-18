@@ -51,7 +51,7 @@ export async function loadLatestAnswerStatus(userId: string, sessions?: Practice
 
 export async function createPracticeSession(userId: string, subjectId: string, questions: Question[]) {
   const { data, error } = await supabase.from('practice_sessions').insert({
-    user_id: userId, subject_id: subjectId === 'all' || subjectId === 'review' ? null : subjectId,
+    user_id: userId, subject_id: ['all', 'review', 'flagged'].includes(subjectId) ? null : subjectId,
     total_questions: questions.length, question_ids: questions.map(question => question.id),
   }).select().single();
   if (error) throw error;

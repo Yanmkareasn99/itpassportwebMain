@@ -9,6 +9,12 @@ interface ChatRequest {
   prompt?: unknown;
   messages?: unknown;
   systemPrompt?: unknown;
+  images?: unknown;
+}
+
+interface InlineImage {
+  mimeType: 'image/jpeg' | 'image/png' | 'image/webp';
+  data: string;
 }
 
 const DEFAULT_ALLOWED_ORIGINS = [
@@ -126,6 +132,23 @@ Deno.serve(async (req) => {
     const systemPrompt = typeof body.systemPrompt === 'string'
       ? body.systemPrompt.slice(0, 8000)
       : 'You are a helpful AI tutor. Answer concisely in Japanese.';
+    const allowedImageTypes = new Set<InlineImage['mimeType']>(['image/jpeg', 'image/png', 'image/webp']);
+    const images: InlineImage[] = Array.isArray(body.images)
+      ? body.images
+          .filter((image): image is InlineImage => {
+            if (!image || typeof image !== 'object') return false;
+            const candidate = image as Record<string, unknown>;
+            return typeof candidate.mimeType === 'string'
+              && allowedImageTypes.has(candidate.mimeType as InlineImage['mimeType'])
+              && typeof candidate.data === 'string'
+              && candidate.data.length > 0
+              && candidate.data.length <= 7_000_000;
+          })
+          .slice(0, 5)
+      : [];
+    if (images.reduce((total, image) => total + image.data.length, 0) > 14_000_000) {
+      return json({ error: 'The image payload is too large.' }, 413, origin);
+    }
     const model = Deno.env.get('GEMINI_MODEL') ?? 'gemini-3.5-flash-lite';
 
     const contents = [
@@ -135,7 +158,10 @@ Deno.serve(async (req) => {
       })),
       {
         role: 'user',
-        parts: [{ text: prompt }],
+        parts: [
+          { text: prompt },
+          ...images.map(image => ({ inlineData: image })),
+        ],
       },
     ];
 

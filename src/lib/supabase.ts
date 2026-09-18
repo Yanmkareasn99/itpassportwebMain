@@ -61,7 +61,7 @@ function getCurrentLocalUserId() {
 function scopeLocalRows(table: string, rows: LocalRow[]) {
   const userId = getCurrentLocalUserId();
   if (!userId) return rows;
-  if (['practice_sessions', 'exam_sessions', 'exam_targets', 'ai_chat_messages'].includes(table)) {
+  if (['practice_sessions', 'exam_sessions', 'exam_targets', 'ai_chat_messages', 'question_flags'].includes(table)) {
     return rows.filter(row => row.user_id === userId);
   }
   if (table === 'session_answers') {
@@ -227,7 +227,8 @@ class LocalQuery {
       const next = [...existing];
       result = values.map(value => {
         const candidate = normalizeLocalRow(this.table, value);
-        const conflictIndex = next.findIndex(row => row[this.conflictColumn ?? 'id'] === candidate[this.conflictColumn ?? 'id']);
+        const conflictColumns = (this.conflictColumn ?? 'id').split(',').map(column => column.trim());
+        const conflictIndex = next.findIndex(row => conflictColumns.every(column => row[column] === candidate[column]));
         if (conflictIndex >= 0) {
           next[conflictIndex] = { ...next[conflictIndex], ...candidate, id: next[conflictIndex].id };
           return next[conflictIndex];
