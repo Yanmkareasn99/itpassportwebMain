@@ -860,90 +860,118 @@ export default function PracticeListPage({
         </div>
 
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="text-sm font-semibold text-gray-600 shrink-0">
-              {translate(currentLanguage, "practiceListPage.filterBy")}
-            </span>
+  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
+    
+    {/* Filter title */}
+    <span className="text-sm font-semibold text-gray-600 shrink-0">
+      {translate(currentLanguage, "practiceListPage.filterBy")}
+    </span>
 
-            <MultiSelectDropdown
-              label={translate(currentLanguage, "practiceListPage.examDate")}
-              allLabel={translate(currentLanguage, "practiceListPage.all")}
-              selectedValues={selectedExamDates}
-              onChange={(values) => {
-                setSelectedExamDates(values);
-                setError("");
-              }}
-              options={[
-                {
-                  value: UNCATEGORIZED_EXAM_DATE,
-                  label: translate(currentLanguage, "ui.uncategorized"),
-                },
-                ...examDates.map((date) => ({
-                  value: date,
-                  label: formatExamDate(date, currentLanguage),
-                })),
-              ]}
-            />
+    {/* Filters */}
+    <div className="grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto">
+      <MultiSelectDropdown
+        label={translate(currentLanguage, "practiceListPage.examDate")}
+        allLabel={translate(currentLanguage, "practiceListPage.all")}
+        selectedValues={selectedExamDates}
+        onChange={(values) => {
+          setSelectedExamDates(values);
+          setError("");
+        }}
+        options={[
+          {
+            value: UNCATEGORIZED_EXAM_DATE,
+            label: translate(currentLanguage, "ui.uncategorized"),
+          },
+          ...examDates.map((date) => ({
+            value: date,
+            label: formatExamDate(date, currentLanguage),
+          })),
+        ]}
+      />
 
-            <SelectDropdown
-              label={translate(
+      <SelectDropdown
+        label={translate(
+          currentLanguage,
+          "practiceListPage.learningMode",
+        )}
+        value={modeFilter}
+        onChange={(v) => {
+          setModeFilter(v as ModeFilter);
+          setError("");
+        }}
+        options={[
+          {
+            value: "all",
+            label: translate(currentLanguage, "practiceListPage.all"),
+          },
+          {
+            value: "new",
+            label: translate(currentLanguage, "practiceListPage.new"),
+          },
+          {
+            value: "review",
+            label: translate(currentLanguage, "practiceListPage.review"),
+          },
+        ]}
+      />
+    </div>
+
+    {/* Result + button */}
+    <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto">
+      <p
+        role="status"
+        aria-live="polite"
+        className="min-w-0 flex-1 truncate text-xs sm:text-sm font-medium text-gray-600"
+      >
+        {!currentResult
+          ? translate(
+              currentLanguage,
+              "practiceListPage.countingMatches",
+            )
+          : currentResult.error
+            ? translateMessage(language, currentResult.error)
+            : translate(
                 currentLanguage,
-                "practiceListPage.learningMode",
+                "practiceListPage.matchingQuestions",
+                {
+                  count: matchingQuestions.length.toLocaleString(),
+                },
               )}
-              value={modeFilter}
-              onChange={(v) => {
-                setModeFilter(v as ModeFilter);
-                setError("");
-              }}
-              options={[
-                {
-                  value: "all",
-                  label: translate(currentLanguage, "practiceListPage.all"),
-                },
-                {
-                  value: "new",
-                  label: translate(currentLanguage, "practiceListPage.new"),
-                },
-                {
-                  value: "review",
-                  label: translate(currentLanguage, "practiceListPage.review"),
-                },
-              ]}
-            />
+      </p>
 
-            <p
-              role="status"
-              aria-live="polite"
-              className="ml-auto text-sm font-medium text-gray-600"
-            >
-              {!currentResult
-                ? translate(currentLanguage, "practiceListPage.countingMatches")
-                : currentResult.error
-                  ? translateMessage(language, currentResult.error)
-                  : translate(
-                      currentLanguage,
-                      "practiceListPage.matchingQuestions",
-                      { count: matchingQuestions.length.toLocaleString() },
-                    )}
-            </p>
-            <button
-              onClick={() => void startFilteredPractice()}
-              disabled={
-                !!starting ||
-                !currentResult ||
-                !!currentResult.error ||
-                matchingQuestions.length === 0
-              }
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Play className="w-3.5 h-3.5" />
-              {translate(currentLanguage, "practiceListPage.practiceFiltered")}
-              {currentResult &&
-                !currentResult.error &&
-                ` (${matchingQuestions.length.toLocaleString()})`}
-            </button>
-          </div>
-        </div>
+      <button
+        onClick={() => void startFilteredPractice()}
+        disabled={
+          !!starting ||
+          !currentResult ||
+          !!currentResult.error ||
+          matchingQuestions.length === 0
+        }
+        className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-xs sm:px-4 sm:text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        <Play className="h-3.5 w-3.5 shrink-0" />
+
+        <span className="hidden sm:inline">
+          {translate(
+            currentLanguage,
+            "practiceListPage.practiceFiltered",
+          )}
+        </span>
+
+        <span className="sm:hidden">
+          {translate(
+            currentLanguage,
+            "practiceListPage.practice",
+          )}
+        </span>
+
+        {currentResult &&
+          !currentResult.error &&
+          ` (${matchingQuestions.length.toLocaleString()})`}
+      </button>
+    </div>
+  </div>
+</div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <div className="min-w-0 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">

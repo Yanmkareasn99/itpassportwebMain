@@ -275,14 +275,14 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
           </div>
 
           {/* Always-visible Points */}
-          <div className="flex items-center" aria-hidden="false">
-            <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-0.5 sm:py-1 bg-amber-50 text-amber-700 rounded-full border border-amber-100 dark:bg-slate-800 dark:border-slate-700 dark:text-amber-300">
-              <Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span className="text-xs sm:text-sm font-semibold">
-                {pointBalance?.toLocaleString() ?? 0} pts
-              </span>
-            </div>
-          </div>
+          <div className="flex items-center shrink-0" aria-hidden="false">
+  <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 whitespace-nowrap bg-amber-50 text-amber-700 rounded-full border border-amber-100 dark:bg-slate-800 dark:border-slate-700 dark:text-amber-300">
+    <Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+    <span className="text-xs sm:text-sm font-semibold whitespace-nowrap">
+      {pointBalance?.toLocaleString() ?? 0} pts
+    </span>
+  </div>
+</div>
 
           <div ref={profileMenuRef} className="relative">
             <button
