@@ -8,6 +8,7 @@ import {
   Trophy,
   FileText,
   Settings,
+   Shield,
   X,
 } from "lucide-react";
 
@@ -37,6 +38,7 @@ export default function MobileTabBar({
     { icon: Trophy, label: t('mobileTabBar.battle'), page: "battle" as Page },
     { icon: FileText, label: t('mobileTabBar.materials'), page: "materials" as Page },
     { icon: Settings, label: t('mobileTabBar.settings'), page: "settings" as Page },
+     { icon: Shield, label: t('mobileTabBar.admin'), page: "admin" as Page },
   ];
 
   function go(page: Page) {

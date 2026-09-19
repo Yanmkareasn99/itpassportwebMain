@@ -548,6 +548,7 @@ export const ja = {
   "mobileTabBar.battle": "対戦",
   "mobileTabBar.materials": "教材",
   "mobileTabBar.settings": "設定",
+  "mobileTabBar.admin": "管理",
   "mobileTabBar.menu": "メニュー",
   "mobileTabBar.signOut": "ログアウト",
   "mobileTabBar.more": "その他",
