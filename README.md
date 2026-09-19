@@ -189,20 +189,24 @@ Current focused coverage includes:
 - Battle wager validation and duplicate-submit protection
 - Page and component interaction regressions
 
-### Converting quiz-v1 question data
+### Scanning IT Passport and AP exams locally
 
-Convert an external `quiz-v1` dataset into the two files accepted by
-**Admin → Questions → Import CSV**. Referenced WebP figures are also copied to
-`public/quiz-figures`.
+Use the local scanner to convert an IT Passport or Applied Information
+Technology Engineer exam booklet into the JSON archive accepted by
+**Admin → Questions → Import PDFs → Saved question JSON**:
 
 ```powershell
-npm run convert:quiz-v1 -- --source-dir "C:\path\to\data\ip\quiz"
+npm run scan:exam -- `
+  --exam it-passport `
+  --questions .\pdfs\questions.pdf `
+  --answers .\pdfs\answers.pdf `
+  --exam-key 2024r06 `
+  --exam-date 2024-04-01 `
+  --output .\imports\2024r06.json
 ```
 
-Select `supabase/import/ip-quiz-v1/questions.csv` in the question picker and
-`supabase/import/ip-quiz-v1/answer_choices.csv` in the answer-choice picker,
-review the counts, and start the import. Source IDs are retained in stable
-`source_key` values, and generated database UUIDs are deterministic.
+See `docs/FUTURE_QUESTION_IMPORT.md` for local Tesseract setup, AP exam usage,
+and the review/import workflow.
 
 ## Data And Errors
 
