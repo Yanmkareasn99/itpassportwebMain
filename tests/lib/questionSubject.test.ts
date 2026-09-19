@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  AP_SUBJECT_ID,
   detectItPassportSubjectId,
   detectImportedSubjectId,
   FUNDAMENTAL_IT_SUBJECT_IDS,
@@ -73,6 +74,8 @@ describe('question subject detection', () => {
     ['fundamental-a', 60, FUNDAMENTAL_IT_SUBJECT_IDS.subjectA],
     ['fundamental-b', 1, FUNDAMENTAL_IT_SUBJECT_IDS.subjectB],
     ['fundamental-b', 20, FUNDAMENTAL_IT_SUBJECT_IDS.subjectB],
+    ['ap', 1, AP_SUBJECT_ID],
+    ['ap', 80, AP_SUBJECT_ID],
   ] as const)('assigns every %s question to its exam subject', (exam, number, expected) => {
     expect(detectImportedSubjectId(exam, number)).toBe(expected);
   });
@@ -85,6 +88,11 @@ describe('question subject detection', () => {
       'fundamental-a',
     )).toBe(FUNDAMENTAL_IT_SUBJECT_IDS.subjectA);
     expect(resolveImportedSubjectId('', 1, [], 'fundamental-b')).toBeNull();
+  });
+
+  it('resolves the AP subject only when its migration has been applied', () => {
+    expect(resolveImportedSubjectId('', 80, [AP_SUBJECT_ID], 'ap')).toBe(AP_SUBJECT_ID);
+    expect(resolveImportedSubjectId('', 80, [], 'ap')).toBeNull();
   });
 
   it('only returns subjects that exist in the current database', () => {
