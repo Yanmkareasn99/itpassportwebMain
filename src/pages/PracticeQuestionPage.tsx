@@ -1,11 +1,9 @@
 import { translateMessage, translate } from '../i18n';
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertCircle, Flag, ArrowLeft, Sparkles, Loader } from 'lucide-react';
-import Layout from '../components/Layout';
+import { ChevronLeft, ChevronRight, CheckCircle, XCircle, Flag, ArrowLeft, Sparkles, Loader } from 'lucide-react';import Layout from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { getLocalizedExplanation } from '../lib/localizedQuestion';
 import { getQuestionExplanation, loadAiImageInputs } from '../lib/aiChat';
 import { practiceErrorMessage, type PracticeAnswer } from '../lib/practice';
 import { awardLocalAnswerPoints } from '../lib/points';
