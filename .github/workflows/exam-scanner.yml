@@ -1,0 +1,54 @@
+name: Exam Scanner OCR
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ocr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Tesseract OCR
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            tesseract-ocr \
+            tesseract-ocr-jpn
+
+      - name: Check Tesseract
+        run: |
+          tesseract --version
+          tesseract --list-langs
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r tools/exam_scanner/requirements.txt
+
+      - name: Run tests
+        run: |
+          python -m pytest tools/exam_scanner/test_scan_exam.py
+
+      - name: Run OCR
+        run: |
+          python tools/exam_scanner/scan_exam.py \
+            --exam it-passport \
+            --questions tools/exam_scanner/test_questions.pdf \
+            --answers tools/exam_scanner/test_answers.pdf \
+            --exam-key test-ip \
+            --exam-date 2026-09-19 \
+            --output tools/exam_scanner/output.json
+
+      - name: Upload OCR result
+        uses: actions/upload-artifact@v4
+        with:
+          name: exam-scanner-output
+          path: tools/exam_scanner/output.json
