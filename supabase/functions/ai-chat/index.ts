@@ -160,7 +160,12 @@ Deno.serve(async (req) => {
         role: 'user',
         parts: [
           { text: prompt },
-          ...images.map(image => ({ inlineData: image })),
+          ...images.map(image => ({
+            inline_data: {
+              mime_type: image.mimeType,
+              data: image.data,
+            },
+          })),
         ],
       },
     ];
