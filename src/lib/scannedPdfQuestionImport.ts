@@ -1,7 +1,10 @@
-import type { PDFDocumentProxy } from 'pdfjs-dist';
-import { extractAnswerMap, extractPages } from './pdfAnswerText';
-import type { PdfImportQuestion, PdfImportResult } from './pdfQuestionImport';
-import { ensureDiagramChoiceLabels, shouldKeepQuestionImage } from './pdfQuestionImages';
+import type { PDFDocumentProxy } from "pdfjs-dist";
+import { extractAnswerMap, extractPages } from "./pdfAnswerText";
+import type { PdfImportQuestion, PdfImportResult } from "./pdfQuestionImport";
+import {
+  ensureDiagramChoiceLabels,
+  shouldKeepQuestionImage,
+} from "./pdfQuestionImages";
 
 export interface OcrLine {
   text: string;
@@ -21,22 +24,31 @@ export interface QuestionStart {
   warnings: string[];
 }
 
-const ANSWER_LABELS = 'アイウエ';
+const ANSWER_LABELS = "アイウエ";
 
 function cleanOcrLine(value: string) {
-  return value.normalize('NFKC').replace(/[ \t]+/g, ' ').trim();
+  return value
+    .normalize("NFKC")
+    .replace(/[ \t]+/g, " ")
+    .trim();
 }
 
-export function parseScannedQuestionText(rawText: string, questionNumber: number) {
+export function parseScannedQuestionText(
+  rawText: string,
+  questionNumber: number,
+) {
   const questionParts: string[] = [];
-  const choices: PdfImportQuestion['choices'] = [];
+  const choices: PdfImportQuestion["choices"] = [];
   let currentChoice: { label: string; parts: string[] } | null = null;
   const choiceMarker = /(?:^|\s)([アイウエ])(?=\s|[^\p{Script=Katakana}])/gu;
 
   const commitChoice = () => {
     if (!currentChoice) return;
-    const text = currentChoice.parts.join(' ').replace(/\s+/g, ' ').trim();
-    if (text && !choices.some(choice => choice.label === currentChoice?.label)) {
+    const text = currentChoice.parts.join(" ").replace(/\s+/g, " ").trim();
+    if (
+      text &&
+      !choices.some((choice) => choice.label === currentChoice?.label)
+    ) {
       choices.push({
         label: currentChoice.label,
         text,
@@ -50,8 +62,15 @@ export function parseScannedQuestionText(rawText: string, questionNumber: number
     let line = cleanOcrLine(rawLine);
     if (!line) continue;
     if (/^[－—-]?\s*\d+\s*[－—-]?$/.test(line)) continue;
-    if (line.includes('無断転載を禁ず') || line.includes('試験問題に記載されている会社名')) continue;
-    line = line.replace(new RegExp(`^[問間]\\s*${questionNumber}(?:\\s*[.:：、])?\\s*`), '');
+    if (
+      line.includes("無断転載を禁ず") ||
+      line.includes("試験問題に記載されている会社名")
+    )
+      continue;
+    line = line.replace(
+      new RegExp(`^[問間]\\s*${questionNumber}(?:\\s*[.:：、])?\\s*`),
+      "",
+    );
     if (!line) continue;
 
     const matches = [...line.matchAll(choiceMarker)];
@@ -81,50 +100,93 @@ export function parseScannedQuestionText(rawText: string, questionNumber: number
   commitChoice();
 
   return {
-    questionText: questionParts.join('\n').replace(/\n{3,}/g, '\n\n').trim(),
+    questionText: questionParts
+      .join("\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim(),
     choices,
   };
 }
 
 function createCanvas(width: number, height: number) {
-  const canvas = document.createElement('canvas');
+  const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.ceil(width));
   canvas.height = Math.max(1, Math.ceil(height));
   return canvas;
 }
 
-async function renderPage(documentProxy: PDFDocumentProxy, pageNumber: number, scale: number) {
+/**
+ * Converts a Blob to a base64 data: URL (e.g. "data:image/webp;base64,...").
+ * Unlike URL.createObjectURL(), the result is a self-contained string that
+ * survives serialization to a database/API and can be loaded in any browser
+ * session, not just the one that created it.
+ */
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () =>
+      reject(reader.error ?? new Error("Failed to read image blob."));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function renderPage(
+  documentProxy: PDFDocumentProxy,
+  pageNumber: number,
+  scale: number,
+) {
   const page = await documentProxy.getPage(pageNumber);
   const viewport = page.getViewport({ scale });
   const canvas = createCanvas(viewport.width, viewport.height);
-  const context = canvas.getContext('2d');
-  if (!context) throw new Error('Canvas is unavailable in this browser.');
-  context.fillStyle = '#ffffff';
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Canvas is unavailable in this browser.");
+  context.fillStyle = "#ffffff";
   context.fillRect(0, 0, canvas.width, canvas.height);
   await page.render({ canvasContext: context, viewport }).promise;
   page.cleanup();
   return canvas;
 }
 
-function cropCanvas(source: HTMLCanvasElement, left: number, top: number, width: number, height: number) {
+function cropCanvas(
+  source: HTMLCanvasElement,
+  left: number,
+  top: number,
+  width: number,
+  height: number,
+) {
   const output = createCanvas(width, height);
-  const context = output.getContext('2d');
-  if (!context) throw new Error('Canvas is unavailable in this browser.');
-  context.fillStyle = '#ffffff';
+  const context = output.getContext("2d");
+  if (!context) throw new Error("Canvas is unavailable in this browser.");
+  context.fillStyle = "#ffffff";
   context.fillRect(0, 0, output.width, output.height);
-  context.drawImage(source, left, top, width, height, 0, 0, output.width, output.height);
+  context.drawImage(
+    source,
+    left,
+    top,
+    width,
+    height,
+    0,
+    0,
+    output.width,
+    output.height,
+  );
   return output;
 }
 
 function hasInk(canvas: HTMLCanvasElement) {
-  const context = canvas.getContext('2d', { willReadFrequently: true });
+  const context = canvas.getContext("2d", { willReadFrequently: true });
   if (!context) return true;
   const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
   let inkSamples = 0;
   for (let y = 0; y < canvas.height; y += 6) {
     for (let x = 0; x < canvas.width; x += 6) {
       const offset = (y * canvas.width + x) * 4;
-      if (pixels[offset] < 215 || pixels[offset + 1] < 215 || pixels[offset + 2] < 215) {
+      if (
+        pixels[offset] < 215 ||
+        pixels[offset + 1] < 215 ||
+        pixels[offset + 2] < 215
+      ) {
         inkSamples += 1;
         if (inkSamples >= 20) return true;
       }
@@ -134,7 +196,7 @@ function hasInk(canvas: HTMLCanvasElement) {
 }
 
 function trimWhitespace(source: HTMLCanvasElement) {
-  const context = source.getContext('2d', { willReadFrequently: true });
+  const context = source.getContext("2d", { willReadFrequently: true });
   if (!context) return source;
   const pixels = context.getImageData(0, 0, source.width, source.height).data;
   let left = source.width;
@@ -144,7 +206,11 @@ function trimWhitespace(source: HTMLCanvasElement) {
   for (let y = 0; y < source.height; y += 2) {
     for (let x = 0; x < source.width; x += 2) {
       const offset = (y * source.width + x) * 4;
-      if (pixels[offset] < 245 || pixels[offset + 1] < 245 || pixels[offset + 2] < 245) {
+      if (
+        pixels[offset] < 245 ||
+        pixels[offset + 1] < 245 ||
+        pixels[offset + 2] < 245
+      ) {
         left = Math.min(left, x);
         right = Math.max(right, x);
         top = Math.min(top, y);
@@ -158,16 +224,26 @@ function trimWhitespace(source: HTMLCanvasElement) {
   const cropTop = Math.max(0, top - margin);
   const cropRight = Math.min(source.width, right + margin);
   const cropBottom = Math.min(source.height, bottom + margin);
-  return cropCanvas(source, cropLeft, cropTop, cropRight - cropLeft, cropBottom - cropTop);
+  return cropCanvas(
+    source,
+    cropLeft,
+    cropTop,
+    cropRight - cropLeft,
+    cropBottom - cropTop,
+  );
 }
 
 function hasDiagramLikeLines(canvas: HTMLCanvasElement) {
-  const context = canvas.getContext('2d', { willReadFrequently: true });
+  const context = canvas.getContext("2d", { willReadFrequently: true });
   if (!context) return false;
   const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
   const isDark = (x: number, y: number) => {
     const offset = (y * canvas.width + x) * 4;
-    return pixels[offset] < 175 && pixels[offset + 1] < 175 && pixels[offset + 2] < 175;
+    return (
+      pixels[offset] < 175 &&
+      pixels[offset + 1] < 175 &&
+      pixels[offset + 2] < 175
+    );
   };
   const minimumHorizontal = Math.max(80, Math.floor(canvas.width * 0.14));
   const minimumVertical = Math.max(80, Math.floor(canvas.height * 0.12));
@@ -199,14 +275,20 @@ function hasDiagramLikeLines(canvas: HTMLCanvasElement) {
   return false;
 }
 
-function parseTsv(tsv: string | null | undefined, imageHeight: number): OcrLine[] {
+function parseTsv(
+  tsv: string | null | undefined,
+  imageHeight: number,
+): OcrLine[] {
   if (!tsv) return [];
-  const grouped = new Map<string, { words: { left: number; text: string }[]; top: number; bottom: number }>();
+  const grouped = new Map<
+    string,
+    { words: { left: number; text: string }[]; top: number; bottom: number }
+  >();
   const rows = tsv.split(/\r?\n/).slice(1);
   for (const row of rows) {
-    const cells = row.split('\t');
-    if (cells.length < 12 || cells[0] !== '5') continue;
-    const text = cells.slice(11).join('\t').trim();
+    const cells = row.split("\t");
+    if (cells.length < 12 || cells[0] !== "5") continue;
+    const text = cells.slice(11).join("\t").trim();
     if (!text) continue;
     const key = `${cells[2]}:${cells[3]}:${cells[4]}`;
     const left = Number(cells[6]);
@@ -220,8 +302,11 @@ function parseTsv(tsv: string | null | undefined, imageHeight: number): OcrLine[
   }
   return [...grouped.values()]
     .sort((left, right) => left.top - right.top)
-    .map(line => ({
-      text: line.words.sort((left, right) => left.left - right.left).map(word => word.text).join(' '),
+    .map((line) => ({
+      text: line.words
+        .sort((left, right) => left.left - right.left)
+        .map((word) => word.text)
+        .join(" "),
       topRatio: line.top / imageHeight,
       bottomRatio: line.bottom / imageHeight,
     }));
@@ -231,15 +316,20 @@ function groupAdjacent(values: number[]) {
   const groups: number[][] = [];
   for (const value of values) {
     const current = groups[groups.length - 1];
-    if (!current || value > current[current.length - 1] + 1) groups.push([value]);
+    if (!current || value > current[current.length - 1] + 1)
+      groups.push([value]);
     else current.push(value);
   }
-  return groups.map(group => Math.round(group.reduce((sum, value) => sum + value, 0) / group.length));
+  return groups.map((group) =>
+    Math.round(group.reduce((sum, value) => sum + value, 0) / group.length),
+  );
 }
 
 export function selectAnswerTableLines(horizontalLines: number[]) {
   if (horizontalLines.length < 4) return horizontalLines;
-  const gaps = horizontalLines.slice(1).map((line, index) => line - horizontalLines[index]);
+  const gaps = horizontalLines
+    .slice(1)
+    .map((line, index) => line - horizontalLines[index]);
   const sortedGaps = [...gaps].sort((left, right) => left - right);
   const medianGap = sortedGaps[Math.floor(sortedGaps.length / 2)];
   if (medianGap <= 0) return horizontalLines;
@@ -257,13 +347,18 @@ export function selectAnswerTableLines(horizontalLines: number[]) {
       runs.push([horizontalLines[index]]);
     }
   }
-  return runs.reduce((longest, run) => run.length > longest.length ? run : longest, []);
+  return runs.reduce(
+    (longest, run) => (run.length > longest.length ? run : longest),
+    [],
+  );
 }
 
 export function parseAnswerGridRow(value: string) {
-  const normalized = value.normalize('NFKC').replace(/\s+/g, '');
+  const normalized = value.normalize("NFKC").replace(/\s+/g, "");
   const numberMatch = normalized.match(/\d{1,3}/);
-  const label = [...normalized].find(character => ANSWER_LABELS.includes(character));
+  const label = [...normalized].find((character) =>
+    ANSWER_LABELS.includes(character),
+  );
   if (!numberMatch || !label) return null;
   const number = Number(numberMatch[0]);
   if (number < 1 || number > 200) return null;
@@ -271,12 +366,16 @@ export function parseAnswerGridRow(value: string) {
 }
 
 function detectAnswerGrid(canvas: HTMLCanvasElement) {
-  const context = canvas.getContext('2d', { willReadFrequently: true });
+  const context = canvas.getContext("2d", { willReadFrequently: true });
   if (!context) return null;
   const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
   const isDark = (x: number, y: number) => {
     const offset = (y * canvas.width + x) * 4;
-    return pixels[offset] < 170 && pixels[offset + 1] < 170 && pixels[offset + 2] < 170;
+    return (
+      pixels[offset] < 170 &&
+      pixels[offset + 1] < 170 &&
+      pixels[offset + 2] < 170
+    );
   };
 
   const horizontalCandidates: number[] = [];
@@ -294,7 +393,9 @@ function detectAnswerGrid(canvas: HTMLCanvasElement) {
     }
     if (longestRun >= minimumRun) horizontalCandidates.push(y);
   }
-  const horizontalLines = selectAnswerTableLines(groupAdjacent(horizontalCandidates));
+  const horizontalLines = selectAnswerTableLines(
+    groupAdjacent(horizontalCandidates),
+  );
   if (horizontalLines.length < 4) return null;
 
   const tableTop = horizontalLines[0];
@@ -313,7 +414,11 @@ function detectAnswerGrid(canvas: HTMLCanvasElement) {
 
   const tables: [number, number, number][] = [];
   for (let index = 0; index + 2 < verticalLines.length; index += 3) {
-    const table = verticalLines.slice(index, index + 3) as [number, number, number];
+    const table = verticalLines.slice(index, index + 3) as [
+      number,
+      number,
+      number,
+    ];
     if (table[1] > table[0] && table[2] > table[1]) tables.push(table);
   }
   const rowCount = horizontalLines.length - 2;
@@ -322,33 +427,44 @@ function detectAnswerGrid(canvas: HTMLCanvasElement) {
 }
 
 export function isQuestionRangeHeading(value: string) {
-  const compact = value.normalize('NFKC').replace(/\s+/g, '');
-  return /^[問間]\d{1,4}(?:(?:から|より)|[～〜~\-－—―])[問間]?\d{1,4}(?:まで)?/.test(compact);
+  const compact = value.normalize("NFKC").replace(/\s+/g, "");
+  return /^[問間]\d{1,4}(?:(?:から|より)|[～〜~\-－—―])[問間]?\d{1,4}(?:まで)?/.test(
+    compact,
+  );
 }
 
-export function findQuestionStarts(pages: OcrPage[], repairForwardJumps = false) {
+export function findQuestionStarts(
+  pages: OcrPage[],
+  repairForwardJumps = false,
+) {
   const candidates: Array<QuestionStart & { detectedNumber: number }> = [];
   const rangeHints: Array<QuestionStart & { detectedNumber: number }> = [];
   for (const page of pages) {
     for (let lineIndex = 0; lineIndex < page.lines.length; lineIndex += 1) {
       const line = page.lines[lineIndex];
-      const normalized = line.text.normalize('NFKC').replace(/\s+/g, ' ').trim();
-      const previousLine = page.lines[lineIndex - 1]?.text ?? '';
-      const nextLine = page.lines[lineIndex + 1]?.text ?? '';
+      const normalized = line.text
+        .normalize("NFKC")
+        .replace(/\s+/g, " ")
+        .trim();
+      const previousLine = page.lines[lineIndex - 1]?.text ?? "";
+      const nextLine = page.lines[lineIndex + 1]?.text ?? "";
       // Section dividers such as "問1から問34までは、ストラテジ系の問題です。"
       // are not questions. Treating one as a start shifts every later question and answer.
       const ownRangeHeading = isQuestionRangeHeading(normalized);
-      const nextRangeHeading = isQuestionRangeHeading(`${normalized} ${nextLine}`);
-      const previousRangeHeading = !isQuestionRangeHeading(previousLine)
-        && isQuestionRangeHeading(`${previousLine} ${normalized}`);
+      const nextRangeHeading = isQuestionRangeHeading(
+        `${normalized} ${nextLine}`,
+      );
+      const previousRangeHeading =
+        !isQuestionRangeHeading(previousLine) &&
+        isQuestionRangeHeading(`${previousLine} ${normalized}`);
       if (
-        ownRangeHeading
-        || nextRangeHeading
+        ownRangeHeading ||
+        nextRangeHeading ||
         // Only join the previous line when it is an incomplete range heading.
         // A complete section heading immediately above a real question (for
         // example, "問1から問34まで..." followed by "問1 ...") must not
         // consume that question as part of the range.
-        || previousRangeHeading
+        previousRangeHeading
       ) {
         if (repairForwardJumps) {
           const rangeText = ownRangeHeading
@@ -356,7 +472,9 @@ export function findQuestionStarts(pages: OcrPage[], repairForwardJumps = false)
             : nextRangeHeading
               ? `${normalized} ${nextLine}`
               : `${previousLine} ${normalized}`;
-          const rangeStart = Number(rangeText.normalize('NFKC').match(/\d{1,4}/)?.[0]);
+          const rangeStart = Number(
+            rangeText.normalize("NFKC").match(/\d{1,4}/)?.[0],
+          );
           if (rangeStart >= 1 && rangeStart <= 200) {
             rangeHints.push({
               detectedNumber: rangeStart,
@@ -385,9 +503,10 @@ export function findQuestionStarts(pages: OcrPage[], repairForwardJumps = false)
     }
   }
 
-  candidates.sort((left, right) => (
-    left.pageNumber - right.pageNumber || left.topRatio - right.topRatio
-  ));
+  candidates.sort(
+    (left, right) =>
+      left.pageNumber - right.pageNumber || left.topRatio - right.topRatio,
+  );
 
   // OCR sometimes merges the first question of a section into its divider or
   // misses that question heading entirely. A divider such as "questions
@@ -395,27 +514,38 @@ export function findQuestionStarts(pages: OcrPage[], repairForwardJumps = false)
   // it and question 37 is after it. Keep this recovery deliberately narrow so
   // a genuinely missing heading elsewhere never shifts all subsequent crops.
   const isBefore = (
-    left: Pick<QuestionStart, 'pageNumber' | 'topRatio'>,
-    right: Pick<QuestionStart, 'pageNumber' | 'topRatio'>,
-  ) => left.pageNumber < right.pageNumber
-    || (left.pageNumber === right.pageNumber && left.topRatio < right.topRatio);
+    left: Pick<QuestionStart, "pageNumber" | "topRatio">,
+    right: Pick<QuestionStart, "pageNumber" | "topRatio">,
+  ) =>
+    left.pageNumber < right.pageNumber ||
+    (left.pageNumber === right.pageNumber && left.topRatio < right.topRatio);
   for (const hint of rangeHints) {
-    if (candidates.some(candidate => candidate.detectedNumber === hint.detectedNumber)) continue;
-    const previous = candidates.find(candidate => (
-      candidate.detectedNumber === hint.detectedNumber - 1 && isBefore(candidate, hint)
-    ));
-    const next = candidates.find(candidate => (
-      candidate.detectedNumber === hint.detectedNumber + 1 && isBefore(hint, candidate)
-    ));
+    if (
+      candidates.some(
+        (candidate) => candidate.detectedNumber === hint.detectedNumber,
+      )
+    )
+      continue;
+    const previous = candidates.find(
+      (candidate) =>
+        candidate.detectedNumber === hint.detectedNumber - 1 &&
+        isBefore(candidate, hint),
+    );
+    const next = candidates.find(
+      (candidate) =>
+        candidate.detectedNumber === hint.detectedNumber + 1 &&
+        isBefore(hint, candidate),
+    );
     if (!previous || !next) continue;
     hint.warnings.push(
       `Question ${hint.detectedNumber} heading was recovered from its section divider; review its crop.`,
     );
     candidates.push(hint);
   }
-  candidates.sort((left, right) => (
-    left.pageNumber - right.pageNumber || left.topRatio - right.topRatio
-  ));
+  candidates.sort(
+    (left, right) =>
+      left.pageNumber - right.pageNumber || left.topRatio - right.topRatio,
+  );
 
   const starts: QuestionStart[] = [];
   const byNumber = new Map<number, QuestionStart>();
@@ -431,29 +561,33 @@ export function findQuestionStarts(pages: OcrPage[], repairForwardJumps = false)
     // the current OCR value is 19, and the next heading is 11.
     const expectedNumber = (previous?.number ?? 0) + 1;
     const nextDetectedNumber = candidates[index + 1]?.detectedNumber;
-    const isTrailingZeroReadAsNine = expectedNumber % 10 === 0
-      && candidate.detectedNumber === expectedNumber + 9
-      && (nextDetectedNumber === expectedNumber + 1 || nextDetectedNumber === undefined);
+    const isTrailingZeroReadAsNine =
+      expectedNumber % 10 === 0 &&
+      candidate.detectedNumber === expectedNumber + 9 &&
+      (nextDetectedNumber === expectedNumber + 1 ||
+        nextDetectedNumber === undefined);
     if (isTrailingZeroReadAsNine) resolvedNumber = expectedNumber;
 
     // A heavily blurred final "100" can be recognized as values such as
     // "196". When questions 1-99 are already contiguous, a final value above
     // the supported 100-question range cannot be a real heading in the exam
     // types handled by this importer, so recover it from physical order.
-    const isFinalQuestionReadOutOfRange = repairForwardJumps
-      && Boolean(previous)
-      && nextDetectedNumber === undefined
-      && expectedNumber === 100
-      && candidate.detectedNumber > 100;
+    const isFinalQuestionReadOutOfRange =
+      repairForwardJumps &&
+      Boolean(previous) &&
+      nextDetectedNumber === undefined &&
+      expectedNumber === 100 &&
+      candidate.detectedNumber > 100;
     if (isFinalQuestionReadOutOfRange) resolvedNumber = expectedNumber;
 
     // A duplicated or inserted digit can turn a normal heading into 341 or
     // 388. If the following physical heading is exactly the next expected
     // question, the surrounding sequence safely identifies the real number.
-    const isQuestionReadOutOfRange = repairForwardJumps
-      && Boolean(previous)
-      && candidate.detectedNumber > 200
-      && nextDetectedNumber === expectedNumber + 1;
+    const isQuestionReadOutOfRange =
+      repairForwardJumps &&
+      Boolean(previous) &&
+      candidate.detectedNumber > 200 &&
+      nextDetectedNumber === expectedNumber + 1;
     if (isQuestionReadOutOfRange) resolvedNumber = expectedNumber;
 
     // Only repair a forward jump when the remaining headings prove that it is
@@ -462,20 +596,22 @@ export function findQuestionStarts(pages: OcrPage[], repairForwardJumps = false)
     // a single 37 instead means question 36 was missed; renumbering that 37
     // would shift every remaining crop by one.
     const laterDetectedNumbers = new Set(
-      candidates.slice(index + 1).map(next => next.detectedNumber),
+      candidates.slice(index + 1).map((next) => next.detectedNumber),
     );
     const interveningNumbersRemain = Array.from(
       { length: Math.max(0, candidate.detectedNumber - expectedNumber - 1) },
       (_, offset) => expectedNumber + offset + 1,
-    ).every(number => laterDetectedNumbers.has(number));
-    const nextContinuesExpectedSequence = nextDetectedNumber === expectedNumber + 1;
-    const isForwardJumpCorrected = repairForwardJumps
-      && Boolean(previous)
-      && candidate.detectedNumber > expectedNumber
-      && candidate.detectedNumber <= 200
-      && nextDetectedNumber !== expectedNumber
-      && laterDetectedNumbers.has(candidate.detectedNumber)
-      && (nextContinuesExpectedSequence || interveningNumbersRemain);
+    ).every((number) => laterDetectedNumbers.has(number));
+    const nextContinuesExpectedSequence =
+      nextDetectedNumber === expectedNumber + 1;
+    const isForwardJumpCorrected =
+      repairForwardJumps &&
+      Boolean(previous) &&
+      candidate.detectedNumber > expectedNumber &&
+      candidate.detectedNumber <= 200 &&
+      nextDetectedNumber !== expectedNumber &&
+      laterDetectedNumbers.has(candidate.detectedNumber) &&
+      (nextContinuesExpectedSequence || interveningNumbersRemain);
     if (isForwardJumpCorrected) resolvedNumber = expectedNumber;
 
     // Keep large OCR values available as sequence evidence, but never emit
@@ -485,19 +621,27 @@ export function findQuestionStarts(pages: OcrPage[], repairForwardJumps = false)
 
     const duplicate = byNumber.get(resolvedNumber);
     if (duplicate) {
-      duplicate.warnings.push(`Question ${resolvedNumber} was detected more than once; review its crop.`);
+      duplicate.warnings.push(
+        `Question ${resolvedNumber} was detected more than once; review its crop.`,
+      );
       continue;
     }
 
     if (previous && resolvedNumber <= previous.number) {
-      previous.warnings.push(`Ignored out-of-order question heading ${candidate.detectedNumber}; review question segmentation.`);
+      previous.warnings.push(
+        `Ignored out-of-order question heading ${candidate.detectedNumber}; review question segmentation.`,
+      );
       continue;
     }
 
     if (previous && resolvedNumber > previous.number + 1) {
-      const nextNumber = candidates.slice(index + 1).find(next => next.detectedNumber > previous.number)?.detectedNumber;
+      const nextNumber = candidates
+        .slice(index + 1)
+        .find((next) => next.detectedNumber > previous.number)?.detectedNumber;
       if (nextNumber === previous.number + 1) {
-        previous.warnings.push(`Ignored likely false-positive question heading ${candidate.detectedNumber}.`);
+        previous.warnings.push(
+          `Ignored likely false-positive question heading ${candidate.detectedNumber}.`,
+        );
         continue;
       }
       const firstMissing = previous.number + 1;
@@ -510,7 +654,7 @@ export function findQuestionStarts(pages: OcrPage[], repairForwardJumps = false)
     } else if (!previous && resolvedNumber > 1) {
       candidate.warnings.push(
         resolvedNumber === 2
-          ? 'Question 1 was not detected before this question; review segmentation.'
+          ? "Question 1 was not detected before this question; review segmentation."
           : `Questions 1-${resolvedNumber - 1} were not detected before this question; review segmentation.`,
       );
     }
@@ -551,7 +695,11 @@ export function getQuestionHeadingRetryPages(starts: QuestionStart[]) {
     const previous = starts[index - 1];
     const current = starts[index];
     if (current.number <= previous.number + 1) continue;
-    for (let pageNumber = previous.pageNumber; pageNumber <= current.pageNumber; pageNumber += 1) {
+    for (
+      let pageNumber = previous.pageNumber;
+      pageNumber <= current.pageNumber;
+      pageNumber += 1
+    ) {
       pageNumbers.add(pageNumber);
     }
   }
@@ -559,24 +707,30 @@ export function getQuestionHeadingRetryPages(starts: QuestionStart[]) {
 }
 
 export function getMissingExpectedQuestionNumbers(
-  starts: readonly Pick<QuestionStart, 'number'>[],
+  starts: readonly Pick<QuestionStart, "number">[],
   expectedCount: number,
 ) {
-  const detected = new Set(starts.map(start => start.number));
-  return Array.from(
-    { length: expectedCount },
-    (_, index) => index + 1,
-  ).filter(number => !detected.has(number));
+  const detected = new Set(starts.map((start) => start.number));
+  return Array.from({ length: expectedCount }, (_, index) => index + 1).filter(
+    (number) => !detected.has(number),
+  );
 }
 
-function hasCompleteExpectedSequence(starts: QuestionStart[], expectedCount: number) {
-  return starts.length === expectedCount
-    && starts.every((start, index) => start.number === index + 1);
+function hasCompleteExpectedSequence(
+  starts: QuestionStart[],
+  expectedCount: number,
+) {
+  return (
+    starts.length === expectedCount &&
+    starts.every((start, index) => start.number === index + 1)
+  );
 }
 
 function mergeOcrPages(primary: OcrPage[], additional: OcrPage[]) {
-  const additionalByPage = new Map(additional.map(page => [page.pageNumber, page.lines]));
-  return primary.map(page => ({
+  const additionalByPage = new Map(
+    additional.map((page) => [page.pageNumber, page.lines]),
+  );
+  return primary.map((page) => ({
     ...page,
     lines: [...page.lines, ...(additionalByPage.get(page.pageNumber) ?? [])],
   }));
@@ -590,26 +744,31 @@ export function mergeExpectedAnswerMaps(
   const expected = new Set(expectedNumbers);
   const answers = new Map<number, string>();
   for (const [number, label] of textLayerAnswers) {
-    if (expected.has(number) && ANSWER_LABELS.includes(label)) answers.set(number, label);
+    if (expected.has(number) && ANSWER_LABELS.includes(label))
+      answers.set(number, label);
   }
   for (const [number, label] of ocrAnswers) {
-    if (expected.has(number) && !answers.has(number) && ANSWER_LABELS.includes(label)) {
+    if (
+      expected.has(number) &&
+      !answers.has(number) &&
+      ANSWER_LABELS.includes(label)
+    ) {
       answers.set(number, label);
     }
   }
-  const missingNumbers = [...expected].filter(number => !answers.has(number));
+  const missingNumbers = [...expected].filter((number) => !answers.has(number));
   return { answers, missingNumbers, answerCount: answers.size };
 }
 
 function extractAnswers(pages: OcrPage[]) {
   const answers = new Map<number, string>();
   const patterns = [
-    new RegExp(`(?:問|間)\\s*(\\d{1,3})\\s*([${ANSWER_LABELS}])`, 'g'),
-    new RegExp(`(?:^|\\s)(\\d{1,3})\\s+([${ANSWER_LABELS}])(?=\\s|$)`, 'g'),
+    new RegExp(`(?:問|間)\\s*(\\d{1,3})\\s*([${ANSWER_LABELS}])`, "g"),
+    new RegExp(`(?:^|\\s)(\\d{1,3})\\s+([${ANSWER_LABELS}])(?=\\s|$)`, "g"),
   ];
   for (const page of pages) {
     for (const line of page.lines) {
-      const normalized = line.text.normalize('NFKC');
+      const normalized = line.text.normalize("NFKC");
       for (const pattern of patterns) {
         for (const match of normalized.matchAll(pattern)) {
           const number = Number(match[1]);
@@ -623,7 +782,7 @@ function extractAnswers(pages: OcrPage[]) {
 
 async function ocrQuestionHeadings(
   documentProxy: PDFDocumentProxy,
-  worker: Awaited<ReturnType<(typeof import('tesseract.js'))['createWorker']>>,
+  worker: Awaited<ReturnType<(typeof import("tesseract.js"))["createWorker"]>>,
   onProgress?: (message: string) => void,
   options: {
     pageNumbers?: readonly number[];
@@ -632,17 +791,26 @@ async function ocrQuestionHeadings(
   } = {},
 ) {
   const pages: OcrPage[] = [];
-  const pageNumbers = options.pageNumbers
-    ?? Array.from({ length: documentProxy.numPages }, (_, index) => index + 1);
+  const pageNumbers =
+    options.pageNumbers ??
+    Array.from({ length: documentProxy.numPages }, (_, index) => index + 1);
   for (const pageNumber of pageNumbers) {
-    onProgress?.(`OCR: finding questions on page ${pageNumber} of ${documentProxy.numPages}…`);
+    onProgress?.(
+      `OCR: finding questions on page ${pageNumber} of ${documentProxy.numPages}…`,
+    );
     // Question numbers are a small part of a full page. At 1.8x Tesseract
     // frequently confused digits (especially 0/6/9) or missed the heading
     // entirely, which then shifted answer matching for every later question.
     // Render the narrow heading strip at a higher resolution while still
     // releasing each page before moving to the next one.
-    const pageCanvas = await renderPage(documentProxy, pageNumber, options.scale ?? 2.6);
-    const stripWidth = Math.floor(pageCanvas.width * (options.stripRatio ?? 0.36));
+    const pageCanvas = await renderPage(
+      documentProxy,
+      pageNumber,
+      options.scale ?? 2.6,
+    );
+    const stripWidth = Math.floor(
+      pageCanvas.width * (options.stripRatio ?? 0.36),
+    );
     const strip = cropCanvas(pageCanvas, 0, 0, stripWidth, pageCanvas.height);
     pageCanvas.width = 1;
     pageCanvas.height = 1;
@@ -660,13 +828,19 @@ async function ocrQuestionHeadings(
 
 async function ocrAnswerPages(
   documentProxy: PDFDocumentProxy,
-  worker: Awaited<ReturnType<(typeof import('tesseract.js'))['createWorker']>>,
-  pageSegmentationModes: typeof import('tesseract.js').PSM,
+  worker: Awaited<ReturnType<(typeof import("tesseract.js"))["createWorker"]>>,
+  pageSegmentationModes: typeof import("tesseract.js").PSM,
   onProgress?: (message: string) => void,
 ) {
   const pages: OcrPage[] = [];
-  for (let pageNumber = 1; pageNumber <= documentProxy.numPages; pageNumber += 1) {
-    onProgress?.(`OCR: reading answer page ${pageNumber} of ${documentProxy.numPages}…`);
+  for (
+    let pageNumber = 1;
+    pageNumber <= documentProxy.numPages;
+    pageNumber += 1
+  ) {
+    onProgress?.(
+      `OCR: reading answer page ${pageNumber} of ${documentProxy.numPages}…`,
+    );
     const canvas = await renderPage(documentProxy, pageNumber, 3.2);
     if (!hasInk(canvas)) {
       pages.push({ pageNumber, lines: [] });
@@ -688,11 +862,17 @@ async function ocrAnswerPages(
           const right = table[2] - 4;
           const top = grid.horizontalLines[rowIndex + 1] + 4;
           const bottom = grid.horizontalLines[rowIndex + 2] - 4;
-          const cell = cropCanvas(canvas, left, top, right - left, bottom - top);
+          const cell = cropCanvas(
+            canvas,
+            left,
+            top,
+            right - left,
+            bottom - top,
+          );
           const padded = createCanvas(cell.width + 60, cell.height + 60);
-          const paddedContext = padded.getContext('2d');
+          const paddedContext = padded.getContext("2d");
           if (paddedContext) {
-            paddedContext.fillStyle = '#ffffff';
+            paddedContext.fillStyle = "#ffffff";
             paddedContext.fillRect(0, 0, padded.width, padded.height);
             paddedContext.drawImage(cell, 30, 30);
           }
@@ -713,14 +893,18 @@ async function ocrAnswerPages(
       }
       await worker.setParameters({
         tessedit_pageseg_mode: pageSegmentationModes.AUTO,
-        tessedit_char_whitelist: '',
+        tessedit_char_whitelist: "",
       });
       pages.push({ pageNumber, lines });
       canvas.width = 1;
       canvas.height = 1;
       continue;
     }
-    const result = await worker.recognize(canvas, {}, { text: true, tsv: true });
+    const result = await worker.recognize(
+      canvas,
+      {},
+      { text: true, tsv: true },
+    );
     pages.push({ pageNumber, lines: parseTsv(result.data.tsv, canvas.height) });
     canvas.width = 1;
     canvas.height = 1;
@@ -732,22 +916,30 @@ async function renderQuestionCrop(
   page: HTMLCanvasElement,
   start: QuestionStart,
   next: QuestionStart | undefined,
-  worker: Awaited<ReturnType<(typeof import('tesseract.js'))['createWorker']>>,
+  worker: Awaited<ReturnType<(typeof import("tesseract.js"))["createWorker"]>>,
 ) {
   const topRatio = Math.max(0, start.topRatio - 0.025);
-  const bottomRatio = next?.pageNumber === start.pageNumber
-    ? Math.max(topRatio + 0.08, next.topRatio - 0.02)
-    : 0.935;
+  const bottomRatio =
+    next?.pageNumber === start.pageNumber
+      ? Math.max(topRatio + 0.08, next.topRatio - 0.02)
+      : 0.935;
   const top = Math.floor(page.height * topRatio);
   const bottom = Math.min(page.height, Math.ceil(page.height * bottomRatio));
   const cropped = cropCanvas(page, 0, top, page.width, bottom - top);
   const trimmed = trimWhitespace(cropped);
   const hasDiagram = hasDiagramLikeLines(trimmed);
   const ocrResult = await worker.recognize(trimmed);
-  const blob = await new Promise<Blob | null>(resolve => trimmed.toBlob(resolve, 'image/webp', 0.82));
+  const blob = await new Promise<Blob | null>((resolve) =>
+    trimmed.toBlob(resolve, "image/webp", 0.82),
+  );
+  // IMPORTANT: always produce a persistent base64 data URL here, never
+  // URL.createObjectURL(blob). Object URLs only resolve within the browser
+  // tab/session that created them — once this question is saved and
+  // reloaded later (or on another device/server), the blob URL is dead and
+  // the app falls back to showing raw text instead of the cropped image.
   const imageDataUrl = blob
-    ? URL.createObjectURL(blob)
-    : trimmed.toDataURL('image/webp', 0.82);
+    ? await blobToDataUrl(blob)
+    : trimmed.toDataURL("image/webp", 0.82);
   const imageSizeBytes = blob?.size ?? Math.ceil(imageDataUrl.length * 0.75);
   cropped.width = 1;
   cropped.height = 1;
@@ -771,12 +963,16 @@ export async function processScannedExamPdfs(
   onProgress?: (message: string) => void,
   expectedQuestionCount?: number,
 ): Promise<PdfImportResult> {
-  onProgress?.('Starting Japanese OCR…');
-  const { createWorker, PSM } = await import('tesseract.js');
-  const worker = await createWorker('jpn', 1);
+  onProgress?.("Starting Japanese OCR…");
+  const { createWorker, PSM } = await import("tesseract.js");
+  const worker = await createWorker("jpn", 1);
   try {
     await worker.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
-    const headingPages = await ocrQuestionHeadings(questionDocument, worker, onProgress);
+    const headingPages = await ocrQuestionHeadings(
+      questionDocument,
+      worker,
+      onProgress,
+    );
     let combinedHeadingPages = headingPages;
     let starts = findQuestionStarts(combinedHeadingPages, true);
     const retryPageNumbers = getQuestionHeadingRetryPages(starts);
@@ -785,58 +981,92 @@ export async function processScannedExamPdfs(
       // first question or omit a small heading. Retry only pages around an
       // observed numbering gap with a larger image and sparse-text layout.
       await worker.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT });
-      const retryPages = await ocrQuestionHeadings(questionDocument, worker, onProgress, {
-        pageNumbers: retryPageNumbers,
-        scale: 3.4,
-        stripRatio: 0.55,
-      });
+      const retryPages = await ocrQuestionHeadings(
+        questionDocument,
+        worker,
+        onProgress,
+        {
+          pageNumbers: retryPageNumbers,
+          scale: 3.4,
+          stripRatio: 0.55,
+        },
+      );
       await worker.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
       combinedHeadingPages = mergeOcrPages(combinedHeadingPages, retryPages);
       starts = findQuestionStarts(combinedHeadingPages, true);
     }
-    if (expectedQuestionCount && !hasCompleteExpectedSequence(starts, expectedQuestionCount)) {
+    if (
+      expectedQuestionCount &&
+      !hasCompleteExpectedSequence(starts, expectedQuestionCount)
+    ) {
       onProgress?.(
         `OCR found ${starts.length} of ${expectedQuestionCount} expected questions; rereading the full PDF…`,
       );
       await worker.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT });
-      const fullRetryPages = await ocrQuestionHeadings(questionDocument, worker, onProgress, {
-        pageNumbers: Array.from(
-          { length: questionDocument.numPages },
-          (_, index) => index + 1,
-        ),
-        scale: 3.4,
-        stripRatio: 0.55,
-      });
+      const fullRetryPages = await ocrQuestionHeadings(
+        questionDocument,
+        worker,
+        onProgress,
+        {
+          pageNumbers: Array.from(
+            { length: questionDocument.numPages },
+            (_, index) => index + 1,
+          ),
+          scale: 3.4,
+          stripRatio: 0.55,
+        },
+      );
       await worker.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
-      combinedHeadingPages = mergeOcrPages(combinedHeadingPages, fullRetryPages);
+      combinedHeadingPages = mergeOcrPages(
+        combinedHeadingPages,
+        fullRetryPages,
+      );
       starts = findQuestionStarts(combinedHeadingPages, true);
     }
-    if (expectedQuestionCount && !hasCompleteExpectedSequence(starts, expectedQuestionCount)) {
-      const missing = getMissingExpectedQuestionNumbers(starts, expectedQuestionCount);
+    if (
+      expectedQuestionCount &&
+      !hasCompleteExpectedSequence(starts, expectedQuestionCount)
+    ) {
+      const missing = getMissingExpectedQuestionNumbers(
+        starts,
+        expectedQuestionCount,
+      );
       const missingMessage = missing.length
-        ? ` Missing question numbers: ${missing.join(', ')}.`
-        : '';
+        ? ` Missing question numbers: ${missing.join(", ")}.`
+        : "";
       throw new Error(
         `IT Passport imports must contain questions 1-${expectedQuestionCount}. OCR found ${starts.length}.${missingMessage}`,
       );
     }
     if (!starts.length) {
-      throw new Error('This scanned PDF could not be segmented into questions. Make sure the pages show headings such as “問1”.');
+      throw new Error(
+        "This scanned PDF could not be segmented into questions. Make sure the pages show headings such as “問1”.",
+      );
     }
 
-    const expectedNumbers = starts.map(start => start.number);
+    const expectedNumbers = starts.map((start) => start.number);
     let answerResult = mergeExpectedAnswerMaps(expectedNumbers, new Map());
     if (answerDocument) {
       // An exam can have scanned question pages and a searchable answer PDF.
       // Prefer its exact text layer over OCR, which is less reliable for dense grids.
-      onProgress?.('Reading embedded answer text…');
-      const textLayerAnswers = extractAnswerMap(await extractPages(answerDocument));
+      onProgress?.("Reading embedded answer text…");
+      const textLayerAnswers = extractAnswerMap(
+        await extractPages(answerDocument),
+      );
       answerResult = mergeExpectedAnswerMaps(expectedNumbers, textLayerAnswers);
 
       if (answerResult.missingNumbers.length > 0) {
-        onProgress?.(`OCR: looking for ${answerResult.missingNumbers.length} missing answers…`);
-        const ocrAnswers = extractAnswers(await ocrAnswerPages(answerDocument, worker, PSM, onProgress));
-        answerResult = mergeExpectedAnswerMaps(expectedNumbers, textLayerAnswers, ocrAnswers);
+        onProgress?.(
+          `OCR: looking for ${answerResult.missingNumbers.length} missing answers…`,
+        );
+        const ocrAnswers = extractAnswers(
+          await ocrAnswerPages(answerDocument, worker, PSM, onProgress),
+        );
+        answerResult = mergeExpectedAnswerMaps(
+          expectedNumbers,
+          textLayerAnswers,
+          ocrAnswers,
+        );
       }
     }
 
@@ -847,38 +1077,52 @@ export async function processScannedExamPdfs(
       for (let index = 0; index < starts.length; index += 1) {
         const start = starts[index];
         const next = starts[index + 1];
-        if (!renderedQuestionPage || renderedQuestionPageNumber !== start.pageNumber) {
+        if (
+          !renderedQuestionPage ||
+          renderedQuestionPageNumber !== start.pageNumber
+        ) {
           if (renderedQuestionPage) {
             renderedQuestionPage.width = 1;
             renderedQuestionPage.height = 1;
           }
           // Several questions commonly share one PDF page. Render that page
           // once and reuse it for every crop instead of decoding it repeatedly.
-          renderedQuestionPage = await renderPage(questionDocument, start.pageNumber, 2.4);
+          renderedQuestionPage = await renderPage(
+            questionDocument,
+            start.pageNumber,
+            2.4,
+          );
           renderedQuestionPageNumber = start.pageNumber;
         }
         onProgress?.(`OCR: reading question ${index + 1} of ${starts.length}…`);
-        const correctChoice = answerResult.answers.get(start.number) ?? '';
-        const {
-          ocrText,
-          hasDiagram,
-          ocrConfidence,
-          ...image
-        } = await renderQuestionCrop(renderedQuestionPage, start, next, worker);
+        const correctChoice = answerResult.answers.get(start.number) ?? "";
+        const { ocrText, hasDiagram, ocrConfidence, ...image } =
+          await renderQuestionCrop(renderedQuestionPage, start, next, worker);
         const parsed = parseScannedQuestionText(ocrText, start.number);
         // Only replace the choice text with ア/イ/ウ/エ labels when the question
         // really needs the picture (diagram, table, or unreadable choices).
         // Low OCR confidence alone keeps the image for comparison but must not
         // throw away choice text that was read correctly.
-        const needsVisual = hasDiagram
-          || shouldKeepQuestionImage(parsed.questionText, parsed.choices);
+        const needsVisual =
+          hasDiagram ||
+          shouldKeepQuestionImage(parsed.questionText, parsed.choices);
         const keepImage = needsVisual || ocrConfidence < 70;
-        const choices = needsVisual ? ensureDiagramChoiceLabels(parsed.choices) : parsed.choices;
+        const choices = needsVisual
+          ? ensureDiagramChoiceLabels(parsed.choices)
+          : parsed.choices;
         const warnings = [...start.warnings];
-        if (!parsed.questionText) warnings.push('Question text was not detected. Enter it below.');
-        if (parsed.choices.length < 2) warnings.push('Fewer than two answer choices were detected. Add or edit them below.');
-        if (!correctChoice) warnings.push('Correct answer not detected. Select it below.');
-        if (ocrConfidence < 70) warnings.push('Low OCR confidence. Please verify the text against the image.');
+        if (!parsed.questionText)
+          warnings.push("Question text was not detected. Enter it below.");
+        if (parsed.choices.length < 2)
+          warnings.push(
+            "Fewer than two answer choices were detected. Add or edit them below.",
+          );
+        if (!correctChoice)
+          warnings.push("Correct answer not detected. Select it below.");
+        if (ocrConfidence < 70)
+          warnings.push(
+            "Low OCR confidence. Please verify the text against the image.",
+          );
         questions.push({
           sourceKey: `${examKey}:Q${start.number}`,
           number: start.number,
@@ -888,7 +1132,7 @@ export async function processScannedExamPdfs(
           sourcePages: [start.pageNumber],
           choices,
           correctChoice,
-          explanation: '',
+          explanation: "",
           difficulty: 2,
           points: 1,
           warnings,
