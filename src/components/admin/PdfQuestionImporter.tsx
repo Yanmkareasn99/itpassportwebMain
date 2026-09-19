@@ -522,13 +522,16 @@ export default function PdfQuestionImporter({
             <option value="it-passport">{translate(language, 'adminPage.pdfExamItPassport')}</option>
             <option value="fundamental-a">{translate(language, 'adminPage.pdfExamFundamentalA')}</option>
             <option value="fundamental-b">{translate(language, 'adminPage.pdfExamFundamentalB')}</option>
+            <option value="ap">{translate(language, 'adminPage.pdfExamApplied')}</option>
           </select>
           <span className="mt-1 block font-normal text-gray-500">
             {translate(language, importExam === 'it-passport'
               ? 'adminPage.pdfSubjectDetectionHelp'
               : importExam === 'fundamental-a'
                 ? 'adminPage.pdfSubjectDetectionFundamentalA'
-                : 'adminPage.pdfSubjectDetectionFundamentalB')}
+                : importExam === 'fundamental-b'
+                  ? 'adminPage.pdfSubjectDetectionFundamentalB'
+                  : 'adminPage.pdfSubjectDetectionApplied')}
           </span>
         </label>
         {importExam === 'it-passport' && (

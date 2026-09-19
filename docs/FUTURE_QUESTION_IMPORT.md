@@ -20,6 +20,41 @@ Image-only scanned PDFs are handled with Japanese OCR in the browser. They take
 longer to process than searchable PDFs, and unclear scans may need manual fixes
 on the review screen.
 
+## Local IT Passport / AP scanner
+
+For large scanned booklets, use the local scanner instead of keeping the Admin
+page open. It uses Tesseract on your computer, sends no PDF or image to an API,
+and creates the same `manabi-question-archive-v2` JSON accepted by **Saved
+question JSON**.
+
+Install Python 3.11+ and Tesseract with the Japanese language data. On Windows,
+install Tesseract, ensure `tesseract.exe` is on `PATH`, then run:
+
+```powershell
+py -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r tools/exam_scanner/requirements.txt
+
+npm run scan:exam -- `
+  --exam it-passport `
+  --questions .\pdfs\2024r06_qs.pdf `
+  --answers .\pdfs\2024r06_ans.pdf `
+  --exam-key 2024r06 `
+  --exam-date 2024-04-01 `
+  --output .\imports\2024r06.json
+```
+
+For the Applied Information Technology Engineer morning exam, replace
+`--exam it-passport` with `--exam ap`. The expected counts are 100 and 80
+respectively. The scanner embeds a cropped WebP for questions that refer to a
+figure/table or whose choices were not read reliably. Add `--keep-all-images`
+to embed every question crop.
+
+OCR output is deliberately marked for review when a choice or answer is
+missing. Load the JSON in the Admin importer, compare each warning against its
+embedded crop, correct it, and only then upload. Apply
+`20260919000000_add_ap_exam_subject.sql` before importing AP questions.
+
 ## Save the conversion as JSON
 
 After reading and reviewing the PDFs, click **Download JSON** to save a portable

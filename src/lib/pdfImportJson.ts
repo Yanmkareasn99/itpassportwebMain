@@ -134,7 +134,7 @@ export function parsePdfImportArchive(text: string): PdfImportArchive {
   }
   const legacy = value.schema_version === LEGACY_PDF_IMPORT_JSON_SCHEMA;
   const importExam = value.import_exam;
-  if (!['it-passport', 'fundamental-a', 'fundamental-b'].includes(String(importExam))) {
+  if (!['it-passport', 'fundamental-a', 'fundamental-b', 'ap'].includes(String(importExam))) {
     throw new Error('JSON contains an unsupported import_exam value.');
   }
   if (!Array.isArray(value.questions) || value.questions.length === 0) {

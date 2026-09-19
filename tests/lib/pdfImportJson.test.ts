@@ -125,4 +125,23 @@ describe('PDF import JSON', () => {
     expect(restored.examKey).toBe('2026B');
     expect(restored.questions[0].correctChoice).toBe('イ');
   });
+
+  it('accepts archives produced by the local AP scanner', () => {
+    const stored = {
+      schema_version: PDF_IMPORT_JSON_SCHEMA,
+      exam: '2025r07h',
+      exam_date: '2025-04-01',
+      import_exam: 'ap',
+      question_count: 1,
+      subject_ranges: [],
+      questions: [{
+        source_key: '2025r07h:Q1', number: 1, text: 'AP question',
+        choices: { ア: 'A', イ: 'B' }, correct_answer: 'ア',
+        has_figure: false, figure: null, confidence: 'high', warnings: [],
+        subject_id: 'ab000000-0000-0000-0000-000000000001',
+        explanation: '', difficulty: 2, points: 1, source_pages: [1],
+      }],
+    };
+    expect(parsePdfImportArchive(JSON.stringify(stored)).importExam).toBe('ap');
+  });
 });

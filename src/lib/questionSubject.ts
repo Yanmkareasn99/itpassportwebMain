@@ -10,7 +10,9 @@ export const FUNDAMENTAL_IT_SUBJECT_IDS = {
   subjectB: 'aa000000-0000-0000-0000-000000000002',
 } as const;
 
-export type QuestionImportExam = 'it-passport' | 'fundamental-a' | 'fundamental-b';
+export const AP_SUBJECT_ID = 'ab000000-0000-0000-0000-000000000001';
+
+export type QuestionImportExam = 'it-passport' | 'fundamental-a' | 'fundamental-b' | 'ap';
 
 export interface ItPassportSubjectRange {
   subjectId: string;
@@ -58,6 +60,7 @@ export function detectImportedSubjectId(
 ) {
   if (exam === 'fundamental-a') return FUNDAMENTAL_IT_SUBJECT_IDS.subjectA;
   if (exam === 'fundamental-b') return FUNDAMENTAL_IT_SUBJECT_IDS.subjectB;
+  if (exam === 'ap') return AP_SUBJECT_ID;
   return detectItPassportSubjectId(questionNumber, itPassportRanges);
 }
 
