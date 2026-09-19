@@ -552,6 +552,7 @@ export const en = {
   "mobileTabBar.menu": "Menu",
   "mobileTabBar.signOut": "Sign out",
   "mobileTabBar.more": "More",
+  "mobileTabBar.admin": "Admin",
   "aiChatPage.welcome": "Ask me about solving questions, study plans, or organizing key terms.",
   "aiChatPage.starterPlan": "Create a study plan for today",
   "aiChatPage.starterAfternoon": "How should I study the afternoon exam?",

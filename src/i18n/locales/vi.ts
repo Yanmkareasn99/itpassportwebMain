@@ -549,6 +549,7 @@ export const vi = {
   "mobileTabBar.battle": "Đối kháng",
   "mobileTabBar.materials": "Tài liệu",
   "mobileTabBar.settings": "Cài đặt",
+  "mobileTabBar.admin": "Quản trị",
   "mobileTabBar.menu": "Menu",
   "mobileTabBar.signOut": "Đăng xuất",
   "mobileTabBar.more": "Thêm",
