@@ -30,13 +30,9 @@ import { useLanguage } from "../contexts/LanguageContext";
 import { Question, Page } from "../types";
 import { formatExamDate, UNCATEGORIZED_EXAM_DATE } from "../lib/examDate";
 import { orderPracticeQuestions } from "../lib/questionRandomization";
-import { IT_PASSPORT_SUBJECT_IDS } from "../lib/questionSubject";
-import {
-  loadFlaggedQuestions,
-  loadQuestionFlags,
-  QUESTION_FLAG_LEVELS,
-  type QuestionFlagLevel,
-} from "../lib/questionFlags";
+
+import { IT_PASSPORT_SUBJECT_IDS } from '../lib/questionSubject';
+import { loadFlaggedQuestions, loadQuestionFlags, QUESTION_FLAG_LEVELS, type QuestionFlagLevel } from '../lib/questionFlags';
 
 interface PracticeListPageProps {
   currentPage: Page;
@@ -89,6 +85,7 @@ const MAIN_CATEGORIES = [
     borderless: true,
 
     subjectIds: [IT_PASSPORT_SUBJECT_IDS.technology],
+
   },
 ];
 
@@ -249,9 +246,9 @@ function FlaggedQuestionsCard({
 }) {
   const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
   const styles = {
-    green: "bg-emerald-500 hover:bg-emerald-600",
-    orange: "bg-orange-500 hover:bg-orange-600",
-    red: "bg-red-500 hover:bg-red-600",
+    green: 'bg-emerald-500 hover:bg-emerald-600',
+    orange: 'bg-orange-500 hover:bg-orange-600',
+    red: 'bg-red-500 hover:bg-red-600',
   } as const;
   return (
     <div className="w-full min-w-0 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left shadow-sm dark:border-slate-600/80 dark:bg-slate-900/40 sm:p-5 xl:p-6">
@@ -266,29 +263,21 @@ function FlaggedQuestionsCard({
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-base font-bold text-slate-700 dark:text-slate-200">
-            {translate(language, "practiceListPage.flaggedQuestions")}
+            {translate(language, 'practiceListPage.flaggedQuestions')}
           </span>
           <span className="text-xs text-gray-500 dark:text-slate-300">
-            {translate(language, "practiceListPage.flaggedCount", {
-              count: total,
-            })}
+            {translate(language, 'practiceListPage.flaggedCount', { count: total })}
           </span>
         </span>
       </button>
       <div className="mt-3 grid grid-cols-3 gap-1.5">
-        {QUESTION_FLAG_LEVELS.map((level) => (
+        {QUESTION_FLAG_LEVELS.map(level => (
           <button
             key={level}
             type="button"
             onClick={() => onStart(level)}
             disabled={loading || counts[level] === 0}
-            aria-label={translate(
-              language,
-              `practiceQuestionPage.flag${level[0].toUpperCase()}${level.slice(1)}` as
-                | "practiceQuestionPage.flagGreen"
-                | "practiceQuestionPage.flagOrange"
-                | "practiceQuestionPage.flagRed",
-            )}
+            aria-label={translate(language, `practiceQuestionPage.flag${level[0].toUpperCase()}${level.slice(1)}` as 'practiceQuestionPage.flagGreen' | 'practiceQuestionPage.flagOrange' | 'practiceQuestionPage.flagRed')}
             className={`rounded-lg px-2 py-1.5 text-xs font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-30 ${styles[level]}`}
           >
             {counts[level]}
@@ -457,9 +446,7 @@ export default function PracticeListPage({
     Record<string, { answered: number; correct: number }>
   >({});
   const [incorrectCount, setIncorrectCount] = useState(0);
-  const [flagCounts, setFlagCounts] = useState<
-    Record<QuestionFlagLevel, number>
-  >({ green: 0, orange: 0, red: 0 });
+  const [flagCounts, setFlagCounts] = useState<Record<QuestionFlagLevel, number>>({ green: 0, orange: 0, red: 0 });
   const [loading, setLoading] = useState(true);
   const [starting, setStarting] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -675,18 +662,11 @@ export default function PracticeListPage({
       }
       try {
         const flags = await loadQuestionFlags(user.id);
-        const counts: Record<QuestionFlagLevel, number> = {
-          green: 0,
-          orange: 0,
-          red: 0,
-        };
+        const counts: Record<QuestionFlagLevel, number> = { green: 0, orange: 0, red: 0 };
         for (const flag of flags) counts[flag.level] += 1;
         if (!cancelled) setFlagCounts(counts);
       } catch (error) {
-        if (!cancelled)
-          setProgressWarning(
-            practiceErrorMessage(error, "Unable to load flagged questions."),
-          );
+        if (!cancelled) setProgressWarning(practiceErrorMessage(error, 'Unable to load flagged questions.'));
       }
     }
 
@@ -804,36 +784,23 @@ export default function PracticeListPage({
 
   async function startFlagged(level?: QuestionFlagLevel) {
     if (!user || starting) return;
-    setStarting(`flagged-${level ?? "all"}`);
-    setError("");
+    setStarting(`flagged-${level ?? 'all'}`);
+    setError('');
     try {
       const flaggedQuestions = await loadFlaggedQuestions(user.id, level);
       if (!flaggedQuestions.length) {
-        setError(
-          translate(currentLanguage, "practiceListPage.noFlaggedQuestions"),
-        );
+        setError(translate(currentLanguage, 'practiceListPage.noFlaggedQuestions'));
         return;
       }
-      await onStartPractice(
-        "flagged",
-        orderPracticeQuestions(flaggedQuestions, false),
-      );
+      await onStartPractice('flagged', orderPracticeQuestions(flaggedQuestions, false));
     } catch (flagError) {
-      setError(
-        practiceErrorMessage(
-          flagError,
-          translate(currentLanguage, "practiceListPage.flaggedLoadFailed"),
-        ),
-      );
+      setError(practiceErrorMessage(flagError, translate(currentLanguage, 'practiceListPage.flaggedLoadFailed')));
     } finally {
       setStarting(null);
     }
   }
 
-  const categories: PracticeCategory[] = [
-    ...MAIN_CATEGORIES,
-    ...additionalCategories,
-  ];
+  const categories: PracticeCategory[] = [...MAIN_CATEGORIES, ...additionalCategories];
 
   const summaryRows = categories.map((cat) => {
     const stats = getCategoryStats(cat.subjectIds);
@@ -886,7 +853,7 @@ export default function PracticeListPage({
           />
           <FlaggedQuestionsCard
             counts={flagCounts}
-            onStart={(level) => void startFlagged(level)}
+            onStart={level => void startFlagged(level)}
             loading={loading || !!starting}
             language={currentLanguage}
           />
