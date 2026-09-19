@@ -164,25 +164,46 @@ export const en = {
   "adminPage.answersCsv": "Answer CSV",
   "adminPage.pdfImport": "Import PDFs",
   "adminPage.pdfImportTitle": "Import questions from PDFs",
-  "adminPage.pdfImportDescription": "Choose a question PDF and its answer key. The browser will detect questions, preserve diagrams, and prepare them for review.",
+  "adminPage.pdfImportDescription": "Choose a question PDF and its answer key. Review the detected questions and answers, then import them directly.",
+  "adminPage.pdfSubjectFallback": "Fallback subject",
+  "adminPage.pdfSubjectDetectionHelp": "Set the subject ranges for this exam before reading the PDFs.",
+  "adminPage.pdfSubjectRanges": "Question subject ranges",
+  "adminPage.pdfSubjectRangesHelp": "Questions outside these ranges go to Unassigned. Gaps are allowed, but ranges cannot overlap.",
+  "adminPage.pdfRangeFrom": "From",
+  "adminPage.pdfRangeTo": "To",
+  "adminPage.pdfInvalidSubjectRanges": "Subject ranges must stay within Questions 1–100, start before they end, and not overlap.",
+  "adminPage.pdfExamType": "Exam to import",
+  "adminPage.pdfExamItPassport": "IT Passport",
+  "adminPage.pdfExamFundamentalA": "Fundamental Information Technology Engineer — Subject A",
+  "adminPage.pdfExamFundamentalB": "Fundamental Information Technology Engineer — Subject B",
+  "adminPage.pdfSubjectDetectionFundamentalA": "Every imported question will be assigned to Fundamental Information Technology Engineer Subject A.",
+  "adminPage.pdfSubjectDetectionFundamentalB": "Every imported question will be assigned to Fundamental Information Technology Engineer Subject B.",
   "adminPage.pdfExamKey": "Exam key (unique)",
   "adminPage.pdfQuestionFile": "Question PDF",
+  "adminPage.pdfJsonFile": "Saved question JSON",
+  "adminPage.pdfJsonFileHelp": "Reload a previously reviewed PDF conversion and continue editing or importing it.",
+  "adminPage.pdfJsonDownload": "Download JSON",
+  "adminPage.pdfJsonLoaded": "Loaded {count} questions from JSON.",
+  "adminPage.pdfJsonSaved": "Saved {count} questions as JSON.",
+  "adminPage.pdfJsonLoadFailed": "The question JSON could not be loaded: {reason}",
+  "adminPage.pdfJsonSaveFailed": "The question JSON could not be saved: {reason}",
   "adminPage.pdfAnswerFile": "Answer PDF (optional)",
   "adminPage.pdfChooseQuestion": "Choose a question PDF first.",
   "adminPage.pdfEnterExamKey": "Enter a unique exam key, for example 2026B.",
   "adminPage.pdfProcess": "Read PDFs",
   "adminPage.pdfProcessing": "Reading PDFs…",
   "adminPage.pdfProcessingFailed": "The PDFs could not be processed.",
-  "adminPage.pdfLocalProcessing": "PDF processing stays in this browser until you import.",
+  "adminPage.pdfLocalProcessing": "You can navigate elsewhere while OCR runs. Keep this browser tab open and do not refresh it.",
   "adminPage.pdfAnswersNotDetected": "The questions were detected, but the answer key was not. Select each correct answer during review.",
   "adminPage.pdfReviewCount": "Review {count} detected questions",
   "adminPage.pdfReviewProblems": "{count} questions still need attention",
   "adminPage.pdfReadyToImport": "All questions are ready to import",
   "adminPage.pdfMarkCorrect": "Mark as the correct answer",
-  "adminPage.pdfImportButton": "Import/update all",
+  "adminPage.pdfImportButton": "Upload questions and answers",
   "adminPage.pdfImportProgress": "Importing {current} of {total}…",
   "adminPage.pdfImportComplete": "Successfully imported {count} questions.",
   "adminPage.pdfImportFailed": "PDF question import failed.",
+  "adminPage.pdfImportFailedWithReason": "PDF question import failed: {reason}",
   "adminPage.pdfFixReviewErrors": "Fix the highlighted review items before importing.",
   "adminPage.pdfRequiresSupabase": "PDF import requires Supabase to be enabled.",
   "adminPage.pdfMigrationRequired": "The PDF import table is missing or unavailable. Run migration 20260903010000_add_single_csv_question_import.sql in Supabase first.",
@@ -190,6 +211,11 @@ export const en = {
   "adminPage.allSubjects": "All subjects",
   "adminPage.cancel": "Cancel",
   "adminPage.csvImportFailed": "CSV import failed.",
+  "adminPage.duplicateQuestionsFound": "Import stopped because these questions already exist or are repeated in the import: {questions}",
+  "adminPage.duplicateQuestionExists": "Import stopped because this question already exists.",
+  "adminPage.pageOf": "Page {current} of {total}",
+  "adminPage.previousPage": "Previous",
+  "adminPage.nextPage": "Next",
   "adminPage.csvImportFormat": "Select both CSV files. Use the exported questions.csv and answer_choices.csv column format.",
   "adminPage.csvReadFailed": "Could not read the CSV file.",
   "adminPage.csvReadyToImport": "CSV files ready to import",
@@ -663,4 +689,20 @@ export const en = {
   , "settingsPage.deletingAccount": "Deleting account..."
   , "settingsPage.deleteAccountAction": "Permanently delete my account"
   ,"aiChatPage.error": "An error occurred. Please try again.",
+  "practiceQuestionPage.flagQuestion": "Flag this question"
+  , "practiceQuestionPage.clearFlag": "click again to clear"
+  , "practiceQuestionPage.flagGreen": "Green flag"
+  , "practiceQuestionPage.flagOrange": "Orange flag"
+  , "practiceQuestionPage.flagRed": "Red flag"
+  , "practiceListPage.flaggedQuestions": "Flagged questions"
+  , "practiceListPage.flaggedCount": "{count} flagged questions"
+  , "practiceListPage.noFlaggedQuestions": "No questions are saved with this flag."
+  , "practiceListPage.flaggedLoadFailed": "Unable to load flagged questions."
+  , "practiceQuestionPage.askAi": "Ask AI for explanation"
+  , "practiceQuestionPage.aiThinking": "AI is reading the question..."
+  , "practiceQuestionPage.aiImageFailed": "The question image could not be read. Please reload the page and try again."
+  , "practiceQuestionPage.aiExplanationFailed": "Failed to get an AI explanation. Please try again."
+  , "adminPage.pdfHybridImport": "{count} diagram images kept ({size} MB)"
+  , "adminPage.pdfKeepDiagram": "Keep this question image"
+  , "adminPage.pdfKeepDiagramHelp": "Enable this for diagrams, charts, tables, formulas, or image-based answer choices. Text-only questions will not upload the preview."
 } as const;

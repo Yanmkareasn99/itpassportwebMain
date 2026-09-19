@@ -164,25 +164,46 @@ export const ja = {
   "adminPage.answersCsv": "解答CSV",
   "adminPage.pdfImport": "PDF取込み",
   "adminPage.pdfImportTitle": "PDFから問題を取り込む",
-  "adminPage.pdfImportDescription": "問題PDFと解答PDFを選択すると、問題を検出し、図表を保持したまま確認画面を作成します。",
+  "adminPage.pdfImportDescription": "問題PDFと解答PDFを選択し、検出した問題と解答を確認して直接取り込みます。",
+  "adminPage.pdfSubjectFallback": "科目の予備設定",
+  "adminPage.pdfSubjectDetectionHelp": "PDFを読み取る前に、この試験の科目範囲を設定してください。",
+  "adminPage.pdfSubjectRanges": "問題の科目範囲",
+  "adminPage.pdfSubjectRangesHelp": "範囲外の問題は未分類になります。範囲に空きがあっても構いませんが、重複はできません。",
+  "adminPage.pdfRangeFrom": "開始",
+  "adminPage.pdfRangeTo": "終了",
+  "adminPage.pdfInvalidSubjectRanges": "科目範囲は問1〜100以内で開始を終了以下にし、範囲同士が重複しないようにしてください。",
+  "adminPage.pdfExamType": "取り込む試験",
+  "adminPage.pdfExamItPassport": "ITパスポート試験",
+  "adminPage.pdfExamFundamentalA": "基本情報技術者試験　科目A",
+  "adminPage.pdfExamFundamentalB": "基本情報技術者試験　科目B",
+  "adminPage.pdfSubjectDetectionFundamentalA": "取り込む全ての問題を「基本情報技術者 科目A」に分類します。",
+  "adminPage.pdfSubjectDetectionFundamentalB": "取り込む全ての問題を「基本情報技術者 科目B」に分類します。",
   "adminPage.pdfExamKey": "試験キー（一意）",
   "adminPage.pdfQuestionFile": "問題PDF",
+  "adminPage.pdfJsonFile": "保存済み問題JSON",
+  "adminPage.pdfJsonFileHelp": "以前にPDFから変換・確認したJSONを読み込み、編集またはインポートを再開できます。",
+  "adminPage.pdfJsonDownload": "JSONをダウンロード",
+  "adminPage.pdfJsonLoaded": "JSONから{count}問を読み込みました。",
+  "adminPage.pdfJsonSaved": "{count}問をJSONとして保存しました。",
+  "adminPage.pdfJsonLoadFailed": "問題JSONを読み込めませんでした: {reason}",
+  "adminPage.pdfJsonSaveFailed": "問題JSONを保存できませんでした: {reason}",
   "adminPage.pdfAnswerFile": "解答PDF（任意）",
   "adminPage.pdfChooseQuestion": "先に問題PDFを選択してください。",
   "adminPage.pdfEnterExamKey": "2026Bなどの一意な試験キーを入力してください。",
   "adminPage.pdfProcess": "PDFを読み取る",
   "adminPage.pdfProcessing": "PDFを読み取り中…",
   "adminPage.pdfProcessingFailed": "PDFを処理できませんでした。",
-  "adminPage.pdfLocalProcessing": "取込みを実行するまで、PDF処理はこのブラウザー内だけで行われます。",
+  "adminPage.pdfLocalProcessing": "OCR中も別のページへ移動できます。このブラウザータブを閉じたり再読み込みしたりしないでください。",
   "adminPage.pdfAnswersNotDetected": "問題は検出されましたが、解答を読み取れませんでした。確認画面で各正解を選択してください。",
   "adminPage.pdfReviewCount": "検出した{count}問を確認",
   "adminPage.pdfReviewProblems": "{count}問の確認が必要です",
   "adminPage.pdfReadyToImport": "すべての問題を取り込めます",
   "adminPage.pdfMarkCorrect": "正解として選択",
-  "adminPage.pdfImportButton": "すべて取込み・更新",
+  "adminPage.pdfImportButton": "問題と解答をアップロード",
   "adminPage.pdfImportProgress": "{total}問中{current}問を取込み中…",
   "adminPage.pdfImportComplete": "{count}問を取り込みました。",
   "adminPage.pdfImportFailed": "PDF問題の取込みに失敗しました。",
+  "adminPage.pdfImportFailedWithReason": "PDF問題の取込みに失敗しました: {reason}",
   "adminPage.pdfFixReviewErrors": "取り込む前に、確認が必要な項目を修正してください。",
   "adminPage.pdfRequiresSupabase": "PDF取込みにはSupabaseを有効にする必要があります。",
   "adminPage.pdfMigrationRequired": "PDF取込み用テーブルがありません。Supabaseで20260903010000_add_single_csv_question_import.sqlを先に実行してください。",
@@ -190,6 +211,11 @@ export const ja = {
   "adminPage.allSubjects": "全科目",
   "adminPage.cancel": "キャンセル",
   "adminPage.csvImportFailed": "CSVのインポートに失敗しました。",
+  "adminPage.duplicateQuestionsFound": "既に登録されている、または取込み内で重複しているため、取込みを中止しました: {questions}",
+  "adminPage.duplicateQuestionExists": "この問題は既に登録されているため、取込みを中止しました。",
+  "adminPage.pageOf": "{total}ページ中 {current}ページ",
+  "adminPage.previousPage": "前へ",
+  "adminPage.nextPage": "次へ",
   "adminPage.csvImportFormat": "2つのCSVファイルを選択してください。questions.csvとanswer_choices.csvの列形式に対応しています。",
   "adminPage.csvReadFailed": "CSVファイルを読み込めませんでした。",
   "adminPage.csvReadyToImport": "CSVファイルの準備ができました",
@@ -662,4 +688,20 @@ export const ja = {
   , "settingsPage.deletingAccount": "アカウントを削除中..."
   , "settingsPage.deleteAccountAction": "アカウントを完全に削除する"
   ,"aiChatPage.error": "エラーが発生しました。もう一度お試しください。",
+  "practiceQuestionPage.flagQuestion": "この問題にフラグを付ける"
+  , "practiceQuestionPage.clearFlag": "もう一度押すと解除"
+  , "practiceQuestionPage.flagGreen": "緑フラグ"
+  , "practiceQuestionPage.flagOrange": "オレンジフラグ"
+  , "practiceQuestionPage.flagRed": "赤フラグ"
+  , "practiceListPage.flaggedQuestions": "フラグ付き問題"
+  , "practiceListPage.flaggedCount": "{count}問にフラグがあります"
+  , "practiceListPage.noFlaggedQuestions": "このフラグの問題はありません。"
+  , "practiceListPage.flaggedLoadFailed": "フラグ付き問題を読み込めませんでした。"
+  , "practiceQuestionPage.askAi": "AIに解説を依頼"
+  , "practiceQuestionPage.aiThinking": "AIが問題を読み取っています..."
+  , "practiceQuestionPage.aiImageFailed": "問題画像を読み取れませんでした。ページを再読み込みして、もう一度お試しください。"
+  , "practiceQuestionPage.aiExplanationFailed": "AI解説を取得できませんでした。もう一度お試しください。"
+  , "adminPage.pdfHybridImport": "図表画像を{count}件保存（{size} MB）"
+  , "adminPage.pdfKeepDiagram": "この問題画像を保存する"
+  , "adminPage.pdfKeepDiagramHelp": "図、グラフ、表、数式、または画像形式の選択肢がある場合に有効にします。テキストのみの問題ではプレビュー画像を保存しません。"
 } as const;

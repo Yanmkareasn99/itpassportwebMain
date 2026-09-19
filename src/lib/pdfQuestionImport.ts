@@ -5,8 +5,12 @@ import {
 } from 'pdfjs-dist';
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { extractAnswerMap, extractPages, type PageText } from './pdfAnswerText';
+import type { QuestionImportExam } from './questionSubject';
+import { ensureDiagramChoiceLabels, shouldKeepQuestionImage } from './pdfQuestionImages';
 
 GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+
+const PDF_CMAP_URL = `${import.meta.env.BASE_URL}pdfjs/cmaps/`;
 
 export interface PdfImportChoice {
   label: string;
@@ -19,6 +23,8 @@ export interface PdfImportQuestion {
   number: number;
   questionText: string;
   imageDataUrl: string;
+  imageSizeBytes?: number;
+  keepImage: boolean;
   sourcePages: number[];
   choices: PdfImportChoice[];
   correctChoice: string;
@@ -123,6 +129,13 @@ function createCanvas(width: number, height: number) {
   return canvas;
 }
 
+async function canvasToWebpUrl(canvas: HTMLCanvasElement) {
+  const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/webp', 0.82));
+  if (blob) return { imageDataUrl: URL.createObjectURL(blob), imageSizeBytes: blob.size };
+  const imageDataUrl = canvas.toDataURL('image/webp', 0.82);
+  return { imageDataUrl, imageSizeBytes: Math.ceil(imageDataUrl.length * 0.75) };
+}
+
 function trimCanvas(source: HTMLCanvasElement) {
   const context = source.getContext('2d', { willReadFrequently: true });
   if (!context) throw new Error('Canvas is unavailable in this browser.');
@@ -192,12 +205,23 @@ async function renderQuestionImage(document: PDFDocumentProxy, pageNumbers: numb
     context.drawImage(canvas, Math.floor((width - canvas.width) / 2), top);
     top += canvas.height + gap;
   }
-  return combined.toDataURL('image/webp', 0.82);
+  const image = await canvasToWebpUrl(combined);
+  combined.width = 1;
+  combined.height = 1;
+  for (const canvas of rendered) {
+    canvas.width = 1;
+    canvas.height = 1;
+  }
+  return image;
 }
 
 async function openPdf(file: File) {
   const bytes = new Uint8Array(await file.arrayBuffer());
-  return getDocument({ data: bytes }).promise;
+  return getDocument({
+    data: bytes,
+    cMapUrl: PDF_CMAP_URL,
+    cMapPacked: true,
+  }).promise;
 }
 
 export async function processExamPdfs(
@@ -205,6 +229,7 @@ export async function processExamPdfs(
   answerFile: File | null,
   examKey: string,
   onProgress?: (message: string) => void,
+  exam: QuestionImportExam = 'it-passport',
 ): Promise<PdfImportResult> {
   const questionDocument = await openPdf(questionFile);
   const answerDocument = answerFile ? await openPdf(answerFile) : null;
@@ -212,13 +237,19 @@ export async function processExamPdfs(
     onProgress?.('Reading question text…');
     const questionPages = await extractPages(questionDocument);
     const starts = findQuestionStarts(questionPages);
-    if (!starts.length) {
+    const requiresScannedRetry = !starts.length
+      || (exam === 'it-passport' && (
+        starts.length !== 100
+        || starts.some((start, index) => start.number !== index + 1)
+      ));
+    if (requiresScannedRetry) {
       const { processScannedExamPdfs } = await import('./scannedPdfQuestionImport');
       return await processScannedExamPdfs(
         questionDocument,
         answerDocument,
         examKey,
         onProgress,
+        exam === 'it-passport' ? 100 : undefined,
       );
     }
 
@@ -255,13 +286,16 @@ export async function processExamPdfs(
       if (!correctChoice) warnings.push('Correct answer not detected. Select it below.');
       if (choices.length < 2) warnings.push('Fewer than two choices were detected. Add or edit choices below.');
 
+      const image = await renderQuestionImage(questionDocument, pages.map(page => page.pageNumber));
+      const keepImage = shouldKeepQuestionImage(questionText, choices);
       questions.push({
         sourceKey: `${examKey}:Q${start.number}`,
         number: start.number,
         questionText: questionText || `${examKey} 問${start.number}`,
-        imageDataUrl: await renderQuestionImage(questionDocument, pages.map(page => page.pageNumber)),
+        ...image,
+        keepImage,
         sourcePages: pages.map(page => page.pageNumber),
-        choices,
+        choices: keepImage ? ensureDiagramChoiceLabels(choices) : choices,
         correctChoice,
         explanation: '',
         difficulty: 2,

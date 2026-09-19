@@ -1,12 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getChatReply } from '../../src/lib/aiChat';
+import { getChatReply, getQuestionExplanation } from '../../src/lib/aiChat';
 import { getRateLimitStatus, isAllowed, resetRateLimit } from '../../src/lib/rateLimiting';
+
+const mocks = vi.hoisted(() => ({ invoke: vi.fn() }));
 
 vi.mock('../../src/lib/supabase', () => ({
   isSupabaseEnabled: true,
   supabase: {
     functions: {
-      invoke: vi.fn().mockResolvedValue({ data: null, error: new Error('unavailable') }),
+      invoke: mocks.invoke,
     },
   },
 }));
@@ -14,6 +16,7 @@ vi.mock('../../src/lib/supabase', () => ({
 describe('AI fallback and limits', () => {
   beforeEach(() => {
     resetRateLimit('user-1');
+    mocks.invoke.mockReset().mockResolvedValue({ data: null, error: new Error('unavailable') });
     vi.spyOn(console, 'log').mockImplementation(() => undefined);
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
   });
@@ -41,5 +44,26 @@ describe('AI fallback and limits', () => {
 
     expect(isAllowed('user-1')).toBe(false);
     expect(getRateLimitStatus('user-1').remaining).toBe(0);
+  });
+
+  it('includes question images when requesting an explanation', async () => {
+    mocks.invoke.mockResolvedValue({ data: { reply: 'Image-based explanation' }, error: null });
+
+    const reply = await getQuestionExplanation(
+      '2014h25h Question 88',
+      ['A', 'B', 'C', 'D'],
+      0,
+      2,
+      'en',
+      'Alice',
+      [{ mimeType: 'image/png', data: 'encoded-question-image' }],
+    );
+
+    expect(reply).toBe('Image-based explanation');
+    expect(mocks.invoke).toHaveBeenCalledWith('ai-chat', expect.objectContaining({
+      body: expect.objectContaining({
+        images: [{ mimeType: 'image/png', data: 'encoded-question-image' }],
+      }),
+    }));
   });
 });

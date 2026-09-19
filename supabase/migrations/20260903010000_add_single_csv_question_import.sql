@@ -178,7 +178,7 @@ FOR EACH ROW
 EXECUTE FUNCTION public.sync_question_import_row();
 
 COMMENT ON TABLE public.question_import_staging IS
-  'Upload the CSV produced by scripts/prepare_question_import.py here. A trigger syncs questions and answer choices.';
+  'The Admin PDF importer inserts reviewed questions here. A trigger syncs questions and answer choices.';
 
 -- The Admin panel renders PDF pages in the browser and uploads the optimized
 -- images here. Public delivery is intentional because question images are

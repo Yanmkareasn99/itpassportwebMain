@@ -18,10 +18,10 @@
     "test:coverage": "vitest --coverage",
     "export:dashboard-sql": "node scripts/export_dashboard_sql.mjs",
     "export:questions:csv": "node scripts/export_questions_csv.mjs",
+    "convert:quiz-v1": "node scripts/convert_quiz_v1_import.mjs",
     "import:questions": "node scripts/import_questions.mjs",
     "backfill:exam-dates": "node scripts/backfill_question_exam_dates.mjs",
-    "generate:image-metadata": "node scripts/generate_question_image_metadata.mjs",
-    "prepare:pdf-import": "python scripts/prepare_question_import.py"
+    "generate:image-metadata": "node scripts/generate_question_image_metadata.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",

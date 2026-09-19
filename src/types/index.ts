@@ -31,6 +31,7 @@ export interface Question {
   exam_date: string | null;
   difficulty: number;
   points: number;
+  source_key?: string | null;
   answer_choices?: AnswerChoice[];
 }
 

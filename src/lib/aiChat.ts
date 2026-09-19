@@ -22,6 +22,49 @@ interface ChatContext {
   history: ChatTurn[];
 }
 
+export interface AiImageInput {
+  mimeType: 'image/jpeg' | 'image/png' | 'image/webp';
+  data: string;
+}
+
+const AI_IMAGE_MIME_TYPES = new Set<AiImageInput['mimeType']>([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+]);
+const MAX_AI_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_AI_IMAGE_TOTAL_BYTES = 10 * 1024 * 1024;
+const MAX_AI_IMAGES = 5;
+
+function encodeBase64(bytes: Uint8Array) {
+  let binary = '';
+  for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+  }
+  return btoa(binary);
+}
+
+export async function loadAiImageInputs(urls: Array<string | undefined>): Promise<AiImageInput[]> {
+  const uniqueUrls = [...new Set(urls.filter((url): url is string => Boolean(url)))].slice(0, MAX_AI_IMAGES);
+  const images: AiImageInput[] = [];
+  let totalBytes = 0;
+
+  for (const url of uniqueUrls) {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Unable to read the question image.');
+    const blob = await response.blob();
+    const mimeType = blob.type.split(';')[0].toLowerCase() as AiImageInput['mimeType'];
+    if (!AI_IMAGE_MIME_TYPES.has(mimeType)) throw new Error('The question image format is not supported.');
+    if (blob.size > MAX_AI_IMAGE_BYTES || totalBytes + blob.size > MAX_AI_IMAGE_TOTAL_BYTES) {
+      throw new Error('The question image is too large.');
+    }
+    totalBytes += blob.size;
+    images.push({ mimeType, data: encodeBase64(new Uint8Array(await blob.arrayBuffer())) });
+  }
+
+  return images;
+}
+
 function summarizeQuestions(questions: Question[], language: Language) {
   if (questions.length === 0) return translate(language, 'aiChat.noRecentQuestions');
   return questions
@@ -127,7 +170,8 @@ export async function getQuestionExplanation(
   userAnswerIndex: number,
   correctAnswerIndex: number,
   language: Language,
-  profileName?: string
+  profileName?: string,
+  images: AiImageInput[] = [],
 ) {
   const languageNames: Record<Language, string> = {
     ja: 'Japanese',
@@ -170,7 +214,8 @@ Please explain why the correct answer is right and help me understand this conce
       body: { 
         prompt: userPrompt, 
         messages: [],
-        systemPrompt 
+        systemPrompt,
+        images,
       },
     });
 

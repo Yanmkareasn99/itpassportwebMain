@@ -164,25 +164,46 @@ export const vi = {
   "adminPage.answersCsv": "CSV đáp án",
   "adminPage.pdfImport": "Nhập PDF",
   "adminPage.pdfImportTitle": "Nhập câu hỏi từ PDF",
-  "adminPage.pdfImportDescription": "Chọn PDF câu hỏi và đáp án. Trình duyệt sẽ nhận diện câu hỏi, giữ nguyên hình ảnh và tạo bản xem lại.",
+  "adminPage.pdfImportDescription": "Chọn PDF câu hỏi và đáp án, xem lại kết quả nhận diện rồi nhập trực tiếp.",
+  "adminPage.pdfSubjectFallback": "Môn học dự phòng",
+  "adminPage.pdfSubjectDetectionHelp": "Đặt phạm vi môn học cho kỳ thi này trước khi đọc PDF.",
+  "adminPage.pdfSubjectRanges": "Phạm vi môn học của câu hỏi",
+  "adminPage.pdfSubjectRangesHelp": "Câu hỏi ngoài các phạm vi này sẽ được xếp vào Chưa phân loại. Có thể để khoảng trống nhưng các phạm vi không được chồng lấn.",
+  "adminPage.pdfRangeFrom": "Từ",
+  "adminPage.pdfRangeTo": "Đến",
+  "adminPage.pdfInvalidSubjectRanges": "Phạm vi phải nằm trong Câu 1–100, số bắt đầu không lớn hơn số kết thúc và không được chồng lấn.",
+  "adminPage.pdfExamType": "Kỳ thi cần nhập",
+  "adminPage.pdfExamItPassport": "IT Passport",
+  "adminPage.pdfExamFundamentalA": "Kỹ sư Công nghệ Thông tin Cơ bản — Môn A",
+  "adminPage.pdfExamFundamentalB": "Kỹ sư Công nghệ Thông tin Cơ bản — Môn B",
+  "adminPage.pdfSubjectDetectionFundamentalA": "Tất cả câu hỏi được nhập sẽ thuộc môn A của kỳ thi Kỹ sư Công nghệ Thông tin Cơ bản.",
+  "adminPage.pdfSubjectDetectionFundamentalB": "Tất cả câu hỏi được nhập sẽ thuộc môn B của kỳ thi Kỹ sư Công nghệ Thông tin Cơ bản.",
   "adminPage.pdfExamKey": "Mã kỳ thi (duy nhất)",
   "adminPage.pdfQuestionFile": "PDF câu hỏi",
+  "adminPage.pdfJsonFile": "JSON câu hỏi đã lưu",
+  "adminPage.pdfJsonFileHelp": "Tải lại bản chuyển đổi PDF đã xem xét để tiếp tục chỉnh sửa hoặc nhập dữ liệu.",
+  "adminPage.pdfJsonDownload": "Tải JSON xuống",
+  "adminPage.pdfJsonLoaded": "Đã tải {count} câu hỏi từ JSON.",
+  "adminPage.pdfJsonSaved": "Đã lưu {count} câu hỏi dưới dạng JSON.",
+  "adminPage.pdfJsonLoadFailed": "Không thể tải JSON câu hỏi: {reason}",
+  "adminPage.pdfJsonSaveFailed": "Không thể lưu JSON câu hỏi: {reason}",
   "adminPage.pdfAnswerFile": "PDF đáp án (không bắt buộc)",
   "adminPage.pdfChooseQuestion": "Hãy chọn PDF câu hỏi trước.",
   "adminPage.pdfEnterExamKey": "Nhập mã kỳ thi duy nhất, ví dụ 2026B.",
   "adminPage.pdfProcess": "Đọc PDF",
   "adminPage.pdfProcessing": "Đang đọc PDF…",
   "adminPage.pdfProcessingFailed": "Không thể xử lý các tệp PDF.",
-  "adminPage.pdfLocalProcessing": "PDF chỉ được xử lý trong trình duyệt cho đến khi bạn nhập dữ liệu.",
+  "adminPage.pdfLocalProcessing": "Bạn có thể chuyển sang trang khác khi OCR đang chạy. Hãy giữ tab trình duyệt này mở và không tải lại trang.",
   "adminPage.pdfAnswersNotDetected": "Đã nhận diện câu hỏi nhưng chưa đọc được đáp án. Hãy chọn đáp án đúng khi xem lại.",
   "adminPage.pdfReviewCount": "Xem lại {count} câu hỏi đã nhận diện",
   "adminPage.pdfReviewProblems": "Còn {count} câu hỏi cần kiểm tra",
   "adminPage.pdfReadyToImport": "Tất cả câu hỏi đã sẵn sàng để nhập",
   "adminPage.pdfMarkCorrect": "Đánh dấu là đáp án đúng",
-  "adminPage.pdfImportButton": "Nhập/cập nhật tất cả",
+  "adminPage.pdfImportButton": "Tải câu hỏi và đáp án lên",
   "adminPage.pdfImportProgress": "Đang nhập {current}/{total}…",
   "adminPage.pdfImportComplete": "Đã nhập thành công {count} câu hỏi.",
   "adminPage.pdfImportFailed": "Nhập câu hỏi PDF thất bại.",
+  "adminPage.pdfImportFailedWithReason": "Nhập câu hỏi PDF thất bại: {reason}",
   "adminPage.pdfFixReviewErrors": "Hãy sửa các mục được đánh dấu trước khi nhập.",
   "adminPage.pdfRequiresSupabase": "Tính năng nhập PDF yêu cầu bật Supabase.",
   "adminPage.pdfMigrationRequired": "Thiếu bảng nhập PDF. Hãy chạy migration 20260903010000_add_single_csv_question_import.sql trên Supabase trước.",
@@ -190,6 +211,11 @@ export const vi = {
   "adminPage.allSubjects": "Tất cả môn",
   "adminPage.cancel": "Hủy",
   "adminPage.csvImportFailed": "Nhập CSV thất bại.",
+  "adminPage.duplicateQuestionsFound": "Đã dừng nhập vì các câu hỏi này đã tồn tại hoặc bị lặp trong dữ liệu nhập: {questions}",
+  "adminPage.duplicateQuestionExists": "Đã dừng nhập vì câu hỏi này đã tồn tại.",
+  "adminPage.pageOf": "Trang {current}/{total}",
+  "adminPage.previousPage": "Trước",
+  "adminPage.nextPage": "Tiếp",
   "adminPage.csvImportFormat": "Chọn cả hai tệp CSV theo định dạng cột questions.csv và answer_choices.csv đã xuất.",
   "adminPage.csvReadFailed": "Không thể đọc tệp CSV.",
   "adminPage.csvReadyToImport": "Đã sẵn sàng nhập CSV",
@@ -664,4 +690,20 @@ export const vi = {
   , "settingsPage.deleteAccountAction": "Xóa vĩnh viễn tài khoản của tôi"
   ,"aiChatPage.error": "Đã xảy ra lỗi. Vui lòng thử lại.",
   
+  "practiceQuestionPage.flagQuestion": "Gắn cờ câu hỏi này"
+  , "practiceQuestionPage.clearFlag": "nhấn lại để bỏ cờ"
+  , "practiceQuestionPage.flagGreen": "Cờ xanh"
+  , "practiceQuestionPage.flagOrange": "Cờ cam"
+  , "practiceQuestionPage.flagRed": "Cờ đỏ"
+  , "practiceListPage.flaggedQuestions": "Câu hỏi đã gắn cờ"
+  , "practiceListPage.flaggedCount": "{count} câu hỏi đã gắn cờ"
+  , "practiceListPage.noFlaggedQuestions": "Không có câu hỏi nào được lưu với cờ này."
+  , "practiceListPage.flaggedLoadFailed": "Không thể tải câu hỏi đã gắn cờ."
+  , "practiceQuestionPage.askAi": "Yêu cầu AI giải thích"
+  , "practiceQuestionPage.aiThinking": "AI đang đọc câu hỏi..."
+  , "practiceQuestionPage.aiImageFailed": "Không thể đọc hình ảnh câu hỏi. Vui lòng tải lại trang và thử lại."
+  , "practiceQuestionPage.aiExplanationFailed": "Không thể nhận lời giải thích từ AI. Vui lòng thử lại."
+  , "adminPage.pdfHybridImport": "Giữ {count} hình sơ đồ ({size} MB)"
+  , "adminPage.pdfKeepDiagram": "Giữ hình ảnh câu hỏi này"
+  , "adminPage.pdfKeepDiagramHelp": "Bật cho sơ đồ, biểu đồ, bảng, công thức hoặc lựa chọn trả lời bằng hình ảnh. Câu hỏi chỉ có văn bản sẽ không tải ảnh xem trước lên."
 } as const;

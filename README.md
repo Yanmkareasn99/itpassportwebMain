@@ -189,6 +189,21 @@ Current focused coverage includes:
 - Battle wager validation and duplicate-submit protection
 - Page and component interaction regressions
 
+### Converting quiz-v1 question data
+
+Convert an external `quiz-v1` dataset into the two files accepted by
+**Admin → Questions → Import CSV**. Referenced WebP figures are also copied to
+`public/quiz-figures`.
+
+```powershell
+npm run convert:quiz-v1 -- --source-dir "C:\path\to\data\ip\quiz"
+```
+
+Select `supabase/import/ip-quiz-v1/questions.csv` in the question picker and
+`supabase/import/ip-quiz-v1/answer_choices.csv` in the answer-choice picker,
+review the counts, and start the import. Source IDs are retained in stable
+`source_key` values, and generated database UUIDs are deterministic.
+
 ## Data And Errors
 
 Supabase calls should throw or surface errors instead of ignoring them. New shared helpers live in:

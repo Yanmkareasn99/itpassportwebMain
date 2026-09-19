@@ -4,6 +4,7 @@ const SUBJECT_IDS = {
   strategy: 'cc000001-0000-0000-0000-000000000001',
   management: 'cc000002-0000-0000-0000-000000000001',
   technology: 'cc000003-0000-0000-0000-000000000001',
+  unassigned: 'cc000004-0000-0000-0000-000000000001',
 };
 
 export const localSubjects: Subject[] = [
@@ -26,6 +27,13 @@ export const localSubjects: Subject[] = [
     name: 'テクノロジ系',
     description: 'Computer systems, networks, security, and development basics.',
     color: '#F59E0B',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: SUBJECT_IDS.unassigned,
+    name: 'Unassigned (IT Passport)',
+    description: 'IT Passport questions outside the subject ranges selected during import.',
+    color: '#94A3B8',
     created_at: new Date().toISOString(),
   },
 ];
