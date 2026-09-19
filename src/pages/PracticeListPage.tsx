@@ -30,15 +30,7 @@ import { useLanguage } from "../contexts/LanguageContext";
 import { Question, Page } from "../types";
 import { formatExamDate, UNCATEGORIZED_EXAM_DATE } from "../lib/examDate";
 import { orderPracticeQuestions } from "../lib/questionRandomization";
-} from 'lucide-react';
-import Layout from '../components/Layout';
-import { fetchPracticeQuestions, loadExamDates, loadLatestAnswerStatus, loadPracticeProgress, practiceErrorMessage, type ExamDateFilter, type ModeFilter } from '../lib/practice';
-import { supabase } from '../lib/supabase';
-import { useAuth } from '../contexts/AuthContext';
-import { useLanguage } from '../contexts/LanguageContext';
-import { Question, Page } from '../types';
-import { formatExamDate, UNCATEGORIZED_EXAM_DATE } from '../lib/examDate';
-import { orderPracticeQuestions } from '../lib/questionRandomization';
+
 import { IT_PASSPORT_SUBJECT_IDS } from '../lib/questionSubject';
 import { loadFlaggedQuestions, loadQuestionFlags, QUESTION_FLAG_LEVELS, type QuestionFlagLevel } from '../lib/questionFlags';
 

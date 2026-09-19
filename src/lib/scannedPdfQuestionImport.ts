@@ -866,14 +866,19 @@ export async function processScannedExamPdfs(
           ...image
         } = await renderQuestionCrop(renderedQuestionPage, start, next, worker);
         const parsed = parseScannedQuestionText(ocrText, start.number);
-        const keepImage = hasDiagram
-          || ocrConfidence < 70
+        // Only replace the choice text with ア/イ/ウ/エ labels when the question
+        // really needs the picture (diagram, table, or unreadable choices).
+        // Low OCR confidence alone keeps the image for comparison but must not
+        // throw away choice text that was read correctly.
+        const needsVisual = hasDiagram
           || shouldKeepQuestionImage(parsed.questionText, parsed.choices);
-        const choices = keepImage ? ensureDiagramChoiceLabels(parsed.choices) : parsed.choices;
+        const keepImage = needsVisual || ocrConfidence < 70;
+        const choices = needsVisual ? ensureDiagramChoiceLabels(parsed.choices) : parsed.choices;
         const warnings = [...start.warnings];
         if (!parsed.questionText) warnings.push('Question text was not detected. Enter it below.');
         if (parsed.choices.length < 2) warnings.push('Fewer than two answer choices were detected. Add or edit them below.');
         if (!correctChoice) warnings.push('Correct answer not detected. Select it below.');
+        if (ocrConfidence < 70) warnings.push('Low OCR confidence. Please verify the text against the image.');
         questions.push({
           sourceKey: `${examKey}:Q${start.number}`,
           number: start.number,
