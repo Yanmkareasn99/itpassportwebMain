@@ -61,7 +61,7 @@ function makeLocalProfile(email: string, name?: string, studentId?: string | nul
     role: 'student',
     class_name: null,
     avatar_url: null,
-    is_admin: true,
+    is_admin: false,
     created_at: new Date().toISOString(),
   };
 }
