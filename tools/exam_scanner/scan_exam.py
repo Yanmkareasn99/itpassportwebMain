@@ -20,7 +20,7 @@ IP_SUBJECT_IDS = {
     "technology": "cc000003-0000-0000-0000-000000000001",
 }
 LABELS = "アイウエ"
-HEADING_RE = re.compile(r"^[問間]\s*([0-9０-９]{1,3})(?:\s|[、。：:.])")
+HEADING_RE = re.compile(r"^[問間]\s*([0-9０-９]{1,3})(?=\s|[^0-9０-９])")
 ANSWER_PAIR_RE = re.compile(r"(?:問\s*)?([0-9０-９]{1,3})\s*([アイウエ])")
 
 
@@ -29,6 +29,23 @@ class OcrLine:
     text: str
     top: int
     bottom: int
+
+
+@dataclass(frozen=True)
+class OcrWord:
+    text: str
+    left: int
+    top: int
+    width: int
+    height: int
+
+    @property
+    def right(self) -> int:
+        return self.left + self.width
+
+    @property
+    def center_y(self) -> float:
+        return self.top + self.height / 2
 
 
 @dataclass(frozen=True)
@@ -41,6 +58,14 @@ class QuestionStart:
 def normalize(text: str) -> str:
     table = str.maketrans("０１２３４５６７８９，．", "0123456789,.")
     return re.sub(r"[ \t]+", " ", text.translate(table)).strip()
+
+
+def clean_detected_text(text: str) -> str:
+    japanese = r"\u3040-\u30ff\u3400-\u9fff"
+    text = re.sub(rf"(?<=[{japanese}]) +(?=[{japanese}])", "", text)
+    text = re.sub(r" +([、。）」』】])", r"\1", text)
+    text = re.sub(rf"([、。]) +(?=[{japanese}])", r"\1", text)
+    return re.sub(r"([（「『【]) +", r"\1", text).strip()
 
 
 def parse_choices(raw_text: str, number: int) -> tuple[str, dict[str, str]]:
@@ -66,8 +91,9 @@ def parse_choices(raw_text: str, number: int) -> tuple[str, dict[str, str]]:
             value = line[match.end() : end].strip()
             if value:
                 choices[current].append(value)
-    return "\n".join(body).strip(), {
-        label: " ".join(parts).strip() for label, parts in choices.items() if " ".join(parts).strip()
+    return clean_detected_text("\n".join(body)), {
+        label: clean_detected_text(" ".join(parts))
+        for label, parts in choices.items() if " ".join(parts).strip()
     }
 
 
@@ -155,28 +181,189 @@ def ocr_lines(image, lang: str, psm: int = 6) -> list[OcrLine]:
     return sorted(result, key=lambda line: (line.top, line.bottom))
 
 
+def ocr_words(image, lang: str, psm: int = 6) -> list[OcrWord]:
+    _, pytesseract, _, _, _, _ = load_runtime()
+    data = pytesseract.image_to_data(
+        prepare_image(image), lang=lang, config=f"--oem 1 --psm {psm}", output_type=pytesseract.Output.DICT
+    )
+    words = []
+    for index, value in enumerate(data["text"]):
+        text = normalize(value)
+        if not text:
+            continue
+        words.append(OcrWord(
+            text=text,
+            left=int(data["left"][index]),
+            top=int(data["top"][index]),
+            width=int(data["width"][index]),
+            height=int(data["height"][index]),
+        ))
+    return words
+
+
+def horizontal_choice_row(words: list[OcrWord], image_width: int) -> tuple[int, dict[str, str]] | None:
+    """Read an IPA-style horizontal ア–エ choice row by physical columns.
+
+    Tesseract's reading order is unreliable when four short choices share one
+    row. Coordinates are stable, so detect the aligned labels and assign text
+    to the column immediately to the right of each label.
+    """
+    label_words = [word for word in words if word.text in LABELS]
+    if len(label_words) < len(LABELS):
+        return None
+
+    for anchor in sorted(label_words, key=lambda word: (word.top, word.left), reverse=True):
+        tolerance = max(18, anchor.height * 2)
+        aligned = [word for word in label_words if abs(word.center_y - anchor.center_y) <= tolerance]
+        by_label: dict[str, OcrWord] = {}
+        for label in LABELS:
+            candidates = [word for word in aligned if word.text == label]
+            if candidates:
+                by_label[label] = min(candidates, key=lambda word: abs(word.center_y - anchor.center_y))
+        if len(by_label) != len(LABELS):
+            continue
+        labels = [by_label[label] for label in LABELS]
+        if any(labels[index].left >= labels[index + 1].left for index in range(len(labels) - 1)):
+            continue
+
+        row_top = min(word.top for word in labels)
+        row_bottom = max(word.top + word.height for word in labels)
+        row_height = max(word.height for word in labels)
+        # Choice text can sit slightly above/below its label, but the next
+        # question is excluded from the crop. Include wrapped choice lines.
+        relevant = [
+            word for word in words
+            if row_top - row_height <= word.center_y <= row_bottom + row_height * 3
+        ]
+        choices: dict[str, str] = {}
+        for index, label in enumerate(labels):
+            left = label.right
+            right = labels[index + 1].left if index + 1 < len(labels) else image_width
+            column = [
+                word for word in relevant
+                if word is not label and left <= word.left + word.width / 2 < right
+            ]
+            column.sort(key=lambda word: (word.top, word.left))
+            value = clean_detected_text(" ".join(word.text for word in column))
+            if value:
+                choices[LABELS[index]] = value
+        if len(choices) >= 2:
+            return max(0, row_top - max(8, row_height // 2)), choices
+    return None
+
+
+def extract_question(image, lang: str, number: int) -> tuple[str, dict[str, str]]:
+    words = ocr_words(image, lang, 6)
+    horizontal = horizontal_choice_row(words, image.width)
+    if horizontal:
+        choice_top, choices = horizontal
+        body_image = image.crop((0, 0, image.width, choice_top))
+        text, _ = parse_choices(ocr_text(body_image, lang, 6), number)
+        return text, choices
+    return parse_choices(ocr_text(image, lang, 6), number)
+
+
 def find_starts(page_lines: list[list[OcrLine]], maximum: int) -> list[QuestionStart]:
     candidates: list[QuestionStart] = []
     for page_index, lines in enumerate(page_lines):
         for line in lines:
-            match = HEADING_RE.match(normalize(line.text))
+            text = normalize(line.text)
+            match = HEADING_RE.match(text)
             if not match:
                 continue
+            if re.search(r"から\s*[問間]\s*\d", text):
+                continue
             number = int(normalize(match.group(1)))
-            if 1 <= number <= maximum:
-                candidates.append(QuestionStart(number, page_index, line.top))
+            candidates.append(QuestionStart(number, page_index, line.top))
+    if len(candidates) == maximum:
+        return [
+            QuestionStart(index + 1, candidate.page_index, candidate.top)
+            for index, candidate in enumerate(candidates)
+        ]
+    if len(candidates) == maximum - 1:
+        def agreement(missing: int) -> int:
+            return sum(
+                candidate.number == (index + 1 if index + 1 < missing else index + 2)
+                for index, candidate in enumerate(candidates)
+            )
+
+        missing = max(range(1, maximum + 1), key=agreement)
+        if agreement(missing) >= maximum // 2:
+            insert_at = missing - 1
+            previous = candidates[insert_at - 1] if insert_at > 0 else None
+            following = candidates[insert_at] if insert_at < len(candidates) else None
+            if previous and following and previous.page_index == following.page_index:
+                page_index = previous.page_index
+                top = (previous.top + following.top) // 2
+            elif following:
+                page_index = following.page_index
+                top = 0
+            elif previous:
+                page_index = previous.page_index
+                top = previous.top + 100
+            else:
+                page_index = 0
+                top = 0
+            recovered = [*candidates]
+            recovered.insert(insert_at, QuestionStart(missing, page_index, top))
+            return [
+                QuestionStart(index + 1, candidate.page_index, candidate.top)
+                for index, candidate in enumerate(recovered)
+            ]
     starts: list[QuestionStart] = []
     expected = 1
-    for candidate in candidates:
-        if candidate.number == expected:
-            starts.append(candidate)
-            expected += 1
-        elif candidate.number == expected - 1:
+    for index, candidate in enumerate(candidates):
+        if candidate.number < expected:
             continue
-        elif candidate.number > expected and not any(item.number == expected for item in candidates):
-            starts.append(candidate)
-            expected = candidate.number + 1
+        # OCR commonly changes the tens digit (10 -> 19, 50 -> 59) or adds
+        # another digit (100 -> 199). Document order is more trustworthy.
+        # A difference of exactly one is retained as a genuinely missing
+        # heading so incomplete scans are still reported rather than shifted.
+        repeated_next = candidate.number == expected + 1 and any(
+            later.number == candidate.number for later in candidates[index + 1:index + 4]
+        )
+        number = (
+            candidate.number
+            if candidate.number in (expected, expected + 1) and not repeated_next
+            else expected
+        )
+        if number > maximum:
+            break
+        starts.append(QuestionStart(number, candidate.page_index, candidate.top))
+        expected = number + 1
     return starts
+
+
+def detect_question_starts(pages, dpi: int, lang: str, maximum: int) -> list[QuestionStart]:
+    """Detect headings at a scale that is stable for small Japanese type."""
+    heading_dpi = min(dpi, 200)
+    scale = heading_dpi / dpi
+    if scale < 1:
+        _, _, Image, _, _, _ = load_runtime()
+        heading_pages = [
+            page.resize(
+                (max(1, round(page.width * scale)), max(1, round(page.height * scale))),
+                Image.Resampling.LANCZOS,
+            )
+            for page in pages
+        ]
+    else:
+        heading_pages = pages
+    page_lines = []
+    for page in heading_pages:
+        headings: list[OcrLine] = []
+        # Automatic layout and sparse-text modes recover complementary
+        # headings on pages containing diagrams or multi-column choices.
+        for psm in (3, 11, 12):
+            for line in ocr_lines(page, lang, psm):
+                if not HEADING_RE.match(normalize(line.text)):
+                    continue
+                scaled = OcrLine(line.text, round(line.top / scale), round(line.bottom / scale))
+                if any(abs(existing.top - scaled.top) <= 24 / scale for existing in headings):
+                    continue
+                headings.append(scaled)
+        page_lines.append(sorted(headings, key=lambda line: line.top))
+    return find_starts(page_lines, maximum)
 
 
 def question_crop(pages, starts: list[QuestionStart], index: int):
@@ -227,16 +414,22 @@ def extract_answer_text(path: Path, lang: str, dpi: int) -> str:
 def build_archive(args) -> dict:
     maximum = 100 if args.exam == "it-passport" else 80
     pages = render_pages(args.questions, args.dpi)
-    page_lines = [ocr_lines(page, args.lang, 6) for page in pages]
-    starts = find_starts(page_lines, maximum)
+    starts = detect_question_starts(pages, args.dpi, args.lang, maximum)
     if not starts:
         raise SystemExit("No question headings were detected. Check Tesseract Japanese data and PDF quality.")
+    detected_numbers = {start.number for start in starts}
+    missing_headings = sorted(set(range(1, maximum + 1)) - detected_numbers)
+    if missing_headings:
+        raise SystemExit(
+            f"Detected {len(starts)}/{maximum} question headings; "
+            f"missing {missing_headings}. No incomplete archive was written."
+        )
     answers = parse_answers(extract_answer_text(args.answers, args.lang, args.dpi), maximum) if args.answers else {}
     questions = []
     for index, start in enumerate(starts):
         print(f"OCR question {start.number}/{maximum}", file=sys.stderr)
         crop, source_pages = question_crop(pages, starts, index)
-        text, choices = parse_choices(ocr_text(crop, args.lang, 6), start.number)
+        text, choices = extract_question(crop, args.lang, start.number)
         warnings = []
         if len(choices) < 4:
             warnings.append(f"Detected {len(choices)} choices; review against the PDF.")
