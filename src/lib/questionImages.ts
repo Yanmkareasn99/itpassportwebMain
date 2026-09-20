@@ -1,5 +1,5 @@
-import imageMetadataData from '../data/questionImageMetadata.json';
-import type { AnswerChoice, Question } from '../types';
+import imageMetadataData from "../data/questionImageMetadata.json";
+import type { AnswerChoice, Question } from "../types";
 
 interface ImageMetadata {
   question?: string;
@@ -9,14 +9,16 @@ interface ImageMetadata {
 type ImageLoader = () => Promise<string>;
 
 const imageMetadata = imageMetadataData as Record<string, ImageMetadata>;
-const imageModules = import.meta.glob('../data/img/**/*.png', {
-  query: '?url',
-  import: 'default',
+const imageModules = import.meta.glob("../data/img/**/*.png", {
+  query: "?url",
+  import: "default",
 }) as Record<string, ImageLoader>;
 
 const imageLoaders = new Map<string, ImageLoader>();
 for (const [modulePath, loader] of Object.entries(imageModules)) {
-  const relativePath = modulePath.replace('../data/img/', '').replace(/\\/g, '/');
+  const relativePath = modulePath
+    .replace("../data/img/", "")
+    .replace(/\\/g, "/");
   imageLoaders.set(relativePath.toLowerCase(), loader);
 }
 
@@ -32,11 +34,11 @@ function questionKey(value: string) {
 }
 
 function normalizeAssetPath(path: string) {
-  const normalized = path.replace(/\\/g, '/');
-  const imgIndex = normalized.toLowerCase().lastIndexOf('/img/');
+  const normalized = path.replace(/\\/g, "/");
+  const imgIndex = normalized.toLowerCase().lastIndexOf("/img/");
   return imgIndex >= 0
     ? normalized.slice(imgIndex + 5)
-    : normalized.replace(/^\.?\/?src\/data\/img\//i, '').replace(/^img\//i, '');
+    : normalized.replace(/^\.?\/?src\/data\/img\//i, "").replace(/^img\//i, "");
 }
 
 function resolveBundledImage(path: string | null | undefined) {
@@ -45,7 +47,9 @@ function resolveBundledImage(path: string | null | undefined) {
   const existing = imagePromises.get(assetPath);
   if (existing) return existing;
   const loader = imageLoaders.get(assetPath);
-  const promise = loader ? loader().catch(() => undefined) : Promise.resolve(undefined);
+  const promise = loader
+    ? loader().catch(() => undefined)
+    : Promise.resolve(undefined);
   imagePromises.set(assetPath, promise);
   return promise;
 }
@@ -62,9 +66,10 @@ export async function getQuestionImageUrl(question: Question | undefined) {
 
   const storedAsset = await resolveBundledImage(storedImage);
   if (storedAsset) return storedAsset;
-  if (storedImage?.startsWith('/')) return storedImage;
+  if (storedImage?.startsWith("/")) return storedImage;
 
-  const fallbackPath = imageMetadata[questionKey(question.question_text.trim())]?.question;
+  const fallbackPath =
+    imageMetadata[questionKey(question.question_text.trim())]?.question;
   return resolveBundledImage(fallbackPath);
 }
 
@@ -77,14 +82,18 @@ export async function getAnswerChoiceImageUrl(
 
   const storedAsset = await resolveBundledImage(storedImage);
   if (storedAsset) return storedAsset;
-  if (storedImage?.startsWith('/')) return storedImage;
+  if (storedImage?.startsWith("/")) return storedImage;
   if (!question) return undefined;
 
-  const fallbackPath = imageMetadata[questionKey(question.question_text.trim())]
-    ?.choices?.[String(choice.sort_order)];
+  const fallbackPath =
+    imageMetadata[questionKey(question.question_text.trim())]?.choices?.[
+      String(choice.sort_order)
+    ];
   return resolveBundledImage(fallbackPath);
 }
 
 export function isImageReference(value: string) {
-  return value.startsWith('../') || /\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(value);
+  return (
+    value.startsWith("../") || /\.(png|jpe?g|gif|webp|svg)(\?.*)?$/i.test(value)
+  );
 }

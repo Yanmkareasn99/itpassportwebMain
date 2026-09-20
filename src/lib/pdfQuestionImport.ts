@@ -2,11 +2,14 @@ import {
   GlobalWorkerOptions,
   getDocument,
   type PDFDocumentProxy,
-} from 'pdfjs-dist';
-import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-import { extractAnswerMap, extractPages, type PageText } from './pdfAnswerText';
-import type { QuestionImportExam } from './questionSubject';
-import { ensureDiagramChoiceLabels, shouldKeepQuestionImage } from './pdfQuestionImages';
+} from "pdfjs-dist";
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import { extractAnswerMap, extractPages, type PageText } from "./pdfAnswerText";
+import type { QuestionImportExam } from "./questionSubject";
+import {
+  ensureDiagramChoiceLabels,
+  shouldKeepQuestionImage,
+} from "./pdfQuestionImages";
 
 GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -39,31 +42,31 @@ export interface PdfImportResult {
   answerCount: number;
 }
 
-const CHOICE_LABELS = 'アイウエオカキクケコ';
-const MEMO_MARKERS = ['メモ用紙', 'メ モ 用 紙'];
-const TRAILING_MARKERS = ['試験問題に記載されている会社名', '無断転載を禁ず'];
+const CHOICE_LABELS = "アイウエオカキクケコ";
+const MEMO_MARKERS = ["メモ用紙", "メ モ 用 紙"];
+const TRAILING_MARKERS = ["試験問題に記載されている会社名", "無断転載を禁ず"];
 
 function normalize(value: string) {
-  return value.normalize('NFKC').split('\u3000').join(' ');
+  return value.normalize("NFKC").split("\u3000").join(" ");
 }
 
 function escapeRegExp(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function cleanPdfText(value: string) {
   const lines: string[] = [];
-  for (const rawLine of value.split('\r').join('').split('\n')) {
+  for (const rawLine of value.split("\r").join("").split("\n")) {
     const line = rawLine.trim();
     if (!line) {
-      if (lines.length && lines[lines.length - 1] !== '') lines.push('');
+      if (lines.length && lines[lines.length - 1] !== "") lines.push("");
       continue;
     }
     if (/^[－—-]?\s*\d+\s*[－—-]?$/.test(normalize(line))) continue;
     lines.push(line);
   }
-  while (lines[lines.length - 1] === '') lines.pop();
-  return lines.join('\n');
+  while (lines[lines.length - 1] === "") lines.pop();
+  return lines.join("\n");
 }
 
 function findQuestionStarts(pages: PageText[]) {
@@ -71,7 +74,7 @@ function findQuestionStarts(pages: PageText[]) {
   const seen = new Set<number>();
   for (let pageIndex = 0; pageIndex < pages.length; pageIndex += 1) {
     const text = normalize(pages[pageIndex].text);
-    if (text.includes('問題番号') && text.includes('注意事項')) continue;
+    if (text.includes("問題番号") && text.includes("注意事項")) continue;
     const match = text.match(/(?:^|\n)\s*問\s*(\d{1,3})(?=\s)/);
     if (!match) continue;
     const number = Number(match[1]);
@@ -85,14 +88,16 @@ function findQuestionStarts(pages: PageText[]) {
 
 function parseChoices(text: string): PdfImportChoice[] {
   const normalizedText = normalize(text);
-  const marker = normalizedText.indexOf('解答群');
+  const marker = normalizedText.indexOf("解答群");
   if (marker < 0) return [];
-  const group = normalizedText.slice(marker + '解答群'.length);
-  const labelPattern = new RegExp(`^\\s*([${escapeRegExp(CHOICE_LABELS)}])(?:\\s+(.+))?\\s*$`);
+  const group = normalizedText.slice(marker + "解答群".length);
+  const labelPattern = new RegExp(
+    `^\\s*([${escapeRegExp(CHOICE_LABELS)}])(?:\\s+(.+))?\\s*$`,
+  );
   const choices: PdfImportChoice[] = [];
   let current: { label: string; parts: string[] } | null = null;
 
-  for (const rawLine of group.split('\n')) {
+  for (const rawLine of group.split("\n")) {
     const line = rawLine.trim();
     if (!line) continue;
     const match = line.match(labelPattern);
@@ -100,11 +105,11 @@ function parseChoices(text: string): PdfImportChoice[] {
       if (current) {
         choices.push({
           label: current.label,
-          text: current.parts.join(' ').trim() || current.label,
+          text: current.parts.join(" ").trim() || current.label,
           sortOrder: choices.length + 1,
         });
       }
-      current = { label: match[1], parts: [match[2] ?? ''] };
+      current = { label: match[1], parts: [match[2] ?? ""] };
     } else if (current) {
       current.parts.push(line);
     }
@@ -112,33 +117,64 @@ function parseChoices(text: string): PdfImportChoice[] {
   if (current) {
     choices.push({
       label: current.label,
-      text: current.parts.join(' ').trim() || current.label,
+      text: current.parts.join(" ").trim() || current.label,
       sortOrder: choices.length + 1,
     });
   }
 
-  return choices.filter((choice, index) =>
-    choices.findIndex(candidate => candidate.label === choice.label) === index,
+  return choices.filter(
+    (choice, index) =>
+      choices.findIndex((candidate) => candidate.label === choice.label) ===
+      index,
   );
 }
 
 function createCanvas(width: number, height: number) {
-  const canvas = document.createElement('canvas');
+  const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.ceil(width));
   canvas.height = Math.max(1, Math.ceil(height));
   return canvas;
 }
 
+/**
+ * Converts a Blob to a base64 data: URL (e.g. "data:image/webp;base64,...").
+ * Unlike URL.createObjectURL(), the result is a self-contained string that
+ * survives serialization to a database/API and can be loaded in any browser
+ * session, not just the one that created it.
+ */
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () =>
+      reject(reader.error ?? new Error("Failed to read image blob."));
+    reader.readAsDataURL(blob);
+  });
+}
+
 async function canvasToWebpUrl(canvas: HTMLCanvasElement) {
-  const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/webp', 0.82));
-  if (blob) return { imageDataUrl: URL.createObjectURL(blob), imageSizeBytes: blob.size };
-  const imageDataUrl = canvas.toDataURL('image/webp', 0.82);
-  return { imageDataUrl, imageSizeBytes: Math.ceil(imageDataUrl.length * 0.75) };
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, "image/webp", 0.82),
+  );
+  if (blob) {
+    // IMPORTANT: always produce a persistent base64 data URL here, never
+    // URL.createObjectURL(blob). Object URLs only resolve within the browser
+    // tab/session that created them — once this question is saved and
+    // reloaded later (or on another device), the blob URL is dead and the
+    // image silently fails to load.
+    const imageDataUrl = await blobToDataUrl(blob);
+    return { imageDataUrl, imageSizeBytes: blob.size };
+  }
+  const imageDataUrl = canvas.toDataURL("image/webp", 0.82);
+  return {
+    imageDataUrl,
+    imageSizeBytes: Math.ceil(imageDataUrl.length * 0.75),
+  };
 }
 
 function trimCanvas(source: HTMLCanvasElement) {
-  const context = source.getContext('2d', { willReadFrequently: true });
-  if (!context) throw new Error('Canvas is unavailable in this browser.');
+  const context = source.getContext("2d", { willReadFrequently: true });
+  if (!context) throw new Error("Canvas is unavailable in this browser.");
   const scanHeight = Math.max(1, Math.floor(source.height * 0.935));
   const pixels = context.getImageData(0, 0, source.width, scanHeight).data;
   let left = source.width;
@@ -148,7 +184,11 @@ function trimCanvas(source: HTMLCanvasElement) {
   for (let y = 0; y < scanHeight; y += 2) {
     for (let x = 0; x < source.width; x += 2) {
       const offset = (y * source.width + x) * 4;
-      if (pixels[offset] < 245 || pixels[offset + 1] < 245 || pixels[offset + 2] < 245) {
+      if (
+        pixels[offset] < 245 ||
+        pixels[offset + 1] < 245 ||
+        pixels[offset + 2] < 245
+      ) {
         left = Math.min(left, x);
         right = Math.max(right, x);
         top = Math.min(top, y);
@@ -163,42 +203,49 @@ function trimCanvas(source: HTMLCanvasElement) {
   const cropRight = Math.min(source.width, right + margin);
   const cropBottom = Math.min(scanHeight, bottom + margin);
   const output = createCanvas(cropRight - cropLeft, cropBottom - cropTop);
-  output.getContext('2d')?.drawImage(
-    source,
-    cropLeft,
-    cropTop,
-    output.width,
-    output.height,
-    0,
-    0,
-    output.width,
-    output.height,
-  );
+  output
+    .getContext("2d")
+    ?.drawImage(
+      source,
+      cropLeft,
+      cropTop,
+      output.width,
+      output.height,
+      0,
+      0,
+      output.width,
+      output.height,
+    );
   return output;
 }
 
-async function renderQuestionImage(document: PDFDocumentProxy, pageNumbers: number[]) {
+async function renderQuestionImage(
+  document: PDFDocumentProxy,
+  pageNumbers: number[],
+) {
   const rendered: HTMLCanvasElement[] = [];
   for (const pageNumber of pageNumbers) {
     const page = await document.getPage(pageNumber);
     const viewport = page.getViewport({ scale: 1.45 });
     const canvas = createCanvas(viewport.width, viewport.height);
-    const context = canvas.getContext('2d');
-    if (!context) throw new Error('Canvas is unavailable in this browser.');
-    context.fillStyle = '#ffffff';
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Canvas is unavailable in this browser.");
+    context.fillStyle = "#ffffff";
     context.fillRect(0, 0, canvas.width, canvas.height);
     await page.render({ canvasContext: context, viewport }).promise;
     rendered.push(trimCanvas(canvas));
     page.cleanup();
   }
 
-  const width = Math.max(...rendered.map(canvas => canvas.width));
+  const width = Math.max(...rendered.map((canvas) => canvas.width));
   const gap = Math.max(16, Math.floor(width / 70));
-  const height = rendered.reduce((sum, canvas) => sum + canvas.height, 0) + gap * (rendered.length - 1);
+  const height =
+    rendered.reduce((sum, canvas) => sum + canvas.height, 0) +
+    gap * (rendered.length - 1);
   const combined = createCanvas(width, height);
-  const context = combined.getContext('2d');
-  if (!context) throw new Error('Canvas is unavailable in this browser.');
-  context.fillStyle = '#ffffff';
+  const context = combined.getContext("2d");
+  if (!context) throw new Error("Canvas is unavailable in this browser.");
+  context.fillStyle = "#ffffff";
   context.fillRect(0, 0, width, height);
   let top = 0;
   for (const canvas of rendered) {
@@ -229,33 +276,34 @@ export async function processExamPdfs(
   answerFile: File | null,
   examKey: string,
   onProgress?: (message: string) => void,
-  exam: QuestionImportExam = 'it-passport',
+  exam: QuestionImportExam = "it-passport",
 ): Promise<PdfImportResult> {
   const questionDocument = await openPdf(questionFile);
   const answerDocument = answerFile ? await openPdf(answerFile) : null;
   try {
-    onProgress?.('Reading question text…');
+    onProgress?.("Reading question text…");
     const questionPages = await extractPages(questionDocument);
     const starts = findQuestionStarts(questionPages);
-    const requiresScannedRetry = !starts.length
-      || (exam === 'it-passport' && (
-        starts.length !== 100
-        || starts.some((start, index) => start.number !== index + 1)
-      ));
+    const requiresScannedRetry =
+      !starts.length ||
+      (exam === "it-passport" &&
+        (starts.length !== 100 ||
+          starts.some((start, index) => start.number !== index + 1)));
     if (requiresScannedRetry) {
-      const { processScannedExamPdfs } = await import('./scannedPdfQuestionImport');
+      const { processScannedExamPdfs } =
+        await import("./scannedPdfQuestionImport");
       return await processScannedExamPdfs(
         questionDocument,
         answerDocument,
         examKey,
         onProgress,
-        exam === 'it-passport' ? 100 : undefined,
+        exam === "it-passport" ? 100 : undefined,
       );
     }
 
     let answers = new Map<number, string>();
     if (answerDocument) {
-      onProgress?.('Reading the answer key…');
+      onProgress?.("Reading the answer key…");
       answers = extractAnswerMap(await extractPages(answerDocument));
     }
 
@@ -263,30 +311,51 @@ export async function processExamPdfs(
     for (let position = 0; position < starts.length; position += 1) {
       const start = starts[position];
       const endIndex = starts[position + 1]?.pageIndex ?? questionPages.length;
-      const pages = questionPages.slice(start.pageIndex, endIndex).filter((page, pageOffset) => {
-        const text = normalize(page.text);
-        if (MEMO_MARKERS.some(marker => text.includes(marker))) return false;
-        if (TRAILING_MARKERS.some(marker => text.includes(marker))) return false;
-        return pageOffset === 0 || cleanPdfText(text).length >= 80;
-      });
+      const pages = questionPages
+        .slice(start.pageIndex, endIndex)
+        .filter((page, pageOffset) => {
+          const text = normalize(page.text);
+          if (MEMO_MARKERS.some((marker) => text.includes(marker)))
+            return false;
+          if (TRAILING_MARKERS.some((marker) => text.includes(marker)))
+            return false;
+          return pageOffset === 0 || cleanPdfText(text).length >= 80;
+        });
       if (!pages.length) continue;
 
       onProgress?.(`Rendering question ${position + 1} of ${starts.length}…`);
-      const combinedText = cleanPdfText(pages.map(page => page.text).join('\n'));
-      const answerGroupAt = normalize(combinedText).indexOf('解答群');
-      const questionText = answerGroupAt >= 0
-        ? combinedText.slice(0, answerGroupAt).trim()
-        : combinedText.trim();
+      const combinedText = cleanPdfText(
+        pages.map((page) => page.text).join("\n"),
+      );
+      const answerGroupAt = normalize(combinedText).indexOf("解答群");
+      const questionText =
+        answerGroupAt >= 0
+          ? combinedText.slice(0, answerGroupAt).trim()
+          : combinedText.trim();
       const choices = parseChoices(combinedText);
-      const correctChoice = answers.get(start.number) ?? '';
-      if (correctChoice && !choices.some(choice => choice.label === correctChoice)) {
-        choices.push({ label: correctChoice, text: correctChoice, sortOrder: choices.length + 1 });
+      const correctChoice = answers.get(start.number) ?? "";
+      if (
+        correctChoice &&
+        !choices.some((choice) => choice.label === correctChoice)
+      ) {
+        choices.push({
+          label: correctChoice,
+          text: correctChoice,
+          sortOrder: choices.length + 1,
+        });
       }
       const warnings: string[] = [];
-      if (!correctChoice) warnings.push('Correct answer not detected. Select it below.');
-      if (choices.length < 2) warnings.push('Fewer than two choices were detected. Add or edit choices below.');
+      if (!correctChoice)
+        warnings.push("Correct answer not detected. Select it below.");
+      if (choices.length < 2)
+        warnings.push(
+          "Fewer than two choices were detected. Add or edit choices below.",
+        );
 
-      const image = await renderQuestionImage(questionDocument, pages.map(page => page.pageNumber));
+      const image = await renderQuestionImage(
+        questionDocument,
+        pages.map((page) => page.pageNumber),
+      );
       const keepImage = shouldKeepQuestionImage(questionText, choices);
       questions.push({
         sourceKey: `${examKey}:Q${start.number}`,
@@ -294,10 +363,10 @@ export async function processExamPdfs(
         questionText: questionText || `${examKey} 問${start.number}`,
         ...image,
         keepImage,
-        sourcePages: pages.map(page => page.pageNumber),
+        sourcePages: pages.map((page) => page.pageNumber),
         choices: keepImage ? ensureDiagramChoiceLabels(choices) : choices,
         correctChoice,
-        explanation: '',
+        explanation: "",
         difficulty: 2,
         points: 1,
         warnings,
