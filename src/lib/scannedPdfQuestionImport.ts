@@ -716,16 +716,6 @@ export function getMissingExpectedQuestionNumbers(
   );
 }
 
-function hasCompleteExpectedSequence(
-  starts: QuestionStart[],
-  expectedCount: number,
-) {
-  return (
-    starts.length === expectedCount &&
-    starts.every((start, index) => start.number === index + 1)
-  );
-}
-
 function mergeOcrPages(primary: OcrPage[], additional: OcrPage[]) {
   const additionalByPage = new Map(
     additional.map((page) => [page.pageNumber, page.lines]),
