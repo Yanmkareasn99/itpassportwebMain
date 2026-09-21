@@ -3,12 +3,16 @@
 
 Accuracy-oriented version:
 - multi-pass OCR with Japanese/English fallback
+- Otsu binarization plus contrast/unsharp preprocessing passes tuned for
+  small Japanese glyphs, with preserve_interword_spaces enabled so
+  Tesseract doesn't inject spurious spaces inside Japanese text
 - confidence-aware question heading detection
 - safer question segmentation across pages
 - stricter choice parsing
 - conservative answer-key parsing (does not guess when ambiguous)
 - duplicate/missing question validation
-- OCR retries for difficult crops
+- OCR retries for difficult crops, including a sparse-text pass for
+  question crops that mix body text with figures/diagrams
 """
 
 from __future__ import annotations
@@ -38,17 +42,33 @@ HEADING_RE = re.compile(
     r"(?:\s*[、。：:.．)]|\s|$)"
 )
 
+# 工 (kanji, "labor/construction") is visually near-identical to エ
+# (katakana) in most exam PDF fonts, and Tesseract's Japanese model
+# regularly substitutes one for the other when it appears as an isolated
+# choice marker. We accept both here and normalize back to エ.
+CHOICE_MARKER_CONFUSABLES = "アイウエ工"
+
 ANSWER_PAIR_RE = re.compile(
-    r"(?:問\s*)?([0-9０-９]{1,3})\s*([アイウエ])(?=\s|$|[,、。])"
+    r"(?:問\s*)?([0-9０-９]{1,3})\s*([アイウエ工])(?=\s|$|[,、。])"
 )
 
 CHOICE_RE = re.compile(
-    r"(?<![ァ-ヶー])([アイウエ])(?=\s|[.:：、)]|$)"
+    r"(?<![ァ-ヶー])([アイウエ工])(?=\s|[.:：、)]|$)"
 )
 
 FULLWIDTH_TRANSLATION = str.maketrans(
     "０１２３４５６７８９，．：；（），［］",
     "0123456789,.:;(),[]",
+)
+
+# Keywords indicating the question body refers to a diagram/table/chart the
+# reader needs to see (as opposed to being answerable from text alone).
+# 図 and グラフ and 表 already match as substrings inside most compound
+# terms (ER図, クラス図, 状態遷移図, 棒グラフ, 貸借対照表, ...), so this
+# list only needs to add the terms that don't contain those characters.
+VISUAL_KEYWORD_RE = re.compile(
+    r"(?:図|表|グラフ|チャート|ヒストグラム|計算書|ダイアグラム|"
+    r"マトリクス|マトリックス|画面|真理値)"
 )
 
 
@@ -75,8 +95,13 @@ def normalize(text: str) -> str:
     return text.strip()
 
 
+def normalize_choice_label(value: str) -> str:
+    """Map OCR-confusable characters onto the canonical アイウエ label."""
+    return "エ" if value == "工" else value
+
+
 def normalize_answer_label(value: str) -> str:
-    value = normalize(value)
+    value = normalize_choice_label(normalize(value))
     return value if value in LABELS else ""
 
 
@@ -86,6 +111,13 @@ def parse_choices(raw_text: str, number: int) -> tuple[str, dict[str, str]]:
     A choice marker must be separated from surrounding Japanese text. This
     avoids accidentally treating characters inside words as choice labels.
     """
+    # Tesseract occasionally doubles an isolated choice marker glyph
+    # (e.g. "エエ" instead of "エ"); collapse that before segmenting lines
+    # so it isn't mistaken for two adjacent, ambiguous markers.
+    raw_text = re.sub(
+        r"([アイウエ工])\1+(?=\s|[.:：、)]|$)", r"\1", raw_text
+    )
+
     lines = [normalize(line) for line in raw_text.splitlines() if normalize(line)]
 
     if lines:
@@ -114,7 +146,7 @@ def parse_choices(raw_text: str, number: int) -> tuple[str, dict[str, str]]:
             (choices[current] if current else body).append(prefix)
 
         for i, match in enumerate(matches):
-            label = match.group(1)
+            label = normalize_choice_label(match.group(1))
             current = label
             choices.setdefault(label, [])
 
@@ -168,7 +200,10 @@ def parse_answers(text: str, maximum: int) -> tuple[dict[int, str], list[str]]:
             continue
 
         for candidate in lines[index + 1:index + 5]:
-            labels = [x for x in re.findall(r"[アイウエ]", candidate)]
+            labels = [
+                normalize_choice_label(x)
+                for x in re.findall(r"[アイウエ工]", candidate)
+            ]
             if len(labels) == len(numbers):
                 for number, label in zip(numbers, labels):
                     candidates.setdefault(number, set()).add(label)
@@ -233,31 +268,97 @@ def render_pages(pdf_path: Path, dpi: int):
     return pages
 
 
+def otsu_threshold(gray_image) -> int:
+    """Compute an Otsu binarization threshold from a grayscale image.
+
+    Implemented from the raw histogram so no extra dependency (e.g. OpenCV)
+    is required. Clean Otsu binarization removes paper texture and light
+    scanner shading that otherwise confuses Tesseract's Japanese models on
+    small, dense kanji.
+    """
+    histogram = gray_image.histogram()
+    total = sum(histogram)
+    if total == 0:
+        return 128
+
+    sum_all = sum(intensity * count for intensity, count in enumerate(histogram))
+
+    sum_background = 0.0
+    weight_background = 0
+    best_threshold = 0
+    best_variance = -1.0
+
+    for threshold, count in enumerate(histogram):
+        weight_background += count
+        if weight_background == 0:
+            continue
+
+        weight_foreground = total - weight_background
+        if weight_foreground == 0:
+            break
+
+        sum_background += threshold * count
+        mean_background = sum_background / weight_background
+        mean_foreground = (sum_all - sum_background) / weight_foreground
+
+        variance = (
+            weight_background
+            * weight_foreground
+            * (mean_background - mean_foreground) ** 2
+        )
+        if variance > best_variance:
+            best_variance = variance
+            best_threshold = threshold
+
+    return best_threshold
+
+
 def prepare_image(image, mode: str = "normal"):
     _, _, _, ImageEnhance, ImageFilter, ImageOps = load_runtime()
 
     gray = ImageOps.grayscale(image)
+
     if mode == "strong":
         gray = ImageEnhance.Contrast(gray).enhance(2.2)
         gray = ImageOps.autocontrast(gray)
-        return gray.filter(ImageFilter.SHARPEN)
+        return gray.filter(ImageFilter.UnsharpMask(radius=2, percent=150))
+
+    if mode == "binarized":
+        # Otsu binarization strips background shading/paper texture, which
+        # is one of the more common causes of misread kanji strokes.
+        gray = ImageOps.autocontrast(gray)
+        threshold = otsu_threshold(gray)
+        return gray.point(lambda value: 255 if value > threshold else 0)
 
     gray = ImageEnhance.Contrast(gray).enhance(1.8)
-    return gray.filter(ImageFilter.SHARPEN)
+    return gray.filter(ImageFilter.UnsharpMask(radius=1.5, percent=120))
 
 
-def ocr_data(image, lang: str, psm: int = 6, mode: str = "normal"):
+def tesseract_config(psm: int, dpi: int) -> str:
+    # preserve_interword_spaces matters a lot for Japanese: without it,
+    # Tesseract's LSTM segmenter sometimes inserts or drops spaces between
+    # characters that have no real word boundary, corrupting choice parsing.
+    # Passing the real render DPI avoids Tesseract guessing a wrong scale
+    # for small Japanese glyphs.
+    return (
+        f"--oem 1 --psm {psm} "
+        f"-c preserve_interword_spaces=1 "
+        f"-c user_defined_dpi={dpi}"
+    )
+
+
+def ocr_data(image, lang: str, psm: int = 6, mode: str = "normal", dpi: int = 350):
     _, pytesseract, _, _, _, _ = load_runtime()
     return pytesseract.image_to_data(
         prepare_image(image, mode),
         lang=lang,
-        config=f"--oem 1 --psm {psm}",
+        config=tesseract_config(psm, dpi),
         output_type=pytesseract.Output.DICT,
     )
 
 
-def ocr_lines(image, lang: str, psm: int = 6) -> list[OcrLine]:
-    data = ocr_data(image, lang, psm)
+def ocr_lines(image, lang: str, psm: int = 6, dpi: int = 350) -> list[OcrLine]:
+    data = ocr_data(image, lang, psm, dpi=dpi)
     grouped: dict[tuple[int, int, int], list[tuple[int, str, int, int, float]]] = {}
 
     for index, raw in enumerate(data["text"]):
@@ -302,17 +403,24 @@ def ocr_lines(image, lang: str, psm: int = 6) -> list[OcrLine]:
     return sorted(result, key=lambda line: (line.top, line.bottom))
 
 
-def ocr_text(image, lang: str, psms=(6, 4), retry=True) -> str:
+JAPANESE_CHAR_RE = re.compile(
+    r"[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff]"
+)
+
+
+def ocr_text(image, lang: str, psms=(6, 4), retry=True, dpi: int = 350) -> str:
     """Run more than one segmentation mode and keep the richer result."""
     texts = []
 
+    modes = ("normal", "strong", "binarized") if retry else ("normal",)
+
     for psm in psms:
-        for mode in ("normal", "strong") if retry else ("normal",):
+        for mode in modes:
             _, pytesseract, _, _, _, _ = load_runtime()
             value = pytesseract.image_to_string(
                 prepare_image(image, mode),
                 lang=lang,
-                config=f"--oem 1 --psm {psm}",
+                config=tesseract_config(psm, dpi),
             )
             value = value.strip()
             if value:
@@ -321,10 +429,14 @@ def ocr_text(image, lang: str, psms=(6, 4), retry=True) -> str:
     if not texts:
         return ""
 
-    # Prefer the OCR result with the most choice markers and then most text.
+    # Prefer the OCR result with the most choice markers, then the most
+    # actual Japanese text (kana/kanji), then raw length as a tie-breaker.
+    # Choice-marker count alone previously let a noisy, mostly-garbled pass
+    # outscore a clean one that happened to have slightly fewer markers.
     def score(value: str):
-        labels = len(re.findall(r"[アイウエ]", value))
-        return (labels, len(value))
+        labels = len(re.findall(r"[アイウエ工]", value))
+        japanese_chars = len(JAPANESE_CHAR_RE.findall(value))
+        return (labels, japanese_chars, len(value))
 
     return max(texts, key=score)
 
@@ -370,6 +482,18 @@ def find_starts(
 
     # Build the longest plausible sequential run. This prevents one bad OCR
     # heading from causing all later questions to be segmented incorrectly.
+    #
+    # Gap tolerance is scaled to the gap size: skipping just one or two
+    # question numbers is a normal consequence of a single missed heading
+    # and is accepted whenever nothing else claims the expected number
+    # (checked above). A large jump is far more likely to be a stray OCR
+    # false-positive heading, so it still needs a high-confidence match —
+    # otherwise it can permanently strand the real, lower-numbered headings
+    # that appear later in `candidates` (they'd never equal the new,
+    # much higher `expected` value once we jump past them).
+    SMALL_GAP_TOLERANCE = 2
+    HIGH_CONFIDENCE_JUMP = 70
+
     starts: list[QuestionStart] = []
     expected = 1
 
@@ -386,8 +510,11 @@ def find_starts(
         if any(x.number == expected for x in candidates):
             continue
 
-        # Only allow a gap when the candidate is very plausible.
-        if candidate.number > expected and candidate.confidence >= 70:
+        if candidate.number <= expected:
+            continue
+
+        gap = candidate.number - expected
+        if gap <= SMALL_GAP_TOLERANCE or candidate.confidence >= HIGH_CONFIDENCE_JUMP:
             starts.append(candidate)
             expected = candidate.number + 1
 
@@ -472,7 +599,7 @@ def extract_answer_text(path: Path, lang: str, dpi: int) -> str:
         return text
 
     return "\n".join(
-        ocr_text(page, lang, psms=(6, 4), retry=True)
+        ocr_text(page, lang, psms=(6, 4), retry=True, dpi=dpi)
         for page in render_pages(path, dpi)
     )
 
@@ -504,7 +631,9 @@ def build_archive(args) -> dict:
     maximum = 100 if args.exam == "it-passport" else 80
 
     pages = render_pages(args.questions, args.dpi)
-    page_lines = [ocr_lines(page, args.lang, 6) for page in pages]
+    page_lines = [
+        ocr_lines(page, args.lang, 6, dpi=args.dpi) for page in pages
+    ]
     starts = find_starts(page_lines, maximum)
 
     if not starts:
@@ -558,7 +687,12 @@ def build_archive(args) -> dict:
             )
             continue
 
-        raw_ocr = ocr_text(crop, args.lang, psms=(6, 4), retry=True)
+        # psm 11 (sparse text) is included here because question crops often
+        # mix body text with figures/diagrams, which trips up the
+        # column-oriented psm 6/4 assumptions.
+        raw_ocr = ocr_text(
+            crop, args.lang, psms=(6, 4, 11), retry=True, dpi=args.dpi
+        )
         text, choices = parse_choices(raw_ocr, start.number)
 
         confidence, warnings = question_quality(text, choices)
@@ -571,12 +705,7 @@ def build_archive(args) -> dict:
                 "the detected choices."
             )
 
-        visual = bool(
-            re.search(
-                r"(?:図|表|グラフ|フローチャート|構成図|画面|ネットワーク図)",
-                raw_ocr,
-            )
-        ) or len(choices) < 4
+        visual = bool(VISUAL_KEYWORD_RE.search(raw_ocr)) or len(choices) < 4
 
         figure = None
         if visual or args.keep_all_images:
@@ -655,8 +784,11 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument(
         "--dpi",
         type=int,
-        default=350,
-        help="PDF rendering DPI; 350 is safer for small Japanese text.",
+        default=400,
+        help=(
+            "PDF rendering DPI; 400 gives Tesseract more pixels per "
+            "kanji stroke than 350 without a large runtime cost."
+        ),
     )
     result.add_argument("--keep-all-images", action="store_true")
     return result
