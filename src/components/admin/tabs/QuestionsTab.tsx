@@ -112,6 +112,7 @@ export default function QuestionsTab() {
   const [error, setError] = useState("");
   const [importData, setImportData] = useState<CsvImportData | null>(null);
   const [importing, setImporting] = useState(false);
+  const [uploadingQuestionImage, setUploadingQuestionImage] = useState(false);
   const [showPdfImporter, setShowPdfImporter] = useState(
     () => getPdfImportJobSnapshot().status !== "idle",
   );
@@ -124,6 +125,7 @@ export default function QuestionsTab() {
   });
   const questionCsvInput = useRef<HTMLInputElement>(null);
   const choiceCsvInput = useRef<HTMLInputElement>(null);
+  const questionImageInput = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -424,6 +426,43 @@ export default function QuestionsTab() {
           ? deleteError.message
           : translate(language, "adminPage.failedToSave"),
       );
+    }
+  }
+
+  async function handleQuestionImageUpload(file: File | undefined) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError(translate(language, "adminPage.imageUploadInvalid"));
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError(translate(language, "adminPage.imageUploadTooLarge"));
+      return;
+    }
+
+    setError("");
+    setUploadingQuestionImage(true);
+    try {
+      const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `manual/${Date.now()}-${crypto.randomUUID()}.${extension}`;
+      const { error: uploadError } = await supabase.storage
+        .from("question-images")
+        .upload(path, file, { contentType: file.type, upsert: false });
+      if (uploadError) throw uploadError;
+
+      const imageUrl = supabase.storage
+        .from("question-images")
+        .getPublicUrl(path).data.publicUrl;
+      setForm((current) => ({ ...current, image_url: imageUrl }));
+    } catch (uploadError) {
+      setError(
+        uploadError instanceof Error
+          ? uploadError.message
+          : translate(language, "adminPage.imageUploadFailed"),
+      );
+    } finally {
+      setUploadingQuestionImage(false);
+      if (questionImageInput.current) questionImageInput.current.value = "";
     }
   }
 
@@ -811,17 +850,56 @@ export default function QuestionsTab() {
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1">
-              {translate(language, "adminPage.imageUrlOptional")}
+              {translate(language, "adminPage.questionImageOptional")}
             </label>
             <input
-              type="url"
-              value={form.image_url}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, image_url: e.target.value }))
+              ref={questionImageInput}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              className="hidden"
+              onChange={(event) =>
+                void handleQuestionImageUpload(event.target.files?.[0])
               }
-              placeholder="https://..."
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
             />
+            <div className="flex items-center gap-3 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-3">
+              {form.image_url ? (
+                <img
+                  src={form.image_url}
+                  alt={translate(language, "adminPage.questionImagePreview")}
+                  className="h-16 w-16 rounded-lg border border-gray-200 bg-white object-contain p-1"
+                />
+              ) : (
+                <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-blue-50 text-blue-500">
+                  <Upload className="h-5 w-5" />
+                </div>
+              )}
+              <div className="min-w-0 flex-1">
+                <button
+                  type="button"
+                  onClick={() => questionImageInput.current?.click()}
+                  disabled={uploadingQuestionImage}
+                  className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60"
+                >
+                  {uploadingQuestionImage
+                    ? translate(language, "adminPage.imageUploading")
+                    : translate(language, "adminPage.uploadQuestionImage")}
+                </button>
+                <p className="mt-1 text-[11px] text-gray-400">
+                  {translate(language, "adminPage.imageUploadHelp")}
+                </p>
+                {form.image_url && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm((current) => ({ ...current, image_url: "" }))
+                    }
+                    className="mt-1 text-[11px] text-red-500 hover:text-red-600"
+                  >
+                    {translate(language, "adminPage.removeQuestionImage")}
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
