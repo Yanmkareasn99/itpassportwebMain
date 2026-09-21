@@ -953,8 +953,11 @@ export async function processScannedExamPdfs(
   onProgress?: (message: string) => void,
   // Kept for backwards compatibility with existing callers.
   // The importer no longer requires a fixed question count.
-  _expectedQuestionCount?: number,
+  expectedQuestionCount?: number,
 ): Promise<PdfImportResult> {
+  // Backward-compatible parameter: question count is intentionally not enforced.
+  void expectedQuestionCount;
+
   onProgress?.("Starting Japanese OCR…");
   const { createWorker, PSM } = await import("tesseract.js");
   const worker = await createWorker("jpn", 1);
