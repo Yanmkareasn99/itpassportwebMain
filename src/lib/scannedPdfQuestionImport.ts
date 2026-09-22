@@ -716,16 +716,6 @@ export function getMissingExpectedQuestionNumbers(
   );
 }
 
-function hasCompleteExpectedSequence(
-  starts: QuestionStart[],
-  expectedCount: number,
-) {
-  return (
-    starts.length === expectedCount &&
-    starts.every((start, index) => start.number === index + 1)
-  );
-}
-
 function mergeOcrPages(primary: OcrPage[], additional: OcrPage[]) {
   const additionalByPage = new Map(
     additional.map((page) => [page.pageNumber, page.lines]),
@@ -961,8 +951,13 @@ export async function processScannedExamPdfs(
   answerDocument: PDFDocumentProxy | null,
   examKey: string,
   onProgress?: (message: string) => void,
+  // Kept for backwards compatibility with existing callers.
+  // The importer no longer requires a fixed question count.
   expectedQuestionCount?: number,
 ): Promise<PdfImportResult> {
+  // Backward-compatible parameter: question count is intentionally not enforced.
+  void expectedQuestionCount;
+
   onProgress?.("Starting Japanese OCR…");
   const { createWorker, PSM } = await import("tesseract.js");
   const worker = await createWorker("jpn", 1);
@@ -995,49 +990,12 @@ export async function processScannedExamPdfs(
       combinedHeadingPages = mergeOcrPages(combinedHeadingPages, retryPages);
       starts = findQuestionStarts(combinedHeadingPages, true);
     }
-    if (
-      expectedQuestionCount &&
-      !hasCompleteExpectedSequence(starts, expectedQuestionCount)
-    ) {
-      onProgress?.(
-        `OCR found ${starts.length} of ${expectedQuestionCount} expected questions; rereading the full PDF…`,
-      );
-      await worker.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT });
-      const fullRetryPages = await ocrQuestionHeadings(
-        questionDocument,
-        worker,
-        onProgress,
-        {
-          pageNumbers: Array.from(
-            { length: questionDocument.numPages },
-            (_, index) => index + 1,
-          ),
-          scale: 3.4,
-          stripRatio: 0.55,
-        },
-      );
-      await worker.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
-      combinedHeadingPages = mergeOcrPages(
-        combinedHeadingPages,
-        fullRetryPages,
-      );
-      starts = findQuestionStarts(combinedHeadingPages, true);
-    }
-    if (
-      expectedQuestionCount &&
-      !hasCompleteExpectedSequence(starts, expectedQuestionCount)
-    ) {
-      const missing = getMissingExpectedQuestionNumbers(
-        starts,
-        expectedQuestionCount,
-      );
-      const missingMessage = missing.length
-        ? ` Missing question numbers: ${missing.join(", ")}.`
-        : "";
-      throw new Error(
-        `IT Passport imports must contain questions 1-${expectedQuestionCount}. OCR found ${starts.length}.${missingMessage}`,
-      );
-    }
+    // Do not require a fixed number of questions.
+    // A PDF may contain 1 question, 10 questions, 50 questions, 100 questions,
+    // etc. We import every question heading that OCR can reliably segment.
+    // Missing/low-confidence questions are reported through per-question
+    // warnings instead of rejecting the entire PDF because its count differs
+    // from a predefined value.
     if (!starts.length) {
       throw new Error(
         "This scanned PDF could not be segmented into questions. Make sure the pages show headings such as “問1”.",
