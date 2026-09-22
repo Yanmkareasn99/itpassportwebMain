@@ -15,6 +15,7 @@ import {
   Moon,
   Shuffle,
   Trash2,
+  Bug,
 } from 'lucide-react';
 import Layout from '../components/Layout';
 import { supabase } from '../lib/supabase';
@@ -72,6 +73,7 @@ interface SettingsPageProps {
 }
 
 type SettingsView = 'home' | 'profile' | 'language' | 'target' | 'password' | 'deleteAccount' | 'help';
+const REPORT_ISSUE_URL = 'https://github.com/Yanmkareasn99/itpassportwebMain/issues/new';
 
 export default function SettingsPage({ currentPage, onNavigate }: SettingsPageProps) {
   const { user, profile, refreshProfile, deleteAccount } = useAuth();
@@ -279,20 +281,18 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
     label,
     value,
     onClick,
+    href,
   }: {
     icon: React.ReactNode;
     iconBg: string;
     iconColor: string;
     label: string;
     value?: string;
-    onClick: () => void;
+    onClick?: () => void;
+    href?: string;
   }) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        className={`no-press-animation flex w-full items-center gap-4 rounded-2xl px-3 py-3.5 text-left transition ${darkMode ? 'hover:bg-slate-800' : 'hover:bg-gray-50'}`}
-      >
+    const className = `no-press-animation flex w-full items-center gap-4 rounded-2xl px-3 py-3.5 text-left transition ${darkMode ? 'hover:bg-slate-800' : 'hover:bg-gray-50'}`;
+    const content = <>
         <div
           className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full shadow-inner shadow-white/60"
           style={{ backgroundColor: iconBg, color: iconColor }}
@@ -306,8 +306,10 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
             <ChevronRight className={`w-5 h-5 shrink-0 ${darkMode ? 'text-slate-500' : 'text-gray-300'}`} />
           </div>
         </div>
-      </button>
-    );
+      </>;
+    return href
+      ? <a href={href} className={className}>{content}</a>
+      : <button type="button" onClick={onClick} className={className}>{content}</button>;
   }
 
   const languageOptions: { code: Language; label: string; helper: string }[] = [
@@ -413,6 +415,13 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
                   iconColor="#db2777"
                   label={translate(language, 'settingsPage.help')}
                   onClick={() => setView('help')}
+                />
+                <SettingRow
+                  icon={<Bug className="w-5 h-5" />}
+                  iconBg="#fee2e2"
+                  iconColor="#dc2626"
+                  label={translate(language, 'settingsPage.reportIssue')}
+                  href={REPORT_ISSUE_URL}
                 />
               </div>
             </div>

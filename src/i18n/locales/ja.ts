@@ -615,6 +615,7 @@ export const ja = {
   "settingsPage.name": "お名前",
   "settingsPage.newPassword": "新しいパスワード",
   "settingsPage.help": "ヘルプ",
+  "settingsPage.reportIssue": "問題を報告する",
   "settingsPage.helpIntro": "アプリの主な機能の使い方をまとめたガイドです。",
   "settingsPage.helpPracticeTitle": "練習",
   "settingsPage.helpPracticeBody":
@@ -836,10 +837,11 @@ export const ja = {
   "practiceQuestionPage.flagQuestion": "この問題にフラグを付ける",
   "practiceQuestionPage.clearFlag": "もう一度押すと解除",
   "practiceQuestionPage.flagGreen": "緑フラグ",
-  "practiceQuestionPage.flagOrange": "オレンジフラグ",
+  "practiceQuestionPage.flagOrange": "黄色フラグ",
   "practiceQuestionPage.flagRed": "赤フラグ",
   "practiceListPage.flaggedQuestions": "フラグ付き問題",
   "practiceListPage.flaggedCount": "{count}問にフラグがあります",
+  "practiceListPage.practiceAllFlags": "フラグ付き問題をすべて練習",
   "practiceListPage.noFlaggedQuestions": "このフラグの問題はありません。",
   "practiceListPage.flaggedLoadFailed":
     "フラグ付き問題を読み込めませんでした。",
