@@ -791,7 +791,8 @@ def build_archive(args) -> dict:
         "schema_version": "manabi-question-archive-v2",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "exam": args.exam_key,
-        "exam_date": args.exam_date,
+        "exam_year": int(args.exam_period[:4]),
+        "exam_month": int(args.exam_period[5:7]) if len(args.exam_period) > 4 else None,
         "import_exam": args.exam,
         "question_count": len(questions),
         "subject_ranges": [],
@@ -810,7 +811,7 @@ def parser() -> argparse.ArgumentParser:
     result.add_argument("--questions", type=Path, required=True)
     result.add_argument("--answers", type=Path)
     result.add_argument("--exam-key", required=True)
-    result.add_argument("--exam-date", required=True, help="YYYY-MM-DD")
+    result.add_argument("--exam-period", "--exam-date", dest="exam_period", required=True, help="YYYY or YYYY-MM")
     result.add_argument("--output", type=Path, required=True)
     result.add_argument("--lang", default="jpn+eng")
     result.add_argument(
@@ -833,8 +834,9 @@ def main() -> int:
         if path and not path.is_file():
             raise SystemExit(f"PDF not found: {path}")
 
-    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", args.exam_date):
-        raise SystemExit("--exam-date must use YYYY-MM-DD")
+    if not re.fullmatch(r"\d{4}(?:-(0[1-9]|1[0-2])(?:-\d{2})?)?", args.exam_period):
+        raise SystemExit("--exam-period must use YYYY or YYYY-MM")
+    args.exam_period = args.exam_period[:7]
 
     archive = build_archive(args)
     args.output.parent.mkdir(parents=True, exist_ok=True)

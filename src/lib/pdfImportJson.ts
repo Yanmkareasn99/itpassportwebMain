@@ -110,7 +110,8 @@ export async function serializePdfImportArchive(input: Omit<PdfImportArchive, 's
     year: metadata.year,
     wareki: metadata.wareki,
     season: metadata.season,
-    exam_date: input.examDate,
+    exam_year: Number(input.examDate.slice(0, 4)),
+    exam_month: input.examDate.length > 4 ? Number(input.examDate.slice(5, 7)) : null,
     import_exam: input.importExam,
     question_count: questions.length,
     subject_ranges: input.subjectRanges,
@@ -210,7 +211,9 @@ export function parsePdfImportArchive(text: string): PdfImportArchive {
   return {
     schemaVersion: value.schema_version as PdfImportArchive['schemaVersion'],
     examKey: requiredString(legacy ? value.exam_key : value.exam, legacy ? 'exam_key' : 'exam'),
-    examDate: typeof value.exam_date === 'string' ? value.exam_date : '',
+    examDate: typeof value.exam_year === 'number'
+      ? `${value.exam_year}${value.exam_month ? `-${String(value.exam_month).padStart(2, '0')}` : ''}`
+      : typeof value.exam_date === 'string' ? value.exam_date.slice(0, 7) : '',
     importExam: importExam as QuestionImportExam,
     subjectRanges,
     questions,

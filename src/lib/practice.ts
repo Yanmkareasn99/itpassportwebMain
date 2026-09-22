@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import type { Question, PracticeSession } from '../types';
-import { UNCATEGORIZED_EXAM_DATE } from './examDate';
+import { examPeriodKey, UNCATEGORIZED_EXAM_DATE } from './examDate';
 
 export interface PracticeAnswer {
   questionId: string;
@@ -94,23 +94,6 @@ export async function fetchPracticeQuestions(
   examDateFilter: ExamDateFilter,
   formatFilter: FormatFilter,
 ): Promise<Question[]> {
-  if (Array.isArray(examDateFilter)) {
-    const includesUncategorized = examDateFilter.includes(UNCATEGORIZED_EXAM_DATE);
-    const selectedDates = examDateFilter.filter(value => value !== UNCATEGORIZED_EXAM_DATE);
-
-    // The local Supabase-compatible query adapter does not expose PostgREST's
-    // `.or()` method. Load these two disjoint groups separately so mixed date
-    // and null selections behave the same in local and hosted environments.
-    if (includesUncategorized && selectedDates.length > 0) {
-      const [datedQuestions, uncategorizedQuestions] = await Promise.all([
-        fetchPracticeQuestions(subjectIds, selectedDates, formatFilter),
-        fetchPracticeQuestions(subjectIds, UNCATEGORIZED_EXAM_DATE, formatFilter),
-      ]);
-      return [...datedQuestions, ...uncategorizedQuestions].sort((left, right) =>
-        left.question_number - right.question_number || left.id.localeCompare(right.id));
-    }
-  }
-
   const questions: Question[] = [];
 
   for (let from = 0; ; from += 500) {
@@ -119,20 +102,6 @@ export async function fetchPracticeQuestions(
       .select('*, answer_choices(*)');
 
     if (subjectIds) query = query.in('subject_id', subjectIds);
-
-    if (Array.isArray(examDateFilter) && examDateFilter.length > 0) {
-      const includesUncategorized = examDateFilter.includes(UNCATEGORIZED_EXAM_DATE);
-      const selectedDates = examDateFilter.filter(value => value !== UNCATEGORIZED_EXAM_DATE);
-      if (includesUncategorized) {
-        query = query.is('exam_date', null);
-      } else {
-        query = query.in('exam_date', selectedDates);
-      }
-    } else if (examDateFilter === UNCATEGORIZED_EXAM_DATE) {
-      query = query.is('exam_date', null);
-    } else if (examDateFilter !== 'all') {
-      query = query.eq('exam_date', examDateFilter);
-    }
 
     if (formatFilter !== 'all') {
       query = query.eq('question_type', formatFilter);
@@ -150,23 +119,30 @@ export async function fetchPracticeQuestions(
     if (page.length < 500) break;
   }
 
-  return questions;
+  if (examDateFilter === 'all' || (Array.isArray(examDateFilter) && examDateFilter.length === 0)) {
+    return questions;
+  }
+  const selected = Array.isArray(examDateFilter) ? examDateFilter : [examDateFilter];
+  return questions.filter(question => selected.includes(examPeriodKey(question.exam_year, question.exam_month)));
 }
 
 export async function loadExamDates(): Promise<string[]> {
   const dates = new Set<string>();
   for (let from = 0; ; from += 500) {
     const { data, error } = await supabase.from('questions')
-      .select('exam_date')
-      .order('exam_date', { ascending: false })
+      .select('exam_year, exam_month')
+      .order('exam_year', { ascending: false })
       .range(from, from + 499);
     if (error) throw error;
     for (const question of data ?? []) {
-      if (question.exam_date) dates.add(question.exam_date as string);
+      dates.add(examPeriodKey(question.exam_year as number | null, question.exam_month as number | null));
     }
     if (!data || data.length < 500) break;
   }
-  return [...dates].sort((left, right) => right.localeCompare(left));
+  return [...dates].sort((left, right) =>
+    left === UNCATEGORIZED_EXAM_DATE ? 1
+      : right === UNCATEGORIZED_EXAM_DATE ? -1
+        : right.localeCompare(left));
 }
 
 export type ExamDateFilter = 'all' | string | string[];
