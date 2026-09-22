@@ -9,7 +9,7 @@ import { practiceErrorMessage, type PracticeAnswer } from '../lib/practice';
 import { awardLocalAnswerPoints } from '../lib/points';
 import { Question, AnswerChoice, Page } from '../types';
 import { AnswerChoiceContent, QuestionImage } from '../components/QuestionMedia';
-import { formatExamDate } from '../lib/examDate';
+import { formatExamPeriod } from '../lib/examDate';
 import { getAnswerChoiceImageUrl, getQuestionImageUrl } from '../lib/questionImages';
 import { createAnswerChoiceOrders, getRandomizeAnswerChoicesPreference } from '../lib/questionRandomization';
 import { loadQuestionFlags, QUESTION_FLAG_LEVELS, setQuestionFlag, type QuestionFlagLevel } from '../lib/questionFlags';
@@ -571,8 +571,8 @@ export default function PracticeQuestionPage({
                 </span>
                 <span className="text-xs font-semibold text-violet-600 bg-violet-50 px-2.5 py-1 rounded-full">
                   {translate(language, "ui.examDate")}:{" "}
-                  {question.exam_date
-                    ? formatExamDate(question.exam_date, language)
+                  {question.exam_year
+                    ? formatExamPeriod(question.exam_year, question.exam_month, language)
                     : translate(language, "ui.uncategorized")}
                 </span>
                 <span className="text-xs text-gray-400">

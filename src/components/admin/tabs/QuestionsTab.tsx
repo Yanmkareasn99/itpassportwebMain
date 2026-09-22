@@ -32,6 +32,7 @@ import {
 import { resolveImportedSubjectId } from "../../../lib/questionSubject";
 import { findDuplicateQuestionKeys } from "../../../lib/questionDuplicates";
 import { getPdfImportJobSnapshot } from "../../../lib/pdfImportJob";
+import { formatExamPeriod } from "../../../lib/examDate";
 
 const QUESTION_FETCH_PAGE_SIZE = 1000;
 const QUESTION_LIST_PAGE_SIZE = 50;
@@ -256,7 +257,8 @@ export default function QuestionsTab() {
       explanation: q.explanation ?? "",
       explanation_en: q.explanation_en ?? "",
       explanation_vi: q.explanation_vi ?? "",
-      exam_date: q.exam_date ?? "",
+      exam_year: q.exam_year == null ? "" : String(q.exam_year),
+      exam_month: q.exam_month == null ? "" : String(q.exam_month),
       difficulty: q.difficulty ?? 3,
       points: q.points ?? 1,
       image_url: q.image_url ?? "",
@@ -292,7 +294,8 @@ export default function QuestionsTab() {
       explanation: q.explanation ?? "",
       explanation_en: q.explanation_en ?? "",
       explanation_vi: q.explanation_vi ?? "",
-      exam_date: q.exam_date ?? "",
+      exam_year: q.exam_year == null ? "" : String(q.exam_year),
+      exam_month: q.exam_month == null ? "" : String(q.exam_month),
       difficulty: q.difficulty ?? 3,
       points: q.points ?? 1,
       image_url: q.image_url ?? "",
@@ -330,6 +333,14 @@ export default function QuestionsTab() {
       setError(translate(language, "adminPage.pleaseSelectASubject"));
       return;
     }
+    if (form.exam_year && (!Number.isInteger(Number(form.exam_year)) || Number(form.exam_year) < 1900 || Number(form.exam_year) > 2100)) {
+      setError(translate(language, "adminPage.examYearInvalid"));
+      return;
+    }
+    if (form.exam_month && !form.exam_year) {
+      setError(translate(language, "adminPage.examMonthRequiresYear"));
+      return;
+    }
     const correctCount = form.choices.filter((c) => c.is_correct).length;
     if (correctCount === 0) {
       setError(translate(language, "adminPage.selectAtLeastOneCorrectChoice"));
@@ -352,7 +363,8 @@ export default function QuestionsTab() {
         explanation_ja: form.explanation.trim() || null,
         explanation_en: form.explanation_en.trim() || null,
         explanation_vi: form.explanation_vi.trim() || null,
-        exam_date: form.exam_date || null,
+        exam_year: form.exam_year ? Number(form.exam_year) : null,
+        exam_month: form.exam_month ? Number(form.exam_month) : null,
         difficulty: form.difficulty,
         points: form.points,
         image_url: form.image_url.trim() || null,
@@ -539,6 +551,10 @@ export default function QuestionsTab() {
         throw new Error(
           `Question ${question.id} has an invalid question_number.`,
         );
+      if (question.exam_year && (!Number.isInteger(Number(question.exam_year)) || Number(question.exam_year) < 1900 || Number(question.exam_year) > 2100))
+        throw new Error(`Question ${question.id} has an invalid exam_year.`);
+      if (question.exam_month && (!question.exam_year || !Number.isInteger(Number(question.exam_month)) || Number(question.exam_month) < 1 || Number(question.exam_month) > 12))
+        throw new Error(`Question ${question.id} has an invalid exam_month.`);
       const resolvedSubjectId = resolveImportedSubjectId(
         question.subject_id || csvSubjectId,
         Number(question.question_number),
@@ -639,7 +655,8 @@ export default function QuestionsTab() {
         explanation_vi: question.explanation_vi || null,
         difficulty: Number(question.difficulty) || 2,
         points: parseQuestionPoints(question.points),
-        exam_date: question.exam_date || null,
+        exam_year: question.exam_year ? Number(question.exam_year) : null,
+        exam_month: question.exam_month ? Number(question.exam_month) : null,
         source_key: question.source_key || null,
       }));
       const { error: questionError } = await supabase
@@ -807,14 +824,17 @@ export default function QuestionsTab() {
             <label className="block text-xs font-semibold text-gray-500 mb-1">
               {translate(language, "adminPage.examDate")}
             </label>
-            <input
-              type="date"
-              value={form.exam_date}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, exam_date: e.target.value }))
-              }
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-            />
+            <div className="flex gap-2">
+              <input type="number" min="1900" max="2100" placeholder={translate(language, "adminPage.examYear")} value={form.exam_year}
+                onChange={(e) => setForm((f) => ({ ...f, exam_year: e.target.value }))}
+                className="w-1/2 border border-gray-200 rounded-xl px-3 py-2 text-sm" />
+              <select value={form.exam_month}
+                onChange={(e) => setForm((f) => ({ ...f, exam_month: e.target.value }))}
+                className="w-1/2 border border-gray-200 rounded-xl px-3 py-2 text-sm">
+                <option value="">{translate(language, "adminPage.examMonthUnknown")}</option>
+                {Array.from({ length: 12 }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1}</option>)}
+              </select>
+            </div>
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-500 mb-1">
@@ -1708,9 +1728,9 @@ export default function QuestionsTab() {
                             {sub.name}
                           </span>
                         )}
-                        {q.exam_date && (
+                        {q.exam_year && (
                           <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                            {q.exam_date}
+                            {formatExamPeriod(q.exam_year, q.exam_month, language)}
                           </span>
                         )}
                         <DiffBadge d={q.difficulty ?? 3} />

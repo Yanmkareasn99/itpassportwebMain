@@ -53,13 +53,13 @@ const SUBJECT_IDS = {
 
 const OPTION_KEYS = ['ア', 'イ', 'ウ', 'エ'];
 
-function examDateFromPeriod(period) {
+function examPeriodFromPeriod(period) {
   const value = String(period ?? '');
   if (/^\d{6}$/.test(value)) {
     const month = Number(value.slice(4));
-    if (month >= 1 && month <= 12) return `${value.slice(0, 4)}-${value.slice(4)}-01`;
+    if (month >= 1 && month <= 12) return { exam_year: Number(value.slice(0, 4)), exam_month: month };
   }
-  if (/^\d{4}$/.test(value)) return `${value}-01-01`;
+  if (/^\d{4}$/.test(value)) return { exam_year: Number(value), exam_month: null };
   return null;
 }
 
@@ -111,7 +111,7 @@ async function loadExistingQuestions() {
   while (true) {
     const { data, error } = await supabase
       .from('questions')
-      .select('id, question_text, image_url, exam_date, source_key')
+      .select('id, question_text, image_url, exam_year, exam_month, source_key')
       .range(from, from + 999);
     if (error) throw new Error(`Unable to read existing questions: ${error.message}`);
     if (!data || data.length === 0) break;
@@ -218,7 +218,7 @@ async function importKakomonExam(examData, answers, subjectKey, existing) {
 
   for (const session of examData) {
     const yearKey = String(session.year);
-    const examDate = examDateFromPeriod(session.year);
+    const examPeriod = examPeriodFromPeriod(session.year);
     const sessionAnswers = answers?.[yearKey] ?? {};
     const questions = [], choices = [];
 
@@ -234,9 +234,12 @@ async function importKakomonExam(examData, answers, subjectKey, existing) {
       if (existingQuestion) {
         const patch = {};
         if (questionImageUrl && !existingQuestion.image_url) patch.image_url = questionImageUrl;
-        if (examDate && (!existingQuestion.exam_date
-          || (existingQuestion.source_key?.startsWith('kakomon_') && examDate > existingQuestion.exam_date))) {
-          patch.exam_date = examDate;
+        if (examPeriod && (!existingQuestion.exam_year
+          || (existingQuestion.source_key?.startsWith('kakomon_')
+            && (examPeriod.exam_year > existingQuestion.exam_year
+              || (examPeriod.exam_year === existingQuestion.exam_year
+                && (examPeriod.exam_month ?? 0) > (existingQuestion.exam_month ?? 0)))))) {
+          Object.assign(patch, examPeriod);
           patch.source_key = `${subjectKey}:${yearKey}:Q${q.id}`;
         }
         if (Object.keys(patch).length > 0) {
@@ -254,7 +257,7 @@ async function importKakomonExam(examData, answers, subjectKey, existing) {
       questions.push({
         id: qId,
         source_key: `${subjectKey}:${yearKey}:Q${q.id}`,
-        exam_date: examDate,
+        ...examPeriod,
         subject_id: subjectId,
         question_number: q.id,
         question_text: text,
@@ -289,7 +292,7 @@ async function importKakomonExam(examData, answers, subjectKey, existing) {
         id: qId,
         question_text: text,
         image_url: questionImageUrl,
-        exam_date: examDate,
+        ...examPeriod,
         source_key: `${subjectKey}:${yearKey}:Q${q.id}`,
       });
     }

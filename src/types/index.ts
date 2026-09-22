@@ -28,7 +28,8 @@ export interface Question {
   explanation_ja?: string | null;
   explanation_en?: string | null;
   explanation_vi?: string | null;
-  exam_date: string | null;
+  exam_year: number | null;
+  exam_month: number | null;
   difficulty: number;
   points: number;
   source_key?: string | null;

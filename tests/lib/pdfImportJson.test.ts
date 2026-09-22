@@ -28,7 +28,7 @@ describe('PDF import JSON', () => {
   it('round-trips reviewed questions without transient preview blobs', async () => {
     const text = await serializePdfImportArchive({
       examKey: '2027r09',
-      examDate: '2027-01-01',
+      examDate: '2027-01',
       importExam: 'it-passport',
       subjectRanges: [],
       questions: [question],
@@ -41,6 +41,8 @@ describe('PDF import JSON', () => {
     expect(stored).toMatchObject({
       exam: '2027r09',
       year: 2027,
+      exam_year: 2027,
+      exam_month: 1,
       wareki: '令和9年度',
       question_count: 1,
     });
@@ -68,6 +70,18 @@ describe('PDF import JSON', () => {
       schema_version: 'unknown',
       questions: [],
     }))).toThrow(PDF_IMPORT_JSON_SCHEMA);
+  });
+
+  it('keeps annual exams without an invented month', async () => {
+    const text = await serializePdfImportArchive({
+      examKey: '2026r08',
+      examDate: '2026',
+      importExam: 'it-passport',
+      subjectRanges: [],
+      questions: [question],
+    });
+    expect(JSON.parse(text)).toMatchObject({ exam_year: 2026, exam_month: null });
+    expect(parsePdfImportArchive(text).examDate).toBe('2026');
   });
 
   it('requires embedded image data when keep_image is enabled', () => {

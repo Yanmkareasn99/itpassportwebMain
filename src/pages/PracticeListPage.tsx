@@ -28,7 +28,7 @@ import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { useLanguage } from "../contexts/LanguageContext";
 import { Question, Page } from "../types";
-import { formatExamDate, UNCATEGORIZED_EXAM_DATE } from "../lib/examDate";
+import { formatExamPeriodKey, UNCATEGORIZED_EXAM_DATE } from "../lib/examDate";
 import { orderPracticeQuestions } from "../lib/questionRandomization";
 
 import { IT_PASSPORT_SUBJECT_IDS } from '../lib/questionSubject';
@@ -878,13 +878,11 @@ export default function PracticeListPage({
           setError("");
         }}
         options={[
-          {
-            value: UNCATEGORIZED_EXAM_DATE,
-            label: translate(currentLanguage, "ui.uncategorized"),
-          },
           ...examDates.map((date) => ({
             value: date,
-            label: formatExamDate(date, currentLanguage),
+            label: date === UNCATEGORIZED_EXAM_DATE
+              ? translate(currentLanguage, "ui.uncategorized")
+              : formatExamPeriodKey(date, currentLanguage),
           })),
         ]}
       />

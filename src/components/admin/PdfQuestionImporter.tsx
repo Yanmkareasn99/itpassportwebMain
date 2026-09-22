@@ -349,7 +349,7 @@ export default function PdfQuestionImporter({
       setImportExam(archive.importExam);
       setSubjectRanges(ranges.map(range => ({ ...range })));
       setExamKey(archive.examKey);
-      setExamDate(archive.examDate);
+      setExamDate(archive.examDate.slice(0, 7));
       setQuestionFile(null);
       setAnswerFile(null);
       setQuestions(restoredQuestions);
@@ -402,7 +402,7 @@ export default function PdfQuestionImporter({
       setError(translate(language, 'adminPage.pdfRequiresSupabase'));
       return;
     }
-    if (!examDate) {
+    if (!/^\d{4}(?:-(0[1-9]|1[0-2]))?$/.test(examDate)) {
       setError(translate(language, 'adminPage.examDateRequired'));
       return;
     }
@@ -449,7 +449,8 @@ export default function PdfQuestionImporter({
         }));
         const { error: importError } = await supabase.from('question_import_staging').insert({
           source_key: question.sourceKey,
-          exam_date: examDate,
+          exam_year: Number(examDate.slice(0, 4)),
+          exam_month: examDate.length > 4 ? Number(examDate.slice(5, 7)) : null,
           subject_id: question.subjectId,
           question_number: question.number,
           question_text: question.questionText.trim(),
@@ -597,13 +598,23 @@ export default function PdfQuestionImporter({
         </label>
         <label className="block text-xs font-semibold text-gray-600">
           {translate(language, 'adminPage.examDate')}
-          <input
-            type="date"
-            value={examDate}
-            onChange={event => setExamDate(event.target.value)}
-            disabled={processing}
-            className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
-          />
+          <div className="mt-1 flex gap-2">
+            <input type="number" min="1900" max="2100" placeholder={translate(language, 'adminPage.examYear')}
+              value={examDate.slice(0, 4)}
+              onChange={event => {
+                const year = event.target.value;
+                setExamDate(year.length === 4 && examDate.includes('-') ? `${year}-${examDate.split('-')[1]}` : year);
+              }}
+              disabled={processing}
+              className="w-1/2 rounded-xl border border-gray-200 px-3 py-2 text-sm" />
+            <select value={examDate.length > 4 ? examDate.slice(5, 7) : ''}
+              onChange={event => setExamDate(examDate.slice(0, 4) + (event.target.value && examDate.length >= 4 ? `-${event.target.value}` : ''))}
+              disabled={processing}
+              className="w-1/2 rounded-xl border border-gray-200 px-3 py-2 text-sm">
+              <option value="">{translate(language, 'adminPage.examMonthUnknown')}</option>
+              {Array.from({ length: 12 }, (_, index) => <option key={index + 1} value={String(index + 1).padStart(2, '0')}>{index + 1}</option>)}
+            </select>
+          </div>
         </label>
         <label className="block text-xs font-semibold text-gray-600">
           {translate(language, 'adminPage.pdfQuestionFile')}
