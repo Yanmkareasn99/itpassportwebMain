@@ -1,11 +1,13 @@
 export const vi = {
   "ui.refreshPoints": "Cập nhật điểm",
   "ui.versus": "đấu với",
-  "ui.settingsUnavailable": "Cài đặt thi thử chưa khả dụng. Hãy nhờ quản trị viên cập nhật cơ sở dữ liệu.",
+  "ui.settingsUnavailable":
+    "Cài đặt thi thử chưa khả dụng. Hãy nhờ quản trị viên cập nhật cơ sở dữ liệu.",
   "ui.settingsDenied": "Không lưu được cài đặt. Cần quyền quản trị viên.",
   "ui.loadPoints": "Không tải được điểm.",
   "ui.noBattleQuestions": "Phòng này không có câu hỏi.",
-  "ui.missingBattleQuestions": "Một số câu hỏi không khả dụng. Vui lòng thử lại.",
+  "ui.missingBattleQuestions":
+    "Một số câu hỏi không khả dụng. Vui lòng thử lại.",
   "ui.loadBattleQuestions": "Không tải được câu hỏi đối kháng.",
   "ui.loadBattleAnswers": "Không tải được câu trả lời đối kháng.",
   "ui.refreshBattle": "Không cập nhật được phòng đối kháng.",
@@ -27,8 +29,10 @@ export const vi = {
   "ui.loadAccuracy": "Không tải được tỷ lệ trả lời đúng.",
   "ui.loadExamSettings": "Không tải được cài đặt thi. Vui lòng bắt đầu lại.",
   "ui.startExam": "Không bắt đầu được bài thi. Vui lòng thử lại.",
-  "ui.examShortage": "Bài thi cần {required} câu nhưng chỉ có {available} câu. Hãy nhờ quản trị viên thêm câu hỏi hoặc giảm số câu.",
-  "ui.adminLoadSettings": "Không tải được cài đặt thi thử. Kiểm tra cập nhật cơ sở dữ liệu và tải lại thẻ này.",
+  "ui.examShortage":
+    "Bài thi cần {required} câu nhưng chỉ có {available} câu. Hãy nhờ quản trị viên thêm câu hỏi hoặc giảm số câu.",
+  "ui.adminLoadSettings":
+    "Không tải được cài đặt thi thử. Kiểm tra cập nhật cơ sở dữ liệu và tải lại thẻ này.",
   "ui.saveExamSettings": "Không lưu được cài đặt thi thử.",
   "ui.loadStats": "Không tải được thống kê.",
   "ui.savePoints": "Không lưu được cài đặt điểm.",
@@ -39,8 +43,10 @@ export const vi = {
   "ui.battleTimeInvalid": "Thời gian mỗi câu phải từ 5 đến 300 giây.",
   "ui.insufficientPoints": "Không đủ điểm",
   "ui.roomUnavailable": "Phòng đối kháng không còn khả dụng",
-  "ui.resumeUnavailable": "Không thể tiếp tục buổi luyện tập này. Hãy bắt đầu buổi mới.",
-  "ui.removedQuestions": "Một số câu hỏi không còn khả dụng. Hãy bắt đầu buổi mới.",
+  "ui.resumeUnavailable":
+    "Không thể tiếp tục buổi luyện tập này. Hãy bắt đầu buổi mới.",
+  "ui.removedQuestions":
+    "Một số câu hỏi không còn khả dụng. Hãy bắt đầu buổi mới.",
   "ui.createPractice": "Không tạo được buổi luyện tập.",
   "ui.loading": "Đang tải...",
   "ui.retry": "Thử lại",
@@ -49,18 +55,22 @@ export const vi = {
   "ui.points": "Điểm",
   "ui.onlineRooms": "Phòng đối kháng trực tuyến",
   "ui.battleRanking": "Xếp hạng đối kháng",
-  "ui.rankingHelp": "Xếp theo số trận thắng, sau đó theo số câu đúng chỉ trong chế độ đối kháng.",
+  "ui.rankingHelp":
+    "Xếp theo số trận thắng, sau đó theo số câu đúng chỉ trong chế độ đối kháng.",
   "ui.refreshRanking": "Cập nhật bảng xếp hạng",
   "ui.loadingRanking": "Đang tải bảng xếp hạng...",
   "ui.noRanking": "Chưa có dữ liệu xếp hạng.",
   "ui.loadRanking": "Không tải được bảng xếp hạng đối kháng.",
-  "ui.rankingMigration": "Bảng xếp hạng chưa khả dụng. Hãy nhờ quản trị viên áp dụng bản cập nhật cơ sở dữ liệu xếp hạng.",
+  "ui.rankingMigration":
+    "Bảng xếp hạng chưa khả dụng. Hãy nhờ quản trị viên áp dụng bản cập nhật cơ sở dữ liệu xếp hạng.",
   "ui.rank": "Hạng",
   "ui.player": "Người chơi",
   "ui.wins": "Số trận thắng",
   "ui.battleCorrect": "Câu đúng đối kháng",
-  "ui.roomIntro": "Tạo hoặc tham gia phòng, cược điểm và trả lời cùng bộ câu hỏi với người chơi khác.",
-  "ui.onlineRequired": "Cần bật Supabase để sử dụng phòng đối kháng trực tuyến.",
+  "ui.roomIntro":
+    "Tạo hoặc tham gia phòng, cược điểm và trả lời cùng bộ câu hỏi với người chơi khác.",
+  "ui.onlineRequired":
+    "Cần bật Supabase để sử dụng phòng đối kháng trực tuyến.",
   "ui.questions": "Số câu hỏi",
   "ui.perQuestion": "Mỗi câu hỏi",
   "ui.defaultWager": "Điểm cược",
@@ -81,7 +91,8 @@ export const vi = {
   "ui.createRoom": "Tạo phòng",
   "ui.waitingOpponent": "Đang chờ đối thủ",
   "ui.wagerLocked": "Điểm cược đã giữ: {count}",
-  "ui.keepOpen": "Trận đấu tự bắt đầu khi có người tham gia lúc bạn chờ ở đây. Phòng của bạn vẫn mở khi bạn xem các phòng khác.",
+  "ui.keepOpen":
+    "Trận đấu tự bắt đầu khi có người tham gia lúc bạn chờ ở đây. Phòng của bạn vẫn mở khi bạn xem các phòng khác.",
   "ui.checkRooms": "Xem các phòng khác",
   "ui.cancelRefund": "Hủy và hoàn điểm",
   "ui.victory": "Chiến thắng",
@@ -95,18 +106,21 @@ export const vi = {
   "ui.balance": "Số dư: {count} điểm",
   "ui.backLobby": "Quay lại sảnh",
   "ui.waitingFinish": "Đang chờ đối thủ hoàn thành",
-  "ui.settleHelp": "Kết quả sẽ tự động được xác định khi cả hai trả lời hết câu hỏi.",
+  "ui.settleHelp":
+    "Kết quả sẽ tự động được xác định khi cả hai trả lời hết câu hỏi.",
   "ui.questionNumber": "Câu hỏi {count}",
   "ui.correct": "Đúng",
   "ui.incorrect": "Sai. Đáp án đúng: {answer}",
   "ui.mockSettings": "Cài đặt thi thử",
-  "ui.mockHelp": "Thay đổi áp dụng cho bài thi mới của mọi học viên. Bài thi đang làm giữ nguyên cài đặt.",
+  "ui.mockHelp":
+    "Thay đổi áp dụng cho bài thi mới của mọi học viên. Bài thi đang làm giữ nguyên cài đặt.",
   "ui.loadingSettings": "Đang tải cài đặt...",
   "ui.settingsSaved": "Đã lưu cài đặt thi thử.",
   "ui.questionCount": "Số câu hỏi",
   "ui.timeMinutes": "Thời gian (phút)",
   "ui.passingPercent": "Điểm đạt (%)",
-  "ui.questionBankHelp": "Ngân hàng câu hỏi phải có ít nhất số câu đã cấu hình.",
+  "ui.questionBankHelp":
+    "Ngân hàng câu hỏi phải có ít nhất số câu đã cấu hình.",
   "ui.saving": "Đang lưu...",
   "ui.saveSettings": "Lưu cài đặt",
   "ui.pointRewards": "Điểm thưởng",
@@ -116,25 +130,29 @@ export const vi = {
   "ui.practiceWrong": "Trả lời sai khi luyện tập",
   "ui.mockCorrect": "Trả lời đúng khi thi thử",
   "ui.mockWrong": "Trả lời sai khi thi thử",
-  "ui.progressWarning": "Có thể luyện tập, nhưng không tải được lịch sử tiến độ: {error}",
+  "ui.progressWarning":
+    "Có thể luyện tập, nhưng không tải được lịch sử tiến độ: {error}",
   "ui.noMatches": "Không có câu hỏi phù hợp. Hãy đổi ngày thi hoặc chế độ học.",
   "ui.noMistakes": "Không có câu sai cần ôn tập.",
   "ui.dismiss": "Đóng",
   "ui.noData": "Không có dữ liệu",
   "ui.errorCode": "Mã: {code}",
-  'loginPage.signUpWithGoogle': 'Đăng ký bằng Google',
-  'loginPage.chooseAnotherGoogleAccount': 'Chọn hoặc thêm tài khoản Google khác. Tài khoản đã đăng ký sẽ được đăng nhập.',
-  'practiceListPage.countingMatches': 'Đang đếm câu hỏi phù hợp...',
-  'practiceListPage.matchingQuestions': '{count} câu hỏi phù hợp',
-  'practiceListPage.practiceFiltered': 'Luyện tập câu hỏi đã lọc',
+  "loginPage.signUpWithGoogle": "Đăng ký bằng Google",
+  "loginPage.chooseAnotherGoogleAccount":
+    "Chọn hoặc thêm tài khoản Google khác. Tài khoản đã đăng ký sẽ được đăng nhập.",
+  "practiceListPage.countingMatches": "Đang đếm câu hỏi phù hợp...",
+  "practiceListPage.matchingQuestions": "{count} câu hỏi phù hợp",
+  "practiceListPage.practiceFiltered": "Luyện tập câu hỏi đã lọc",
 
   "adminPage.add": "Thêm",
-  "adminPage.adminAccessRequired": "Bạn cần quyền quản trị viên để xem trang này.",
+  "adminPage.adminAccessRequired":
+    "Bạn cần quyền quản trị viên để xem trang này.",
   "adminPage.announcements": "Thông báo",
   "adminPage.newAnnouncement": "Thông báo mới",
   "adminPage.editAnnouncement": "Sửa thông báo",
   "adminPage.deleteAnnouncement": "Xóa thông báo",
-  "adminPage.announcementHelp": "Đăng thông báo theo lịch trên trang chủ của mọi người dùng. Bản dịch trống sẽ dùng ngôn ngữ khác thay thế.",
+  "adminPage.announcementHelp":
+    "Đăng thông báo theo lịch trên trang chủ của mọi người dùng. Bản dịch trống sẽ dùng ngôn ngữ khác thay thế.",
   "adminPage.announcementTitle": "Tiêu đề (không bắt buộc)",
   "adminPage.announcementMessage": "Nội dung",
   "adminPage.japanese": "Tiếng Nhật",
@@ -150,9 +168,12 @@ export const vi = {
   "adminPage.announcementActive": "Đang hoạt động",
   "adminPage.announcementInactive": "Không hoạt động",
   "adminPage.announcementSaved": "Đã lưu thông báo.",
-  "adminPage.announcementMessageRequired": "Nhập nội dung bằng ít nhất một ngôn ngữ.",
-  "adminPage.announcementDateInvalid": "Thời gian kết thúc phải sau thời gian bắt đầu.",
-  "adminPage.announcementLoadFailed": "Không thể tải thông báo. Hãy áp dụng migration thông báo rồi thử lại.",
+  "adminPage.announcementMessageRequired":
+    "Nhập nội dung bằng ít nhất một ngôn ngữ.",
+  "adminPage.announcementDateInvalid":
+    "Thời gian kết thúc phải sau thời gian bắt đầu.",
+  "adminPage.announcementLoadFailed":
+    "Không thể tải thông báo. Hãy áp dụng migration thông báo rồi thử lại.",
   "adminPage.announcementSaveFailed": "Không thể lưu thông báo.",
   "adminPage.announcementDeleteFailed": "Không thể xóa thông báo.",
   "adminPage.announcementDeleteConfirm": "Xóa thông báo này?",
@@ -164,26 +185,34 @@ export const vi = {
   "adminPage.answersCsv": "CSV đáp án",
   "adminPage.pdfImport": "Nhập PDF",
   "adminPage.pdfImportTitle": "Nhập câu hỏi từ PDF",
-  "adminPage.pdfImportDescription": "Chọn PDF câu hỏi và đáp án, xem lại kết quả nhận diện rồi nhập trực tiếp.",
+  "adminPage.pdfImportDescription":
+    "Chọn PDF câu hỏi và đáp án, xem lại kết quả nhận diện rồi nhập trực tiếp.",
   "adminPage.pdfSubjectFallback": "Môn học dự phòng",
-  "adminPage.pdfSubjectDetectionHelp": "Đặt phạm vi môn học cho kỳ thi này trước khi đọc PDF.",
+  "adminPage.pdfSubjectDetectionHelp":
+    "Đặt phạm vi môn học cho kỳ thi này trước khi đọc PDF.",
   "adminPage.pdfSubjectRanges": "Phạm vi môn học của câu hỏi",
-  "adminPage.pdfSubjectRangesHelp": "Câu hỏi ngoài các phạm vi này sẽ được xếp vào Chưa phân loại. Có thể để khoảng trống nhưng các phạm vi không được chồng lấn.",
+  "adminPage.pdfSubjectRangesHelp":
+    "Câu hỏi ngoài các phạm vi này sẽ được xếp vào Chưa phân loại. Có thể để khoảng trống nhưng các phạm vi không được chồng lấn.",
   "adminPage.pdfRangeFrom": "Từ",
   "adminPage.pdfRangeTo": "Đến",
-  "adminPage.pdfInvalidSubjectRanges": "Phạm vi phải nằm trong Câu 1–100, số bắt đầu không lớn hơn số kết thúc và không được chồng lấn.",
+  "adminPage.pdfInvalidSubjectRanges":
+    "Phạm vi phải nằm trong Câu 1–100, số bắt đầu không lớn hơn số kết thúc và không được chồng lấn.",
   "adminPage.pdfExamType": "Kỳ thi cần nhập",
   "adminPage.pdfExamItPassport": "IT Passport",
   "adminPage.pdfExamFundamentalA": "Kỹ sư Công nghệ Thông tin Cơ bản — Môn A",
   "adminPage.pdfExamFundamentalB": "Kỹ sư Công nghệ Thông tin Cơ bản — Môn B",
   "adminPage.pdfExamApplied": "Kỹ sư Công nghệ Thông tin Ứng dụng — Buổi sáng",
-  "adminPage.pdfSubjectDetectionFundamentalA": "Tất cả câu hỏi được nhập sẽ thuộc môn A của kỳ thi Kỹ sư Công nghệ Thông tin Cơ bản.",
-  "adminPage.pdfSubjectDetectionFundamentalB": "Tất cả câu hỏi được nhập sẽ thuộc môn B của kỳ thi Kỹ sư Công nghệ Thông tin Cơ bản.",
-  "adminPage.pdfSubjectDetectionApplied": "Tất cả câu hỏi được nhập sẽ thuộc bài thi AP buổi sáng.",
+  "adminPage.pdfSubjectDetectionFundamentalA":
+    "Tất cả câu hỏi được nhập sẽ thuộc môn A của kỳ thi Kỹ sư Công nghệ Thông tin Cơ bản.",
+  "adminPage.pdfSubjectDetectionFundamentalB":
+    "Tất cả câu hỏi được nhập sẽ thuộc môn B của kỳ thi Kỹ sư Công nghệ Thông tin Cơ bản.",
+  "adminPage.pdfSubjectDetectionApplied":
+    "Tất cả câu hỏi được nhập sẽ thuộc bài thi AP buổi sáng.",
   "adminPage.pdfExamKey": "Mã kỳ thi (duy nhất)",
   "adminPage.pdfQuestionFile": "PDF câu hỏi",
   "adminPage.pdfJsonFile": "JSON câu hỏi đã lưu",
-  "adminPage.pdfJsonFileHelp": "Tải lại bản chuyển đổi PDF đã xem xét để tiếp tục chỉnh sửa hoặc nhập dữ liệu.",
+  "adminPage.pdfJsonFileHelp":
+    "Tải lại bản chuyển đổi PDF đã xem xét để tiếp tục chỉnh sửa hoặc nhập dữ liệu.",
   "adminPage.pdfJsonDownload": "Tải JSON xuống",
   "adminPage.pdfJsonLoaded": "Đã tải {count} câu hỏi từ JSON.",
   "adminPage.pdfJsonSaved": "Đã lưu {count} câu hỏi dưới dạng JSON.",
@@ -195,8 +224,10 @@ export const vi = {
   "adminPage.pdfProcess": "Đọc PDF",
   "adminPage.pdfProcessing": "Đang đọc PDF…",
   "adminPage.pdfProcessingFailed": "Không thể xử lý các tệp PDF.",
-  "adminPage.pdfLocalProcessing": "Bạn có thể chuyển sang trang khác khi OCR đang chạy. Hãy giữ tab trình duyệt này mở và không tải lại trang.",
-  "adminPage.pdfAnswersNotDetected": "Đã nhận diện câu hỏi nhưng chưa đọc được đáp án. Hãy chọn đáp án đúng khi xem lại.",
+  "adminPage.pdfLocalProcessing":
+    "Bạn có thể chuyển sang trang khác khi OCR đang chạy. Hãy giữ tab trình duyệt này mở và không tải lại trang.",
+  "adminPage.pdfAnswersNotDetected":
+    "Đã nhận diện câu hỏi nhưng chưa đọc được đáp án. Hãy chọn đáp án đúng khi xem lại.",
   "adminPage.pdfReviewCount": "Xem lại {count} câu hỏi đã nhận diện",
   "adminPage.pdfReviewProblems": "Còn {count} câu hỏi cần kiểm tra",
   "adminPage.pdfReadyToImport": "Tất cả câu hỏi đã sẵn sàng để nhập",
@@ -206,23 +237,65 @@ export const vi = {
   "adminPage.pdfImportComplete": "Đã nhập thành công {count} câu hỏi.",
   "adminPage.pdfImportFailed": "Nhập câu hỏi PDF thất bại.",
   "adminPage.pdfImportFailedWithReason": "Nhập câu hỏi PDF thất bại: {reason}",
-  "adminPage.pdfFixReviewErrors": "Hãy sửa các mục được đánh dấu trước khi nhập.",
+  "adminPage.pdfFixReviewErrors":
+    "Hãy sửa các mục được đánh dấu trước khi nhập.",
   "adminPage.pdfRequiresSupabase": "Tính năng nhập PDF yêu cầu bật Supabase.",
-  "adminPage.pdfMigrationRequired": "Thiếu bảng nhập PDF. Hãy chạy migration 20260903010000_add_single_csv_question_import.sql trên Supabase trước.",
+  "adminPage.pdfMigrationRequired":
+    "Thiếu bảng nhập PDF. Hãy chạy migration 20260903010000_add_single_csv_question_import.sql trên Supabase trước.",
   "adminPage.admin": "Quản trị",
   "adminPage.allSubjects": "Tất cả môn",
   "adminPage.cancel": "Hủy",
   "adminPage.csvImportFailed": "Nhập CSV thất bại.",
-  "adminPage.duplicateQuestionsFound": "Đã dừng nhập vì các câu hỏi này đã tồn tại hoặc bị lặp trong dữ liệu nhập: {questions}",
-  "adminPage.duplicateQuestionExists": "Đã dừng nhập vì câu hỏi này đã tồn tại.",
+  "adminPage.duplicateQuestionsFound":
+    "Đã dừng nhập vì các câu hỏi này đã tồn tại hoặc bị lặp trong dữ liệu nhập: {questions}",
+  "adminPage.duplicateQuestionExists":
+    "Đã dừng nhập vì câu hỏi này đã tồn tại.",
   "adminPage.pageOf": "Trang {current}/{total}",
   "adminPage.previousPage": "Trước",
   "adminPage.nextPage": "Tiếp",
-  "adminPage.csvImportFormat": "Chọn cả hai tệp CSV theo định dạng cột questions.csv và answer_choices.csv đã xuất.",
+  "adminPage.csvImportFormat":
+    "Chọn cả hai tệp CSV theo định dạng cột questions.csv và answer_choices.csv đã xuất.",
   "adminPage.csvReadFailed": "Không thể đọc tệp CSV.",
   "adminPage.csvReadyToImport": "Đã sẵn sàng nhập CSV",
+  "adminPage.csvModalTitle": "Nhập câu hỏi bằng CSV",
+  "adminPage.csvModalDescription": "Nhập tệp câu hỏi và tệp đáp án.",
+  "adminPage.csvChooseSubject": "Chọn môn học",
+  "adminPage.csvAutoDetectSubject": "Tự động nhận diện từ CSV",
+  "adminPage.csvSubjectHelp":
+    "Nếu CSV có subject_id, hệ thống sẽ ưu tiên thông tin trong tệp.",
+  "adminPage.csvDataFiles": "Chọn tệp dữ liệu",
+  "adminPage.csvDataFilesHelp": "Hãy chọn cả tệp câu hỏi và tệp đáp án.",
+  "adminPage.csvQuestionFile": "Tệp câu hỏi",
+  "adminPage.csvAnswerFile": "Tệp đáp án",
+  "adminPage.csvDropFile": "Kéo thả tệp CSV vào đây",
+  "adminPage.csvChooseFile": "Chọn tệp CSV",
+  "adminPage.csvFileLimit": "CSV · tối đa 10MB",
+  "adminPage.csvImportErrorTitle": "Không thể nhập CSV",
+  "adminPage.csvStatus": "Trạng thái dữ liệu",
+  "adminPage.csvStatusHelp": "Kiểm tra số lượng dữ liệu trước khi nhập.",
+  "adminPage.csvQuestionCount": "{count} câu hỏi",
+  "adminPage.csvAnswerCount": "{count} đáp án",
+  "adminPage.csvNoQuestions": "Chưa có câu hỏi",
+  "adminPage.csvNoAnswers": "Chưa có đáp án",
+  "adminPage.csvNotes": "Lưu ý",
+  "adminPage.csvQuestionColumns":
+    "Tệp câu hỏi cần có các cột id, question_number và question_text.",
+  "adminPage.csvAnswerColumn":
+    "Tệp đáp án cần có question_id để ghép với câu hỏi.",
+  "adminPage.csvAnyCount":
+    "Có thể nhập số lượng câu hỏi bất kỳ, không bắt buộc 100 câu.",
+  "adminPage.csvReady": "Đã sẵn sàng nhập",
+  "adminPage.csvSelectBoth": "Chọn đủ 2 tệp để tiếp tục",
+  "adminPage.csvImporting": "Đang nhập...",
+  "adminPage.csvInvalidExtension": "Chỉ có thể tải lên tệp CSV.",
+  "adminPage.csvFileTooLarge": "Tệp CSV không được vượt quá 10MB.",
+  "adminPage.csvManualDescription": "Tạo câu hỏi thủ công",
+  "adminPage.csvImportDescription": "Nhập câu hỏi và đáp án",
+  "adminPage.csvRemoveQuestionFile": "Xóa tệp câu hỏi",
+  "adminPage.csvRemoveAnswerFile": "Xóa tệp đáp án",
   "adminPage.choices": "Lựa chọn",
-  "adminPage.clickTheRoundButtonToSelectTheCorrect": "Nhấn nút tròn để chọn đáp án đúng.",
+  "adminPage.clickTheRoundButtonToSelectTheCorrect":
+    "Nhấn nút tròn để chọn đáp án đúng.",
   "adminPage.deleteThisQuestion": "Xóa câu hỏi này?",
   "adminPage.deleteQuestion": "Xóa câu hỏi",
   "adminPage.difficulty": "Độ khó",
@@ -238,18 +311,29 @@ export const vi = {
   "adminPage.explanationVietnamese": "Giải thích (tiếng Việt)",
   "adminPage.failedToSave": "Lưu thất bại.",
   "adminPage.imageUrlOptional": "URL ảnh (không bắt buộc)",
+  "adminPage.questionImageOptional": "Ảnh câu hỏi (không bắt buộc)",
+  "adminPage.uploadQuestionImage": "Tải ảnh lên",
+  "adminPage.imageUploading": "Đang tải ảnh...",
+  "adminPage.imageUploadHelp": "PNG, JPG, WEBP hoặc GIF · tối đa 10MB",
+  "adminPage.questionImagePreview": "Xem trước ảnh câu hỏi",
+  "adminPage.removeQuestionImage": "Xóa ảnh",
+  "adminPage.imageUploadInvalid": "Vui lòng chọn tệp hình ảnh.",
+  "adminPage.imageUploadTooLarge": "Ảnh không được vượt quá 10MB.",
+  "adminPage.imageUploadFailed": "Không thể tải ảnh lên.",
   "adminPage.importCsv": "Nhập CSV",
   "adminPage.items": " mục",
   "adminPage.loading": "Đang tải...",
   "adminPage.multipleChoice": "Trắc nghiệm",
-  "adminPage.noQuestionsYetStartByAddingOne": "Chưa có câu hỏi. Hãy thêm câu hỏi mới.",
+  "adminPage.noQuestionsYetStartByAddingOne":
+    "Chưa có câu hỏi. Hãy thêm câu hỏi mới.",
   "adminPage.pleaseEnterTheQuestionText": "Vui lòng nhập nội dung câu hỏi.",
   "adminPage.pleaseSelectASubject": "Vui lòng chọn môn học.",
   "adminPage.points": "Điểm",
   "adminPage.questionNumber": "Số câu",
   "adminPage.questionsCsv": "CSV câu hỏi",
   "adminPage.questions": "Câu hỏi",
-  "adminPage.questionsAndChoicesStayInJapaneseOnlyExplanations": "Câu hỏi và lựa chọn giữ tiếng Nhật; chỉ phần giải thích đổi theo ngôn ngữ hiển thị.",
+  "adminPage.questionsAndChoicesStayInJapaneseOnlyExplanations":
+    "Câu hỏi và lựa chọn giữ tiếng Nhật; chỉ phần giải thích đổi theo ngôn ngữ hiển thị.",
   "adminPage.questionText": "Nội dung câu hỏi",
   "adminPage.questionType": "Dạng câu hỏi",
   "adminPage.save": "Lưu",
@@ -262,7 +346,8 @@ export const vi = {
   "adminPage.trueFalse": "Đúng/Sai",
   "adminPage.users": "Người dùng",
   "aiChatPage.aiChat": "AI Chat",
-  "aiChatPage.exampleExplainThisQuestionCreateAStudyPlan": "Ví dụ: Giải thích câu này / Lập kế hoạch học",
+  "aiChatPage.exampleExplainThisQuestionCreateAStudyPlan":
+    "Ví dụ: Giải thích câu này / Lập kế hoạch học",
   "aiChatPage.reset": "Đặt lại",
   "aiChatPage.send": "Gửi",
   "aiChatPage.studyAssistant": "Trợ lý học tập",
@@ -289,7 +374,8 @@ export const vi = {
   "battlePage.roomsWaitingForMatch": "Phòng đang chờ ghép",
   "battlePage.startBattle": "Bắt đầu",
   "battlePage.studyMenu": "menu",
-  "battlePage.testYourselfBySolvingQuestionsAgainstAnAi": "Đấu với AI để kiểm tra kỹ năng của bạn!",
+  "battlePage.testYourselfBySolvingQuestionsAgainstAnAi":
+    "Đấu với AI để kiểm tra kỹ năng của bạn!",
   "battlePage.tryAgain": "Thử lại!",
   "battlePage.victory": "Chiến thắng!",
   "battlePage.you": "Bạn",
@@ -303,20 +389,26 @@ export const vi = {
   "header.openNotifications": "Mở thông báo",
   "header.read": "Đã đọc",
   "header.reviewRecommended": "Nên ôn tập",
-  "header.reviewTheQuestionsYouMissedLastTime": "Hãy xem lại câu bạn đã sai lần trước.",
+  "header.reviewTheQuestionsYouMissedLastTime":
+    "Hãy xem lại câu bạn đã sai lần trước.",
   "header.search": "Tìm kiếm...",
-  "header.studentsCanCheckMaterialsAnytimeMakingInformationSharing": "Học sinh có thể xem tài liệu bất cứ lúc nào, giúp chia sẻ thông tin suôn sẻ hơn.",
-  "header.takeOneMockExamAndReviewWeakAreas": "Làm một bài thi thử và xem lại phần còn yếu.",
+  "header.studentsCanCheckMaterialsAnytimeMakingInformationSharing":
+    "Học sinh có thể xem tài liệu bất cứ lúc nào, giúp chia sẻ thông tin suôn sẻ hơn.",
+  "header.takeOneMockExamAndReviewWeakAreas":
+    "Làm một bài thi thử và xem lại phần còn yếu.",
   "header.todayStudyReminder": "Nhắc học hôm nay",
   "header.unread": "Chưa đọc",
   "header.yesterday": "Hôm qua",
   "homePage.accuracy": "Tỷ lệ đúng",
   "homePage.aiChat": "AI chat",
   "homePage.askAi": "Hỏi AI",
-  "homePage.askAiAboutUnclearProblemsOrStudyPlans": "Hỏi AI về các vấn đề chưa rõ ràng hoặc kế hoạch học tập.",
+  "homePage.askAiAboutUnclearProblemsOrStudyPlans":
+    "Hỏi AI về các vấn đề chưa rõ ràng hoặc kế hoạch học tập.",
   "homePage.battle": "Đối kháng",
-  "homePage.challengeOthersAndSharpenYourSkills": "Đấu với bạn học để rèn luyện kỹ năng.",
-  "homePage.checkYourLevelWithATimedExamFormat": "Kiểm tra năng lực với định dạng có thời gian.",
+  "homePage.challengeOthersAndSharpenYourSkills":
+    "Đấu với bạn học để rèn luyện kỹ năng.",
+  "homePage.checkYourLevelWithATimedExamFormat":
+    "Kiểm tra năng lực với định dạng có thời gian.",
   "homePage.days": " ngày",
   "homePage.examAvg": "TB thi thử",
   "homePage.goodMorning": ", Chào buổi sáng",
@@ -327,12 +419,14 @@ export const vi = {
   "homePage.noStudyHistoryYet": "Chưa có lịch sử học tập",
   "homePage.practice": "Lần luyện ",
   "homePage.practice2": "Luyện tập",
-  "homePage.practiceBySubjectAndSteadilyImproveYourSkills": "Luyện câu hỏi theo chủ đề để cải thiện từng bước.",
+  "homePage.practiceBySubjectAndSteadilyImproveYourSkills":
+    "Luyện câu hỏi theo chủ đề để cải thiện từng bước.",
   "homePage.recentActivity": "Lịch sử gần đây",
   "homePage.startBattle": "Bắt đầu",
   "homePage.startPractice": "Làm bài",
   "homePage.startPractice2": "Bắt đầu luyện tập",
-  "homePage.studentsCanCheckMaterialsAnytimeMakingInformationSharing": "Sinh viên có thể xem tài liệu bất cứ lúc nào, giúp việc chia sẻ thông tin trở nên thuận tiện hơn.",
+  "homePage.studentsCanCheckMaterialsAnytimeMakingInformationSharing":
+    "Sinh viên có thể xem tài liệu bất cứ lúc nào, giúp việc chia sẻ thông tin trở nên thuận tiện hơn.",
   "homePage.takeExam": "Thi thử",
   "homePage.today": "Hôm nay",
   "homePage.untilExam": "còn",
@@ -341,33 +435,39 @@ export const vi = {
   "loginPage.backToSignIn": "Quay lại đăng nhập",
   "loginPage.brand": "Manabi",
   "loginPage.confirmNewPassword": "Xác nhận mật khẩu mới",
-  "loginPage.confirmationEmailSentConfirmYourEmailThenSign": "Đã gửi email xác nhận. Hãy xác nhận email rồi đăng nhập.",
+  "loginPage.confirmationEmailSentConfirmYourEmailThenSign":
+    "Đã gửi email xác nhận. Hãy xác nhận email rồi đăng nhập.",
   "loginPage.createAccount": "Tạo tài khoản",
   "loginPage.createANewAccount": "Tạo tài khoản mới.",
   "loginPage.email": "Email",
   "loginPage.emailAlreadyRegistered": "Email này đã được đăng ký.",
-  "loginPage.emailOrPasswordIsIncorrect": "Email hoặc mật khẩu không chính xác.",
+  "loginPage.emailOrPasswordIsIncorrect":
+    "Email hoặc mật khẩu không chính xác.",
   "loginPage.eyebrow": "Học tập thông minh hơn",
   "loginPage.failedToCreateAccount": "Tạo tài khoản thất bại: ",
   "loginPage.featureAiReview": "Cùng AI ôn lại những điểm còn yếu",
   "loginPage.featureDailyPreparation": "Quản lý việc ôn thi mỗi ngày",
   "loginPage.featureFocusedStudy": "Tiến bộ vững chắc theo từng lĩnh vực",
   "loginPage.forgotPassword": "Quên mật khẩu?",
-  "loginPage.forgotPasswordHelp": "Nhập email để nhận liên kết đặt lại mật khẩu.",
+  "loginPage.forgotPasswordHelp":
+    "Nhập email để nhận liên kết đặt lại mật khẩu.",
   "loginPage.forgotPasswordTitle": "Bạn quên mật khẩu?",
   "loginPage.headline": "Học tập rõ ràng hơn, xây dựng sự tự tin",
   "loginPage.hidePassword": "Ẩn mật khẩu",
   "loginPage.name": "Họ tên",
   "loginPage.newPassword": "Mật khẩu mới",
   "loginPage.noAccountCreateOne": "Chưa có tài khoản? Tạo mới",
-  "loginPage.osakaDenshiLearningSupportSystem": "Hệ thống hỗ trợ học tập kỳ thi IT Passport",
+  "loginPage.osakaDenshiLearningSupportSystem":
+    "Hệ thống hỗ trợ học tập kỳ thi IT Passport",
   "loginPage.password": "Mật khẩu",
   "loginPage.passwordMinimum": "Mật khẩu phải có ít nhất 6 ký tự.",
   "loginPage.passwordsDoNotMatch": "Mật khẩu không khớp.",
   "loginPage.pleaseEnterYourName": "Vui lòng nhập tên của bạn.",
   "loginPage.processing": "Đang xử lý...",
-  "loginPage.resetEmailFailed": "Không thể gửi email đặt lại mật khẩu. Vui lòng thử lại.",
-  "loginPage.resetEmailSent": "Nếu tài khoản với email này tồn tại, liên kết đặt lại mật khẩu đã được gửi.",
+  "loginPage.resetEmailFailed":
+    "Không thể gửi email đặt lại mật khẩu. Vui lòng thử lại.",
+  "loginPage.resetEmailSent":
+    "Nếu tài khoản với email này tồn tại, liên kết đặt lại mật khẩu đã được gửi.",
   "loginPage.resetPasswordHelp": "Hãy chọn mật khẩu mới cho tài khoản của bạn.",
   "loginPage.resetPasswordTitle": "Đặt lại mật khẩu",
   "loginPage.sendResetLink": "Gửi liên kết đặt lại",
@@ -376,14 +476,17 @@ export const vi = {
   "loginPage.showPassword": "Hiện mật khẩu",
   "loginPage.studentIdOptional": "Mã sinh viên (tùy chọn)",
   "loginPage.updatePassword": "Cập nhật mật khẩu",
-  "loginPage.updatePasswordFailed": "Không thể cập nhật mật khẩu. Liên kết đặt lại có thể đã hết hạn.",
-  "loginPage.invalidRecoveryLink": "Liên kết đặt lại mật khẩu không hợp lệ, đã hết hạn hoặc đã được sử dụng. Vui lòng yêu cầu liên kết mới.",
+  "loginPage.updatePasswordFailed":
+    "Không thể cập nhật mật khẩu. Liên kết đặt lại có thể đã hết hạn.",
+  "loginPage.invalidRecoveryLink":
+    "Liên kết đặt lại mật khẩu không hợp lệ, đã hết hạn hoặc đã được sử dụng. Vui lòng yêu cầu liên kết mới.",
   "materialsPage.download": "Tải xuống",
   "materialsPage.delete": "Xóa",
   "materialsPage.cancel": "Hủy",
   "materialsPage.deleting": "Đang xóa…",
   "materialsPage.deleteDialogTitle": "Xóa tài liệu?",
-  "materialsPage.deleteConfirm": "Thao tác này sẽ xóa vĩnh viễn tài liệu đối với mọi người.",
+  "materialsPage.deleteConfirm":
+    "Thao tác này sẽ xóa vĩnh viễn tài liệu đối với mọi người.",
   "materialsPage.deleted": "Đã xóa tài liệu.",
   "materialsPage.deleteFailed": "Không thể xóa tài liệu.",
   "materialsPage.upload": "Tải tài liệu lên",
@@ -392,11 +495,13 @@ export const vi = {
   "materialsPage.title": "Tiêu đề",
   "materialsPage.file": "Tệp",
   "materialsPage.description": "Mô tả (không bắt buộc)",
-  "materialsPage.fileHelp": "PDF, PNG, JPEG, DOCX, PPTX hoặc XLSX · tối đa 20 MB",
+  "materialsPage.fileHelp":
+    "PDF, PNG, JPEG, DOCX, PPTX hoặc XLSX · tối đa 20 MB",
   "materialsPage.sharedFiles": "Tài liệu được chia sẻ",
   "materialsPage.refresh": "Làm mới",
   "materialsPage.empty": "Chưa có tài liệu nào được tải lên.",
-  "materialsPage.requiresSupabase": "Cần kết nối Supabase để chia sẻ tài liệu giữa các tài khoản.",
+  "materialsPage.requiresSupabase":
+    "Cần kết nối Supabase để chia sẻ tài liệu giữa các tài khoản.",
   "materialsPage.loadFailed": "Không thể tải danh sách tài liệu.",
   "materialsPage.uploadFailed": "Không thể tải tài liệu lên.",
   "materialsPage.openFailed": "Không thể mở tài liệu.",
@@ -407,10 +512,12 @@ export const vi = {
   "materialsPage.goToPractice": "rèn luyện",
   "materialsPage.materials": "Tài liệu",
   "materialsPage.open": "Mở",
-  "materialsPage.studentsCanCheckMaterialsAnytimeMakingInformationSharing": "Sinh viên có thể xem tài liệu bất cứ lúc nào, giúp việc chia sẻ thông tin trở nên thuận tiện hơn.",
+  "materialsPage.studentsCanCheckMaterialsAnytimeMakingInformationSharing":
+    "Sinh viên có thể xem tài liệu bất cứ lúc nào, giúp việc chia sẻ thông tin trở nên thuận tiện hơn.",
   "materialsPage.studyMenu": "Menu",
   "materialsPage.updated": "Cập nhật",
-  "mockExamPage.checkYourAbilityInTheSameFormatAs": "Kiểm tra năng lực với định dạng giống thi thật",
+  "mockExamPage.checkYourAbilityInTheSameFormatAs":
+    "Kiểm tra năng lực với định dạng giống thi thật",
   "mockExamPage.correct": "Đáp án đúng",
   "mockExamPage.examResults": "Kết quả thi",
   "mockExamPage.finishExam": "Kết thúc thi",
@@ -431,12 +538,15 @@ export const vi = {
   "mockExamPage.studyMenu": "menu",
   "mockExamPage.submit": "Nộp bài",
   "mockExamPage.timeLimitMin": "Thời gian (phút)",
-  "mockExamPage.youCannotPauseTheExamOnceItStarts": "Khi đã bắt đầu, bạn không thể dừng giữa chừng. Nhấn bắt đầu khi sẵn sàng.",
+  "mockExamPage.youCannotPauseTheExamOnceItStarts":
+    "Khi đã bắt đầu, bạn không thể dừng giữa chừng. Nhấn bắt đầu khi sẵn sàng.",
   "practiceListPage.accuracy": "Độ chính xác",
   "practiceListPage.action": "Hành động",
   "practiceListPage.all": "Tất cả",
-  "practiceListPage.checkYourLevelWithAMockExam": "Kiểm tra trình độ bằng thi thử",
-  "practiceListPage.chooseASubjectAndFiltersToBeginPractice": "Chọn chủ đề và bộ lọc để bắt đầu luyện tập.",
+  "practiceListPage.checkYourLevelWithAMockExam":
+    "Kiểm tra trình độ bằng thi thử",
+  "practiceListPage.chooseASubjectAndFiltersToBeginPractice":
+    "Chọn chủ đề và bộ lọc để bắt đầu luyện tập.",
   "practiceListPage.difficulty": "Độ khó",
   "practiceListPage.easy": "Dễ",
   "practiceListPage.filterBy": "Lọc theo",
@@ -466,7 +576,8 @@ export const vi = {
   "practiceListPage.solve": "Làm bài",
   "practiceListPage.studyMenu": "menu",
   "practiceListPage.subject": "Chủ đề",
-  "practiceListPage.takeItUnderRealExamTiming": "Làm bài theo thời gian thi thật",
+  "practiceListPage.takeItUnderRealExamTiming":
+    "Làm bài theo thời gian thi thật",
   "practiceListPage.treeQuestion": "Câu hỏi cây",
   "practiceQuestionPage.accuracy": "Tỷ lệ đúng",
   "practiceQuestionPage.answer": "Trả lời",
@@ -490,7 +601,7 @@ export const vi = {
   "practiceQuestionPage.seeResults": "Xem kết quả",
   "practiceQuestionPage.showExplanation": "Xem giải thích",
   "settingsPage.account": "Tài khoản",
-  
+
   "settingsPage.changePassword": "Đổi mật khẩu",
   "settingsPage.chooseTheDisplayLanguage": "Chọn ngôn ngữ hiển thị",
   "settingsPage.class": "Lớp",
@@ -501,22 +612,28 @@ export const vi = {
   "settingsPage.name": "Họ và tên",
   "settingsPage.newPassword": "Mật khẩu mới",
   "settingsPage.help": "Trợ giúp",
-  "settingsPage.helpIntro": "Hướng dẫn nhanh cách sử dụng các tính năng chính trong ứng dụng.",
+  "settingsPage.helpIntro":
+    "Hướng dẫn nhanh cách sử dụng các tính năng chính trong ứng dụng.",
   "settingsPage.helpPracticeTitle": "Luyện tập",
-  "settingsPage.helpPracticeBody": "Chọn một chủ đề trong mục Luyện tập, sau đó lọc theo ngày thi hoặc chế độ học. Kết quả từng phiên luyện tập sẽ được lưu lại để bạn theo dõi tiến độ.",
+  "settingsPage.helpPracticeBody":
+    "Chọn một chủ đề trong mục Luyện tập, sau đó lọc theo ngày thi hoặc chế độ học. Kết quả từng phiên luyện tập sẽ được lưu lại để bạn theo dõi tiến độ.",
   "settingsPage.helpMockExamTitle": "Thi thử",
-  "settingsPage.helpMockExamBody": "Bài thi thử có giới hạn thời gian và số lượng câu hỏi cố định. Bạn cần đạt tỷ lệ trả lời đúng tối thiểu (do giáo viên/quản trị viên thiết lập) để được tính là đạt.",
+  "settingsPage.helpMockExamBody":
+    "Bài thi thử có giới hạn thời gian và số lượng câu hỏi cố định. Bạn cần đạt tỷ lệ trả lời đúng tối thiểu (do giáo viên/quản trị viên thiết lập) để được tính là đạt.",
   "settingsPage.helpBattleTitle": "Đối kháng",
-  "settingsPage.helpBattleBody": "Thách đấu người chơi khác theo thời gian thực. Mỗi trận gồm một số câu hỏi với thời gian trả lời giới hạn cho từng câu; người thắng sẽ nhận thêm điểm thưởng.",
+  "settingsPage.helpBattleBody":
+    "Thách đấu người chơi khác theo thời gian thực. Mỗi trận gồm một số câu hỏi với thời gian trả lời giới hạn cho từng câu; người thắng sẽ nhận thêm điểm thưởng.",
   "settingsPage.helpPointsTitle": "Điểm thưởng",
-  "settingsPage.helpPointsBody": "Bạn nhận điểm khi đăng nhập hàng ngày và khi trả lời câu hỏi (đúng được nhiều điểm hơn sai) trong Luyện tập và Thi thử. Điểm tích lũy có thể dùng để tham gia Đối kháng.",
+  "settingsPage.helpPointsBody":
+    "Bạn nhận điểm khi đăng nhập hàng ngày và khi trả lời câu hỏi (đúng được nhiều điểm hơn sai) trong Luyện tập và Thi thử. Điểm tích lũy có thể dùng để tham gia Đối kháng.",
   "settingsPage.helpAccountTitle": "Tài khoản & Cài đặt",
-  "settingsPage.helpAccountBody": "Trong mục Tài khoản, bạn có thể cập nhật họ tên, mã số sinh viên, lớp học, chọn ảnh đại diện, đổi ngôn ngữ hiển thị, đặt ngày thi mục tiêu và đổi mật khẩu.",
+  "settingsPage.helpAccountBody":
+    "Trong mục Tài khoản, bạn có thể cập nhật họ tên, mã số sinh viên, lớp học, chọn ảnh đại diện, đổi ngôn ngữ hiển thị, đặt ngày thi mục tiêu và đổi mật khẩu.",
   "settingsPage.avatar": "Ảnh đại diện",
   "settingsPage.avatarHint": "Ảnh này sẽ hiển thị trên hồ sơ của bạn.",
   "settingsPage.avatarNone": "Không dùng ảnh",
   "settingsPage.chooseAvatarPreset": "Chọn một ảnh đại diện có sẵn",
-   "settingsPage.avatarOptionAvatar1": "avatar 1",
+  "settingsPage.avatarOptionAvatar1": "avatar 1",
   "settingsPage.avatarOptionAvatar2": "avatar 2",
   "settingsPage.avatarOptionAvatar3": "avatar 3",
   "settingsPage.avatarOptionAvatar4": "avatar 4",
@@ -553,7 +670,8 @@ export const vi = {
   "mobileTabBar.menu": "Menu",
   "mobileTabBar.signOut": "Đăng xuất",
   "mobileTabBar.more": "Thêm",
-  "aiChatPage.welcome": "Hãy hỏi tôi về cách giải bài, kế hoạch học tập hoặc cách hệ thống thuật ngữ.",
+  "aiChatPage.welcome":
+    "Hãy hỏi tôi về cách giải bài, kế hoạch học tập hoặc cách hệ thống thuật ngữ.",
   "aiChatPage.starterPlan": "Lập kế hoạch học tập cho hôm nay",
   "aiChatPage.starterAfternoon": "Tôi nên học phần thi buổi chiều như thế nào?",
   "aiChatPage.starterThinking": "Giải thích cách tiếp cận câu hỏi này",
@@ -610,24 +728,31 @@ export const vi = {
   "loginPage.signInWithGoogle": "Đăng nhập bằng Google",
   "loginPage.copyright": "© 2026 Manabi",
   "aiChatPage.heroTitle": "Hãy hỏi bất cứ điều gì bạn chưa hiểu",
-  "aiChatPage.heroDescription": "Nhận hỗ trợ về kế hoạch học tập, thuật ngữ và cách giải bài qua trò chuyện.",
+  "aiChatPage.heroDescription":
+    "Nhận hỗ trợ về kế hoạch học tập, thuật ngữ và cách giải bài qua trò chuyện.",
   "aiChatPage.thinking": "AI đang suy nghĩ...",
   "aiChatPage.quickQuestions": "Câu hỏi nhanh",
   "materialsPage.termsTitle": "Thuật ngữ quan trọng IT Passport",
-  "materialsPage.termsDescription": "Ôn lại các thuật ngữ cơ bản về chiến lược, quản lý và công nghệ.",
+  "materialsPage.termsDescription":
+    "Ôn lại các thuật ngữ cơ bản về chiến lược, quản lý và công nghệ.",
   "materialsPage.pastQuestionsTitle": "Hướng dẫn giải đề cũ",
-  "materialsPage.pastQuestionsDescription": "Tìm hiểu cách đọc lựa chọn và quản lý thời gian qua video ngắn.",
+  "materialsPage.pastQuestionsDescription":
+    "Tìm hiểu cách đọc lựa chọn và quản lý thời gian qua video ngắn.",
   "materialsPage.slidesTitle": "Danh sách slide bài giảng",
-  "materialsPage.slidesDescription": "Xem lại slide và tài liệu bổ sung bất cứ lúc nào.",
+  "materialsPage.slidesDescription":
+    "Xem lại slide và tài liệu bổ sung bất cứ lúc nào.",
   "adminPage.easy": "Dễ",
   "adminPage.starter": "Cơ bản",
   "adminPage.mid": "Trung bình",
   "adminPage.hard": "Khó",
   "adminPage.expert": "Chuyên gia",
-  "adminPage.englishExplanationPlaceholder": "Nhập phần giải thích bằng tiếng Anh...",
-  "adminPage.vietnameseExplanationPlaceholder": "Nhập phần giải thích bằng tiếng Việt...",
+  "adminPage.englishExplanationPlaceholder":
+    "Nhập phần giải thích bằng tiếng Anh...",
+  "adminPage.vietnameseExplanationPlaceholder":
+    "Nhập phần giải thích bằng tiếng Việt...",
   "adminPage.subjectNameRequired": "Nhập tên môn học.",
-  "adminPage.deleteSubjectConfirmation": "Xóa môn học này? Các câu hỏi liên quan cũng có thể bị ảnh hưởng.",
+  "adminPage.deleteSubjectConfirmation":
+    "Xóa môn học này? Các câu hỏi liên quan cũng có thể bị ảnh hưởng.",
   "adminPage.addSubject": "Thêm môn học",
   "adminPage.editSubject": "Sửa môn học",
   "adminPage.subjectName": "Tên môn học",
@@ -656,7 +781,8 @@ export const vi = {
   "practiceListPage.strategy": "Chiến lược",
   "practiceListPage.management": "Quản lý",
   "practiceListPage.technology": "Công nghệ",
-  "aiChat.defaultReply": "Bạn có thể hỏi về nội dung học tập, ví dụ cách ôn phần thi buổi chiều hoặc cách tiếp cận một câu hỏi khó.",
+  "aiChat.defaultReply":
+    "Bạn có thể hỏi về nội dung học tập, ví dụ cách ôn phần thi buổi chiều hoặc cách tiếp cận một câu hỏi khó.",
   "aiChat.noRecentQuestions": "Không có dữ liệu câu hỏi gần đây.",
   "aiChat.questionSummary": "Câu {number}: {text}",
   "aiChat.currentSubject": "môn học hiện tại",
@@ -664,49 +790,62 @@ export const vi = {
   "aiChat.planStep1": "1. Ôn các thuật ngữ quan trọng của {subject}",
   "aiChat.planStep2": "2. Sau khi luyện tập, tóm tắt lời giải của từng câu",
   "aiChat.planStep3": "3. Hỏi lại AI Chat về những nội dung bạn làm sai",
-  "aiChat.difficultyStep1": "Khi gặp khó ở {subject}, trước tiên hãy diễn đạt lại yêu cầu của câu hỏi trong một câu.",
-  "aiChat.difficultyStep2": "Tiếp theo, hãy nhớ lại ý nghĩa của thuật ngữ trước khi xem các lựa chọn; cách này giúp hiểu sâu hơn việc chỉ dùng phương pháp loại trừ.",
-  "aiChat.difficultyStep3": "Nếu cần, hãy gửi nguyên câu hỏi và tôi sẽ phân tích cách suy luận.",
-  "aiChat.afternoonStep1": "Với phần thi buổi chiều, hãy đọc yêu cầu và sơ đồ trước thay vì cố hiểu toàn bộ đoạn văn ngay lập tức.",
-  "aiChat.afternoonStep2": "Xác định từ khóa, thu hẹp phạm vi câu hỏi rồi quay lại đọc nội dung.",
+  "aiChat.difficultyStep1":
+    "Khi gặp khó ở {subject}, trước tiên hãy diễn đạt lại yêu cầu của câu hỏi trong một câu.",
+  "aiChat.difficultyStep2":
+    "Tiếp theo, hãy nhớ lại ý nghĩa của thuật ngữ trước khi xem các lựa chọn; cách này giúp hiểu sâu hơn việc chỉ dùng phương pháp loại trừ.",
+  "aiChat.difficultyStep3":
+    "Nếu cần, hãy gửi nguyên câu hỏi và tôi sẽ phân tích cách suy luận.",
+  "aiChat.afternoonStep1":
+    "Với phần thi buổi chiều, hãy đọc yêu cầu và sơ đồ trước thay vì cố hiểu toàn bộ đoạn văn ngay lập tức.",
+  "aiChat.afternoonStep2":
+    "Xác định từ khóa, thu hẹp phạm vi câu hỏi rồi quay lại đọc nội dung.",
   "aiChat.recentExamples": "Ví dụ câu hỏi gần đây:\n{questions}",
   "aiChat.systemRole": "Bạn là trợ lý AI hỗ trợ học tập.",
   "aiChat.systemLanguage": "Hãy trả lời ngắn gọn và thực tế bằng tiếng Việt.",
   "aiChat.systemStructure": "Sử dụng gạch đầu dòng hoặc các bước khi hữu ích.",
-  "aiChat.systemAudience": "Ưu tiên cách diễn đạt mà học sinh trung học và trường nghề có thể hiểu.",
+  "aiChat.systemAudience":
+    "Ưu tiên cách diễn đạt mà học sinh trung học và trường nghề có thể hiểu.",
   "aiChat.systemSubject": "Môn học: {subject}",
   "aiChat.systemLearner": "Người học: {name}",
-  "aiChat.systemRecentQuestions": "Dữ liệu câu hỏi gần đây:\n{questions}"
-  , "practiceListPage.examDate": "Ngày thi"
-  , "adminPage.examDate": "Ngày thi"
-  , "adminPage.examDateRequired": "Vui lòng chọn ngày thi."
-  , "ui.examDate": "Ngày thi"
-  , "ui.uncategorized": "Chưa phân loại"
-  , "aiChat.remoteUnavailable": "Dịch vụ AI hiện không khả dụng. Vui lòng thử lại sau ít phút."
-  , "settingsPage.deleteAccount": "Xóa tài khoản"
-  , "settingsPage.deleteAccountWarningTitle": "Không thể hoàn tác thao tác này"
-  , "settingsPage.deleteAccountWarningBody": "Hồ sơ, lịch sử học tập, câu trả lời, điểm, tin nhắn và trận đấu của bạn sẽ bị xóa vĩnh viễn. Tài liệu bạn đã tải lên vẫn sẽ có sẵn."
-  , "settingsPage.deleteAccountConfirmEmail": "Nhập {email} để xác nhận"
-  , "settingsPage.deleteAccountEmailMismatch": "Địa chỉ email không khớp với tài khoản của bạn."
-  , "settingsPage.deleteAccountFailed": "Không thể xóa tài khoản: {error}"
-  , "settingsPage.deletingAccount": "Đang xóa tài khoản..."
-  , "settingsPage.deleteAccountAction": "Xóa vĩnh viễn tài khoản của tôi"
-  ,"aiChatPage.error": "Đã xảy ra lỗi. Vui lòng thử lại.",
-  
-  "practiceQuestionPage.flagQuestion": "Gắn cờ câu hỏi này"
-  , "practiceQuestionPage.clearFlag": "nhấn lại để bỏ cờ"
-  , "practiceQuestionPage.flagGreen": "Cờ xanh"
-  , "practiceQuestionPage.flagOrange": "Cờ cam"
-  , "practiceQuestionPage.flagRed": "Cờ đỏ"
-  , "practiceListPage.flaggedQuestions": "Câu hỏi đã gắn cờ"
-  , "practiceListPage.flaggedCount": "{count} câu hỏi đã gắn cờ"
-  , "practiceListPage.noFlaggedQuestions": "Không có câu hỏi nào được lưu với cờ này."
-  , "practiceListPage.flaggedLoadFailed": "Không thể tải câu hỏi đã gắn cờ."
-  , "practiceQuestionPage.askAi": "Yêu cầu AI giải thích"
-  , "practiceQuestionPage.aiThinking": "AI đang đọc câu hỏi..."
-  , "practiceQuestionPage.aiImageFailed": "Không thể đọc hình ảnh câu hỏi. Vui lòng tải lại trang và thử lại."
-  , "practiceQuestionPage.aiExplanationFailed": "Không thể nhận lời giải thích từ AI. Vui lòng thử lại."
-  , "adminPage.pdfHybridImport": "Giữ {count} hình sơ đồ ({size} MB)"
-  , "adminPage.pdfKeepDiagram": "Giữ hình ảnh câu hỏi này"
-  , "adminPage.pdfKeepDiagramHelp": "Bật cho sơ đồ, biểu đồ, bảng, công thức hoặc lựa chọn trả lời bằng hình ảnh. Câu hỏi chỉ có văn bản sẽ không tải ảnh xem trước lên."
+  "aiChat.systemRecentQuestions": "Dữ liệu câu hỏi gần đây:\n{questions}",
+  "practiceListPage.examDate": "Ngày thi",
+  "adminPage.examDate": "Ngày thi",
+  "adminPage.examDateRequired": "Vui lòng chọn ngày thi.",
+  "ui.examDate": "Ngày thi",
+  "ui.uncategorized": "Chưa phân loại",
+  "aiChat.remoteUnavailable":
+    "Dịch vụ AI hiện không khả dụng. Vui lòng thử lại sau ít phút.",
+  "settingsPage.deleteAccount": "Xóa tài khoản",
+  "settingsPage.deleteAccountWarningTitle": "Không thể hoàn tác thao tác này",
+  "settingsPage.deleteAccountWarningBody":
+    "Hồ sơ, lịch sử học tập, câu trả lời, điểm, tin nhắn và trận đấu của bạn sẽ bị xóa vĩnh viễn. Tài liệu bạn đã tải lên vẫn sẽ có sẵn.",
+  "settingsPage.deleteAccountConfirmEmail": "Nhập {email} để xác nhận",
+  "settingsPage.deleteAccountEmailMismatch":
+    "Địa chỉ email không khớp với tài khoản của bạn.",
+  "settingsPage.deleteAccountFailed": "Không thể xóa tài khoản: {error}",
+  "settingsPage.deletingAccount": "Đang xóa tài khoản...",
+  "settingsPage.deleteAccountAction": "Xóa vĩnh viễn tài khoản của tôi",
+  "aiChatPage.error": "Đã xảy ra lỗi. Vui lòng thử lại.",
+
+  "practiceQuestionPage.flagQuestion": "Gắn cờ câu hỏi này",
+  "practiceQuestionPage.clearFlag": "nhấn lại để bỏ cờ",
+  "practiceQuestionPage.flagGreen": "Cờ xanh",
+  "practiceQuestionPage.flagOrange": "Cờ cam",
+  "practiceQuestionPage.flagRed": "Cờ đỏ",
+  "practiceListPage.flaggedQuestions": "Câu hỏi đã gắn cờ",
+  "practiceListPage.flaggedCount": "{count} câu hỏi đã gắn cờ",
+  "practiceListPage.noFlaggedQuestions":
+    "Không có câu hỏi nào được lưu với cờ này.",
+  "practiceListPage.flaggedLoadFailed": "Không thể tải câu hỏi đã gắn cờ.",
+  "practiceQuestionPage.askAi": "Yêu cầu AI giải thích",
+  "practiceQuestionPage.aiThinking": "AI đang đọc câu hỏi...",
+  "practiceQuestionPage.aiImageFailed":
+    "Không thể đọc hình ảnh câu hỏi. Vui lòng tải lại trang và thử lại.",
+  "practiceQuestionPage.aiExplanationFailed":
+    "Không thể nhận lời giải thích từ AI. Vui lòng thử lại.",
+  "adminPage.pdfHybridImport": "Giữ {count} hình sơ đồ ({size} MB)",
+  "adminPage.pdfKeepDiagram": "Giữ hình ảnh câu hỏi này",
+  "adminPage.pdfKeepDiagramHelp":
+    "Bật cho sơ đồ, biểu đồ, bảng, công thức hoặc lựa chọn trả lời bằng hình ảnh. Câu hỏi chỉ có văn bản sẽ không tải ảnh xem trước lên.",
 } as const;

@@ -1,11 +1,13 @@
 export const ja = {
   "ui.refreshPoints": "ポイントを更新",
   "ui.versus": "対",
-  "ui.settingsUnavailable": "模擬試験の設定が利用できません。管理者にデータベースの更新を依頼してください。",
+  "ui.settingsUnavailable":
+    "模擬試験の設定が利用できません。管理者にデータベースの更新を依頼してください。",
   "ui.settingsDenied": "設定を保存できませんでした。管理者権限が必要です。",
   "ui.loadPoints": "ポイントを読み込めませんでした。",
   "ui.noBattleQuestions": "この対戦ルームには問題がありません。",
-  "ui.missingBattleQuestions": "一部の対戦問題を読み込めません。再試行してください。",
+  "ui.missingBattleQuestions":
+    "一部の対戦問題を読み込めません。再試行してください。",
   "ui.loadBattleQuestions": "対戦問題を読み込めませんでした。",
   "ui.loadBattleAnswers": "対戦の解答を読み込めませんでした。",
   "ui.refreshBattle": "対戦ルームを更新できませんでした。",
@@ -25,10 +27,13 @@ export const ja = {
   "ui.loadProgress": "学習履歴を読み込めませんでした。",
   "ui.startReview": "復習を開始できませんでした。",
   "ui.loadAccuracy": "正答率を読み込めませんでした。",
-  "ui.loadExamSettings": "試験設定を読み込めません。もう一度試験を開始してください。",
+  "ui.loadExamSettings":
+    "試験設定を読み込めません。もう一度試験を開始してください。",
   "ui.startExam": "試験を開始できませんでした。再試行してください。",
-  "ui.examShortage": "この試験には{required}問必要ですが、{available}問しかありません。管理者に問題の追加または問題数の変更を依頼してください。",
-  "ui.adminLoadSettings": "模擬試験の設定を読み込めません。データベースの更新を確認して再読み込みしてください。",
+  "ui.examShortage":
+    "この試験には{required}問必要ですが、{available}問しかありません。管理者に問題の追加または問題数の変更を依頼してください。",
+  "ui.adminLoadSettings":
+    "模擬試験の設定を読み込めません。データベースの更新を確認して再読み込みしてください。",
   "ui.saveExamSettings": "模擬試験の設定を保存できませんでした。",
   "ui.loadStats": "統計を読み込めませんでした。",
   "ui.savePoints": "ポイント設定を保存できませんでした。",
@@ -39,8 +44,10 @@ export const ja = {
   "ui.battleTimeInvalid": "1問の制限時間は5〜300秒にしてください。",
   "ui.insufficientPoints": "ポイントが不足しています",
   "ui.roomUnavailable": "この対戦ルームには参加できません",
-  "ui.resumeUnavailable": "この練習は再開できません。新しい練習を開始してください。",
-  "ui.removedQuestions": "この練習の一部の問題が利用できません。新しい練習を開始してください。",
+  "ui.resumeUnavailable":
+    "この練習は再開できません。新しい練習を開始してください。",
+  "ui.removedQuestions":
+    "この練習の一部の問題が利用できません。新しい練習を開始してください。",
   "ui.createPractice": "練習セッションを作成できませんでした。",
   "ui.loading": "読み込み中…",
   "ui.retry": "再試行",
@@ -49,17 +56,20 @@ export const ja = {
   "ui.points": "ポイント",
   "ui.onlineRooms": "オンライン対戦ルーム",
   "ui.battleRanking": "対戦ランキング",
-  "ui.rankingHelp": "勝利数、同数の場合は対戦モードのみの正解数で順位を決定します。",
+  "ui.rankingHelp":
+    "勝利数、同数の場合は対戦モードのみの正解数で順位を決定します。",
   "ui.refreshRanking": "ランキングを更新",
   "ui.loadingRanking": "ランキングを読み込み中…",
   "ui.noRanking": "ランキングデータはまだありません。",
   "ui.loadRanking": "対戦ランキングを読み込めませんでした。",
-  "ui.rankingMigration": "対戦ランキングを利用できません。管理者にランキング用データベース更新の適用を依頼してください。",
+  "ui.rankingMigration":
+    "対戦ランキングを利用できません。管理者にランキング用データベース更新の適用を依頼してください。",
   "ui.rank": "順位",
   "ui.player": "ユーザー",
   "ui.wins": "勝利数",
   "ui.battleCorrect": "対戦正解数",
-  "ui.roomIntro": "ルームを作成または参加し、ポイントを賭けて同じ問題で対戦します。",
+  "ui.roomIntro":
+    "ルームを作成または参加し、ポイントを賭けて同じ問題で対戦します。",
   "ui.onlineRequired": "オンライン対戦にはSupabaseの有効化が必要です。",
   "ui.questions": "問題数",
   "ui.perQuestion": "1問あたり",
@@ -81,7 +91,8 @@ export const ja = {
   "ui.createRoom": "ルームを作成",
   "ui.waitingOpponent": "対戦相手を待っています",
   "ui.wagerLocked": "確保した賭けポイント：{count}",
-  "ui.keepOpen": "ここで待っている間に相手が参加すると、対戦が自動で始まります。他のルームを見ても、作成したルームは開いたままです。",
+  "ui.keepOpen":
+    "ここで待っている間に相手が参加すると、対戦が自動で始まります。他のルームを見ても、作成したルームは開いたままです。",
   "ui.checkRooms": "他のルームを確認",
   "ui.cancelRefund": "キャンセルして返金",
   "ui.victory": "勝利",
@@ -100,7 +111,8 @@ export const ja = {
   "ui.correct": "正解",
   "ui.incorrect": "不正解。正解：{answer}",
   "ui.mockSettings": "模擬試験の設定",
-  "ui.mockHelp": "変更は全生徒の新しい試験に適用されます。進行中の試験の設定は変わりません。",
+  "ui.mockHelp":
+    "変更は全生徒の新しい試験に適用されます。進行中の試験の設定は変わりません。",
   "ui.loadingSettings": "設定を読み込み中…",
   "ui.settingsSaved": "模擬試験の設定を保存しました。",
   "ui.questionCount": "問題数",
@@ -116,25 +128,30 @@ export const ja = {
   "ui.practiceWrong": "練習の不正解",
   "ui.mockCorrect": "模擬試験の正解",
   "ui.mockWrong": "模擬試験の不正解",
-  "ui.progressWarning": "練習問題は利用できますが、学習履歴を読み込めませんでした：{error}",
-  "ui.noMatches": "条件に一致する問題がありません。試験日または学習モードを変更してください。",
+  "ui.progressWarning":
+    "練習問題は利用できますが、学習履歴を読み込めませんでした：{error}",
+  "ui.noMatches":
+    "条件に一致する問題がありません。試験日または学習モードを変更してください。",
   "ui.noMistakes": "復習が必要な間違いはありません。",
   "ui.dismiss": "閉じる",
   "ui.noData": "データがありません",
   "ui.errorCode": "コード：{code}",
-  'loginPage.signUpWithGoogle': 'Googleで新規登録',
-  'loginPage.chooseAnotherGoogleAccount': '別のGoogleアカウントを選択、または追加できます。登録済みの場合はログインします。',
-  'practiceListPage.countingMatches': '該当する問題を集計中…',
-  'practiceListPage.matchingQuestions': '該当する問題：{count}問',
-  'practiceListPage.practiceFiltered': '絞り込んだ問題を練習',
+  "loginPage.signUpWithGoogle": "Googleで新規登録",
+  "loginPage.chooseAnotherGoogleAccount":
+    "別のGoogleアカウントを選択、または追加できます。登録済みの場合はログインします。",
+  "practiceListPage.countingMatches": "該当する問題を集計中…",
+  "practiceListPage.matchingQuestions": "該当する問題：{count}問",
+  "practiceListPage.practiceFiltered": "絞り込んだ問題を練習",
 
   "adminPage.add": "追加",
-  "adminPage.adminAccessRequired": "このページを表示するには管理者権限が必要です。",
+  "adminPage.adminAccessRequired":
+    "このページを表示するには管理者権限が必要です。",
   "adminPage.announcements": "お知らせ",
   "adminPage.newAnnouncement": "新しいお知らせ",
   "adminPage.editAnnouncement": "お知らせを編集",
   "adminPage.deleteAnnouncement": "お知らせを削除",
-  "adminPage.announcementHelp": "すべてのユーザーのホーム画面に表示するメッセージを予約公開します。空の翻訳は別の言語で補完されます。",
+  "adminPage.announcementHelp":
+    "すべてのユーザーのホーム画面に表示するメッセージを予約公開します。空の翻訳は別の言語で補完されます。",
   "adminPage.announcementTitle": "タイトル（任意）",
   "adminPage.announcementMessage": "メッセージ",
   "adminPage.japanese": "日本語",
@@ -150,9 +167,12 @@ export const ja = {
   "adminPage.announcementActive": "有効",
   "adminPage.announcementInactive": "無効",
   "adminPage.announcementSaved": "お知らせを保存しました。",
-  "adminPage.announcementMessageRequired": "少なくとも1つの言語でメッセージを入力してください。",
-  "adminPage.announcementDateInvalid": "終了日時は開始日時より後に設定してください。",
-  "adminPage.announcementLoadFailed": "お知らせを読み込めません。お知らせ用のマイグレーションを適用して、もう一度お試しください。",
+  "adminPage.announcementMessageRequired":
+    "少なくとも1つの言語でメッセージを入力してください。",
+  "adminPage.announcementDateInvalid":
+    "終了日時は開始日時より後に設定してください。",
+  "adminPage.announcementLoadFailed":
+    "お知らせを読み込めません。お知らせ用のマイグレーションを適用して、もう一度お試しください。",
   "adminPage.announcementSaveFailed": "お知らせを保存できませんでした。",
   "adminPage.announcementDeleteFailed": "お知らせを削除できませんでした。",
   "adminPage.announcementDeleteConfirm": "このお知らせを削除しますか？",
@@ -164,26 +184,34 @@ export const ja = {
   "adminPage.answersCsv": "解答CSV",
   "adminPage.pdfImport": "PDF取込み",
   "adminPage.pdfImportTitle": "PDFから問題を取り込む",
-  "adminPage.pdfImportDescription": "問題PDFと解答PDFを選択し、検出した問題と解答を確認して直接取り込みます。",
+  "adminPage.pdfImportDescription":
+    "問題PDFと解答PDFを選択し、検出した問題と解答を確認して直接取り込みます。",
   "adminPage.pdfSubjectFallback": "科目の予備設定",
-  "adminPage.pdfSubjectDetectionHelp": "PDFを読み取る前に、この試験の科目範囲を設定してください。",
+  "adminPage.pdfSubjectDetectionHelp":
+    "PDFを読み取る前に、この試験の科目範囲を設定してください。",
   "adminPage.pdfSubjectRanges": "問題の科目範囲",
-  "adminPage.pdfSubjectRangesHelp": "範囲外の問題は未分類になります。範囲に空きがあっても構いませんが、重複はできません。",
+  "adminPage.pdfSubjectRangesHelp":
+    "範囲外の問題は未分類になります。範囲に空きがあっても構いませんが、重複はできません。",
   "adminPage.pdfRangeFrom": "開始",
   "adminPage.pdfRangeTo": "終了",
-  "adminPage.pdfInvalidSubjectRanges": "科目範囲は問1〜100以内で開始を終了以下にし、範囲同士が重複しないようにしてください。",
+  "adminPage.pdfInvalidSubjectRanges":
+    "科目範囲は問1〜100以内で開始を終了以下にし、範囲同士が重複しないようにしてください。",
   "adminPage.pdfExamType": "取り込む試験",
   "adminPage.pdfExamItPassport": "ITパスポート試験",
   "adminPage.pdfExamFundamentalA": "基本情報技術者試験　科目A",
   "adminPage.pdfExamFundamentalB": "基本情報技術者試験　科目B",
   "adminPage.pdfExamApplied": "応用情報技術者試験　午前",
-  "adminPage.pdfSubjectDetectionFundamentalA": "取り込む全ての問題を「基本情報技術者 科目A」に分類します。",
-  "adminPage.pdfSubjectDetectionFundamentalB": "取り込む全ての問題を「基本情報技術者 科目B」に分類します。",
-  "adminPage.pdfSubjectDetectionApplied": "取り込む全ての問題を「応用情報技術者試験 午前」に分類します。",
+  "adminPage.pdfSubjectDetectionFundamentalA":
+    "取り込む全ての問題を「基本情報技術者 科目A」に分類します。",
+  "adminPage.pdfSubjectDetectionFundamentalB":
+    "取り込む全ての問題を「基本情報技術者 科目B」に分類します。",
+  "adminPage.pdfSubjectDetectionApplied":
+    "取り込む全ての問題を「応用情報技術者試験 午前」に分類します。",
   "adminPage.pdfExamKey": "試験キー（一意）",
   "adminPage.pdfQuestionFile": "問題PDF",
   "adminPage.pdfJsonFile": "保存済み問題JSON",
-  "adminPage.pdfJsonFileHelp": "以前にPDFから変換・確認したJSONを読み込み、編集またはインポートを再開できます。",
+  "adminPage.pdfJsonFileHelp":
+    "以前にPDFから変換・確認したJSONを読み込み、編集またはインポートを再開できます。",
   "adminPage.pdfJsonDownload": "JSONをダウンロード",
   "adminPage.pdfJsonLoaded": "JSONから{count}問を読み込みました。",
   "adminPage.pdfJsonSaved": "{count}問をJSONとして保存しました。",
@@ -195,8 +223,10 @@ export const ja = {
   "adminPage.pdfProcess": "PDFを読み取る",
   "adminPage.pdfProcessing": "PDFを読み取り中…",
   "adminPage.pdfProcessingFailed": "PDFを処理できませんでした。",
-  "adminPage.pdfLocalProcessing": "OCR中も別のページへ移動できます。このブラウザータブを閉じたり再読み込みしたりしないでください。",
-  "adminPage.pdfAnswersNotDetected": "問題は検出されましたが、解答を読み取れませんでした。確認画面で各正解を選択してください。",
+  "adminPage.pdfLocalProcessing":
+    "OCR中も別のページへ移動できます。このブラウザータブを閉じたり再読み込みしたりしないでください。",
+  "adminPage.pdfAnswersNotDetected":
+    "問題は検出されましたが、解答を読み取れませんでした。確認画面で各正解を選択してください。",
   "adminPage.pdfReviewCount": "検出した{count}問を確認",
   "adminPage.pdfReviewProblems": "{count}問の確認が必要です",
   "adminPage.pdfReadyToImport": "すべての問題を取り込めます",
@@ -205,24 +235,69 @@ export const ja = {
   "adminPage.pdfImportProgress": "{total}問中{current}問を取込み中…",
   "adminPage.pdfImportComplete": "{count}問を取り込みました。",
   "adminPage.pdfImportFailed": "PDF問題の取込みに失敗しました。",
-  "adminPage.pdfImportFailedWithReason": "PDF問題の取込みに失敗しました: {reason}",
-  "adminPage.pdfFixReviewErrors": "取り込む前に、確認が必要な項目を修正してください。",
-  "adminPage.pdfRequiresSupabase": "PDF取込みにはSupabaseを有効にする必要があります。",
-  "adminPage.pdfMigrationRequired": "PDF取込み用テーブルがありません。Supabaseで20260903010000_add_single_csv_question_import.sqlを先に実行してください。",
+  "adminPage.pdfImportFailedWithReason":
+    "PDF問題の取込みに失敗しました: {reason}",
+  "adminPage.pdfFixReviewErrors":
+    "取り込む前に、確認が必要な項目を修正してください。",
+  "adminPage.pdfRequiresSupabase":
+    "PDF取込みにはSupabaseを有効にする必要があります。",
+  "adminPage.pdfMigrationRequired":
+    "PDF取込み用テーブルがありません。Supabaseで20260903010000_add_single_csv_question_import.sqlを先に実行してください。",
   "adminPage.admin": "管理画面",
   "adminPage.allSubjects": "全科目",
   "adminPage.cancel": "キャンセル",
   "adminPage.csvImportFailed": "CSVのインポートに失敗しました。",
-  "adminPage.duplicateQuestionsFound": "既に登録されている、または取込み内で重複しているため、取込みを中止しました: {questions}",
-  "adminPage.duplicateQuestionExists": "この問題は既に登録されているため、取込みを中止しました。",
+  "adminPage.duplicateQuestionsFound":
+    "既に登録されている、または取込み内で重複しているため、取込みを中止しました: {questions}",
+  "adminPage.duplicateQuestionExists":
+    "この問題は既に登録されているため、取込みを中止しました。",
   "adminPage.pageOf": "{total}ページ中 {current}ページ",
   "adminPage.previousPage": "前へ",
   "adminPage.nextPage": "次へ",
-  "adminPage.csvImportFormat": "2つのCSVファイルを選択してください。questions.csvとanswer_choices.csvの列形式に対応しています。",
+  "adminPage.csvImportFormat":
+    "2つのCSVファイルを選択してください。questions.csvとanswer_choices.csvの列形式に対応しています。",
   "adminPage.csvReadFailed": "CSVファイルを読み込めませんでした。",
   "adminPage.csvReadyToImport": "CSVファイルの準備ができました",
+  "adminPage.csvModalTitle": "CSVで問題を取り込む",
+  "adminPage.csvModalDescription": "問題ファイルと解答ファイルを取り込みます。",
+  "adminPage.csvChooseSubject": "科目を選択",
+  "adminPage.csvAutoDetectSubject": "CSVから自動判定",
+  "adminPage.csvSubjectHelp":
+    "CSVにsubject_idがある場合は、ファイルの情報を優先します。",
+  "adminPage.csvDataFiles": "データファイルを選択",
+  "adminPage.csvDataFilesHelp":
+    "問題ファイルと解答ファイルの両方を選択してください。",
+  "adminPage.csvQuestionFile": "問題ファイル",
+  "adminPage.csvAnswerFile": "解答ファイル",
+  "adminPage.csvDropFile": "CSVファイルをここにドラッグ＆ドロップ",
+  "adminPage.csvChooseFile": "CSVファイルを選択",
+  "adminPage.csvFileLimit": "CSV・最大10MB",
+  "adminPage.csvImportErrorTitle": "CSVを取り込めません",
+  "adminPage.csvStatus": "データの状態",
+  "adminPage.csvStatusHelp": "取り込む前にデータ件数を確認してください。",
+  "adminPage.csvQuestionCount": "{count}問",
+  "adminPage.csvAnswerCount": "{count}件の解答",
+  "adminPage.csvNoQuestions": "問題なし",
+  "adminPage.csvNoAnswers": "解答なし",
+  "adminPage.csvNotes": "注意",
+  "adminPage.csvQuestionColumns":
+    "問題ファイルにはid、question_number、question_text列が必要です。",
+  "adminPage.csvAnswerColumn":
+    "解答ファイルには問題と紐付けるquestion_id列が必要です。",
+  "adminPage.csvAnyCount":
+    "問題は任意の件数を取り込めます。100問である必要はありません。",
+  "adminPage.csvReady": "取り込み準備完了",
+  "adminPage.csvSelectBoth": "続行するには両方のファイルを選択してください",
+  "adminPage.csvImporting": "取り込み中…",
+  "adminPage.csvInvalidExtension": "CSVファイルのみアップロードできます。",
+  "adminPage.csvFileTooLarge": "CSVファイルは10MB以下にしてください。",
+  "adminPage.csvManualDescription": "問題を手動で作成",
+  "adminPage.csvImportDescription": "問題と解答を取り込む",
+  "adminPage.csvRemoveQuestionFile": "問題ファイルを削除",
+  "adminPage.csvRemoveAnswerFile": "解答ファイルを削除",
   "adminPage.choices": "選択肢",
-  "adminPage.clickTheRoundButtonToSelectTheCorrect": "丸いボタンをクリックして正解を選択してください。",
+  "adminPage.clickTheRoundButtonToSelectTheCorrect":
+    "丸いボタンをクリックして正解を選択してください。",
   "adminPage.deleteThisQuestion": "この問題を削除しますか？",
   "adminPage.deleteQuestion": "問題を削除",
   "adminPage.difficulty": "難易度",
@@ -238,23 +313,35 @@ export const ja = {
   "adminPage.explanationVietnamese": "解説（ベトナム語）",
   "adminPage.failedToSave": "保存に失敗しました。",
   "adminPage.imageUrlOptional": "画像URL（任意）",
+  "adminPage.questionImageOptional": "問題画像（任意）",
+  "adminPage.uploadQuestionImage": "画像をアップロード",
+  "adminPage.imageUploading": "アップロード中…",
+  "adminPage.imageUploadHelp": "PNG、JPG、WEBP、GIF・最大10MB",
+  "adminPage.questionImagePreview": "問題画像のプレビュー",
+  "adminPage.removeQuestionImage": "画像を削除",
+  "adminPage.imageUploadInvalid": "画像ファイルを選択してください。",
+  "adminPage.imageUploadTooLarge": "画像は10MB以下にしてください。",
+  "adminPage.imageUploadFailed": "画像をアップロードできませんでした。",
   "adminPage.importCsv": "CSVをインポート",
   "adminPage.items": " 問",
   "adminPage.loading": "読み込み中...",
   "adminPage.multipleChoice": "選択式",
-  "adminPage.noQuestionsYetStartByAddingOne": "問題がありません。「問題を追加」から始めましょう。",
+  "adminPage.noQuestionsYetStartByAddingOne":
+    "問題がありません。「問題を追加」から始めましょう。",
   "adminPage.pleaseEnterTheQuestionText": "問題文を入力してください。",
   "adminPage.pleaseSelectASubject": "科目を選択してください。",
   "adminPage.points": "配点",
   "adminPage.questionNumber": "問題番号",
   "adminPage.questionsCsv": "問題CSV",
   "adminPage.questions": "問題管理",
-  "adminPage.questionsAndChoicesStayInJapaneseOnlyExplanations": "問題文と選択肢は日本語のまま保持し、解説だけ表示言語に合わせて切り替えます。",
+  "adminPage.questionsAndChoicesStayInJapaneseOnlyExplanations":
+    "問題文と選択肢は日本語のまま保持し、解説だけ表示言語に合わせて切り替えます。",
   "adminPage.questionText": "問題文",
   "adminPage.questionType": "問題形式",
   "adminPage.save": "保存",
   "adminPage.searchQuestions": "問題を検索...",
-  "adminPage.selectAtLeastOneCorrectChoice": "正解の選択肢を1つ以上選んでください。",
+  "adminPage.selectAtLeastOneCorrectChoice":
+    "正解の選択肢を1つ以上選んでください。",
   "adminPage.stats": "統計",
   "adminPage.subject": "科目",
   "adminPage.subjects": "科目管理",
@@ -262,7 +349,8 @@ export const ja = {
   "adminPage.trueFalse": "正誤問題",
   "adminPage.users": "ユーザー管理",
   "aiChatPage.aiChat": "AIチャット",
-  "aiChatPage.exampleExplainThisQuestionCreateAStudyPlan": "例: この問題の考え方を教えて / 勉強計画を作って",
+  "aiChatPage.exampleExplainThisQuestionCreateAStudyPlan":
+    "例: この問題の考え方を教えて / 勉強計画を作って",
   "aiChatPage.reset": "リセット",
   "aiChatPage.send": "送信",
   "aiChatPage.studyAssistant": "学習アシスタント",
@@ -289,7 +377,8 @@ export const ja = {
   "battlePage.roomsWaitingForMatch": "マッチング待ちのルーム",
   "battlePage.startBattle": "バトル開始",
   "battlePage.studyMenu": "学習メニュー",
-  "battlePage.testYourselfBySolvingQuestionsAgainstAnAi": "AIライバルと問題を解き合って腕試し！",
+  "battlePage.testYourselfBySolvingQuestionsAgainstAnAi":
+    "AIライバルと問題を解き合って腕試し！",
   "battlePage.tryAgain": "もう一度チャレンジ！",
   "battlePage.victory": "勝利！",
   "battlePage.you": "あなた",
@@ -303,20 +392,26 @@ export const ja = {
   "header.openNotifications": "通知を開く",
   "header.read": "既読",
   "header.reviewRecommended": "復習おすすめ",
-  "header.reviewTheQuestionsYouMissedLastTime": "前回間違えた問題をもう一度確認しましょう。",
+  "header.reviewTheQuestionsYouMissedLastTime":
+    "前回間違えた問題をもう一度確認しましょう。",
   "header.search": "検索...",
-  "header.studentsCanCheckMaterialsAnytimeMakingInformationSharing": "学生はいつでも教材を確認できるため、情報共有がスムーズになります。",
-  "header.takeOneMockExamAndReviewWeakAreas": "模擬試験を1回解いて、苦手分野を確認しましょう。",
+  "header.studentsCanCheckMaterialsAnytimeMakingInformationSharing":
+    "学生はいつでも教材を確認できるため、情報共有がスムーズになります。",
+  "header.takeOneMockExamAndReviewWeakAreas":
+    "模擬試験を1回解いて、苦手分野を確認しましょう。",
   "header.todayStudyReminder": "今日の学習リマインダー",
   "header.unread": "未読",
   "header.yesterday": "昨日",
   "homePage.accuracy": "正答率",
   "homePage.aiChat": "AIチャット",
   "homePage.askAi": "相談する",
-  "homePage.askAiAboutUnclearProblemsOrStudyPlans": "わからない問題や学習計画をAIに相談して、その場で答えを整理できます。",
+  "homePage.askAiAboutUnclearProblemsOrStudyPlans":
+    "わからない問題や学習計画をAIに相談して、その場で答えを整理できます。",
   "homePage.battle": "対戦",
-  "homePage.challengeOthersAndSharpenYourSkills": "他の学生と問題を解き合い、ライバルと切磋琢磨しましょう！",
-  "homePage.checkYourLevelWithATimedExamFormat": "本番と同じ形式で時間を計りながら実力を確認しましょう。",
+  "homePage.challengeOthersAndSharpenYourSkills":
+    "他の学生と問題を解き合い、ライバルと切磋琢磨しましょう！",
+  "homePage.checkYourLevelWithATimedExamFormat":
+    "本番と同じ形式で時間を計りながら実力を確認しましょう。",
   "homePage.days": "日",
   "homePage.examAvg": "模試平均",
   "homePage.goodMorning": "さん、おはようございます！",
@@ -327,12 +422,14 @@ export const ja = {
   "homePage.noStudyHistoryYet": "まだ学習履歴がありません",
   "homePage.practice": "演習回数",
   "homePage.practice2": "問題演習",
-  "homePage.practiceBySubjectAndSteadilyImproveYourSkills": "分野別の問題を繰り返し練習して、着実に実力をアップしましょう。",
+  "homePage.practiceBySubjectAndSteadilyImproveYourSkills":
+    "分野別の問題を繰り返し練習して、着実に実力をアップしましょう。",
   "homePage.recentActivity": "最近の学習履歴",
   "homePage.startBattle": "バトル開始",
   "homePage.startPractice": "問題を解く",
   "homePage.startPractice2": "問題演習を始める",
-  "homePage.studentsCanCheckMaterialsAnytimeMakingInformationSharing": "学生はいつでも教材を確認できるため、情報共有がスムーズになります。",
+  "homePage.studentsCanCheckMaterialsAnytimeMakingInformationSharing":
+    "学生はいつでも教材を確認できるため、情報共有がスムーズになります。",
   "homePage.takeExam": "模擬試験を受ける",
   "homePage.today": "今日",
   "homePage.untilExam": "試験まで",
@@ -341,34 +438,42 @@ export const ja = {
   "loginPage.backToSignIn": "ログインに戻る",
   "loginPage.brand": "マナビ",
   "loginPage.confirmNewPassword": "新しいパスワード（確認）",
-  "loginPage.confirmationEmailSentConfirmYourEmailThenSign": "確認メールを送信しました。メールを確認してからログインしてください。",
+  "loginPage.confirmationEmailSentConfirmYourEmailThenSign":
+    "確認メールを送信しました。メールを確認してからログインしてください。",
   "loginPage.createAccount": "アカウント作成",
   "loginPage.createANewAccount": "新しいアカウントを作成します",
   "loginPage.email": "メール",
-  "loginPage.emailAlreadyRegistered": "このメールアドレスはすでに登録されています。",
-  "loginPage.emailOrPasswordIsIncorrect": "メールアドレスまたはパスワードが正しくありません。",
+  "loginPage.emailAlreadyRegistered":
+    "このメールアドレスはすでに登録されています。",
+  "loginPage.emailOrPasswordIsIncorrect":
+    "メールアドレスまたはパスワードが正しくありません。",
   "loginPage.eyebrow": "学習をもっとスマートに",
   "loginPage.failedToCreateAccount": "アカウント作成に失敗しました: ",
   "loginPage.featureAiReview": "弱点をAIと一緒に見直し",
   "loginPage.featureDailyPreparation": "毎日の試験準備を管理",
   "loginPage.featureFocusedStudy": "分野ごとに学習して着実に上達",
   "loginPage.forgotPassword": "パスワードをお忘れですか？",
-  "loginPage.forgotPasswordHelp": "メールアドレスを入力すると、パスワード再設定用のリンクを送信します。",
+  "loginPage.forgotPasswordHelp":
+    "メールアドレスを入力すると、パスワード再設定用のリンクを送信します。",
   "loginPage.forgotPasswordTitle": "パスワードをお忘れですか？",
   "loginPage.headline": "より明確に学び、自信を育てましょう",
   "loginPage.hidePassword": "パスワードを非表示",
   "loginPage.name": "お名前",
   "loginPage.newPassword": "新しいパスワード",
   "loginPage.noAccountCreateOne": "アカウントをお持ちでない方はこちら",
-  "loginPage.osakaDenshiLearningSupportSystem": "ITパスポート試験　学習支援システム",
+  "loginPage.osakaDenshiLearningSupportSystem":
+    "ITパスポート試験　学習支援システム",
   "loginPage.password": "パスワード",
   "loginPage.passwordMinimum": "パスワードは6文字以上で入力してください。",
   "loginPage.passwordsDoNotMatch": "パスワードが一致しません。",
   "loginPage.pleaseEnterYourName": "名前を入力してください。",
   "loginPage.processing": "処理中...",
-  "loginPage.resetEmailFailed": "再設定メールを送信できませんでした。もう一度お試しください。",
-  "loginPage.resetEmailSent": "このメールアドレスのアカウントが存在する場合、パスワード再設定用のリンクを送信しました。",
-  "loginPage.resetPasswordHelp": "アカウントの新しいパスワードを設定してください。",
+  "loginPage.resetEmailFailed":
+    "再設定メールを送信できませんでした。もう一度お試しください。",
+  "loginPage.resetEmailSent":
+    "このメールアドレスのアカウントが存在する場合、パスワード再設定用のリンクを送信しました。",
+  "loginPage.resetPasswordHelp":
+    "アカウントの新しいパスワードを設定してください。",
   "loginPage.resetPasswordTitle": "パスワードの再設定",
   "loginPage.sendResetLink": "再設定リンクを送信",
   "loginPage.signIn": "ログイン",
@@ -376,14 +481,17 @@ export const ja = {
   "loginPage.showPassword": "パスワードを表示",
   "loginPage.studentIdOptional": "学籍番号（任意）",
   "loginPage.updatePassword": "パスワードを更新",
-  "loginPage.updatePasswordFailed": "パスワードを更新できませんでした。再設定リンクの有効期限が切れている可能性があります。",
-  "loginPage.invalidRecoveryLink": "このパスワード再設定リンクは無効、有効期限切れ、または使用済みです。新しいリンクをリクエストしてください。",
+  "loginPage.updatePasswordFailed":
+    "パスワードを更新できませんでした。再設定リンクの有効期限が切れている可能性があります。",
+  "loginPage.invalidRecoveryLink":
+    "このパスワード再設定リンクは無効、有効期限切れ、または使用済みです。新しいリンクをリクエストしてください。",
   "materialsPage.download": "ダウンロード",
   "materialsPage.delete": "削除",
   "materialsPage.cancel": "キャンセル",
   "materialsPage.deleting": "削除中…",
   "materialsPage.deleteDialogTitle": "教材を削除しますか？",
-  "materialsPage.deleteConfirm": "この教材はすべてのユーザーから完全に削除されます。",
+  "materialsPage.deleteConfirm":
+    "この教材はすべてのユーザーから完全に削除されます。",
   "materialsPage.deleted": "教材を削除しました。",
   "materialsPage.deleteFailed": "教材を削除できませんでした。",
   "materialsPage.upload": "教材をアップロード",
@@ -396,21 +504,25 @@ export const ja = {
   "materialsPage.sharedFiles": "共有教材",
   "materialsPage.refresh": "更新",
   "materialsPage.empty": "まだ教材がアップロードされていません。",
-  "materialsPage.requiresSupabase": "教材の共有にはSupabaseへの接続が必要です。アカウント間でファイルを共有するにはSupabaseを有効にしてください。",
+  "materialsPage.requiresSupabase":
+    "教材の共有にはSupabaseへの接続が必要です。アカウント間でファイルを共有するにはSupabaseを有効にしてください。",
   "materialsPage.loadFailed": "教材を読み込めませんでした。",
   "materialsPage.uploadFailed": "教材をアップロードできませんでした。",
   "materialsPage.openFailed": "教材を開けませんでした。",
-  "materialsPage.invalidType": "PDF、PNG、JPEG、DOCX、PPTX、またはXLSXファイルを選んでください。",
+  "materialsPage.invalidType":
+    "PDF、PNG、JPEG、DOCX、PPTX、またはXLSXファイルを選んでください。",
   "materialsPage.emptyFile": "空でないファイルを選んでください。",
   "materialsPage.fileTooLarge": "ファイルは20 MB以下にしてください。",
   "materialsPage.titleRequired": "タイトルを入力してください。",
   "materialsPage.goToPractice": "問題演習へ",
   "materialsPage.materials": "教材",
   "materialsPage.open": "確認する",
-  "materialsPage.studentsCanCheckMaterialsAnytimeMakingInformationSharing": "学生はいつでも教材を確認できるため、情報共有がスムーズになります。",
+  "materialsPage.studentsCanCheckMaterialsAnytimeMakingInformationSharing":
+    "学生はいつでも教材を確認できるため、情報共有がスムーズになります。",
   "materialsPage.studyMenu": "学習メニュー",
   "materialsPage.updated": "最終更新",
-  "mockExamPage.checkYourAbilityInTheSameFormatAs": "本番と同じ形式で実力を確認しましょう",
+  "mockExamPage.checkYourAbilityInTheSameFormatAs":
+    "本番と同じ形式で実力を確認しましょう",
   "mockExamPage.correct": "正解",
   "mockExamPage.examResults": "試験結果",
   "mockExamPage.finishExam": "試験を終了する",
@@ -431,12 +543,14 @@ export const ja = {
   "mockExamPage.studyMenu": "学習メニュー",
   "mockExamPage.submit": "提出する",
   "mockExamPage.timeLimitMin": "制限時間（分）",
-  "mockExamPage.youCannotPauseTheExamOnceItStarts": "試験中は途中で中断できません。準備ができたら開始ボタンを押してください。",
+  "mockExamPage.youCannotPauseTheExamOnceItStarts":
+    "試験中は途中で中断できません。準備ができたら開始ボタンを押してください。",
   "practiceListPage.accuracy": "正答率",
   "practiceListPage.action": "アクション",
   "practiceListPage.all": "すべて",
   "practiceListPage.checkYourLevelWithAMockExam": "模擬試験で実力確認",
-  "practiceListPage.chooseASubjectAndFiltersToBeginPractice": "分野や条件を選んで、演習を始めましょう。",
+  "practiceListPage.chooseASubjectAndFiltersToBeginPractice":
+    "分野や条件を選んで、演習を始めましょう。",
   "practiceListPage.difficulty": "難易度",
   "practiceListPage.easy": "初級",
   "practiceListPage.filterBy": "条件で絞り込む",
@@ -503,20 +617,25 @@ export const ja = {
   "settingsPage.help": "ヘルプ",
   "settingsPage.helpIntro": "アプリの主な機能の使い方をまとめたガイドです。",
   "settingsPage.helpPracticeTitle": "練習",
-  "settingsPage.helpPracticeBody": "「練習」で分野を選び、試験日や学習モードで絞り込めます。各セッションの結果は保存され、進捗を確認できます。",
+  "settingsPage.helpPracticeBody":
+    "「練習」で分野を選び、試験日や学習モードで絞り込めます。各セッションの結果は保存され、進捗を確認できます。",
   "settingsPage.helpMockExamTitle": "模擬試験",
-  "settingsPage.helpMockExamBody": "模擬試験には制限時間と決まった問題数があります。合格には、先生または管理者が設定した最低正答率を満たす必要があります。",
+  "settingsPage.helpMockExamBody":
+    "模擬試験には制限時間と決まった問題数があります。合格には、先生または管理者が設定した最低正答率を満たす必要があります。",
   "settingsPage.helpBattleTitle": "対戦",
-  "settingsPage.helpBattleBody": "リアルタイムで他のユーザーと対戦できます。各対戦は決まった問題数で、1問ごとに制限時間があり、勝者にはボーナスポイントが付与されます。",
+  "settingsPage.helpBattleBody":
+    "リアルタイムで他のユーザーと対戦できます。各対戦は決まった問題数で、1問ごとに制限時間があり、勝者にはボーナスポイントが付与されます。",
   "settingsPage.helpPointsTitle": "ポイント",
-  "settingsPage.helpPointsBody": "毎日のログインや、練習・模擬試験での解答（正解の方が高得点）でポイントが貯まります。貯まったポイントは対戦への参加に使えます。",
+  "settingsPage.helpPointsBody":
+    "毎日のログインや、練習・模擬試験での解答（正解の方が高得点）でポイントが貯まります。貯まったポイントは対戦への参加に使えます。",
   "settingsPage.helpAccountTitle": "アカウントと設定",
-  "settingsPage.helpAccountBody": "「アカウント」では、氏名・学籍番号・クラスの更新、アバターの選択、表示言語の変更、目標試験日の設定、パスワードの変更ができます。",
+  "settingsPage.helpAccountBody":
+    "「アカウント」では、氏名・学籍番号・クラスの更新、アバターの選択、表示言語の変更、目標試験日の設定、パスワードの変更ができます。",
   "settingsPage.avatar": "アバター",
   "settingsPage.avatarHint": "この画像がプロフィールに表示されます。",
   "settingsPage.avatarNone": "画像なし",
   "settingsPage.chooseAvatarPreset": "用意されたアバターを選択",
-   "settingsPage.avatarOptionAvatar1": "avatar 1",
+  "settingsPage.avatarOptionAvatar1": "avatar 1",
   "settingsPage.avatarOptionAvatar2": "avatar 2",
   "settingsPage.avatarOptionAvatar3": "avatar 3",
   "settingsPage.avatarOptionAvatar4": "avatar 4",
@@ -552,7 +671,8 @@ export const ja = {
   "mobileTabBar.menu": "メニュー",
   "mobileTabBar.signOut": "ログアウト",
   "mobileTabBar.more": "その他",
-  "aiChatPage.welcome": "学習の相談窓口です。問題の解き方、勉強計画、用語の整理をそのまま聞いてください。",
+  "aiChatPage.welcome":
+    "学習の相談窓口です。問題の解き方、勉強計画、用語の整理をそのまま聞いてください。",
   "aiChatPage.starterPlan": "今日の学習計画を作って",
   "aiChatPage.starterAfternoon": "基本情報の午後問題の勉強法を教えて",
   "aiChatPage.starterThinking": "この問題を解く考え方を整理して",
@@ -565,7 +685,8 @@ export const ja = {
   "battlePage.questionNumber": "問題 {number}",
   "homePage.daysRemaining": "あと{count}日",
   "homePage.practiceQuestionCount": "問題演習 — {count}問",
-  "mockExamPage.resultSummary": "{total}問中 {correct}問正解 / 所要時間: {time}",
+  "mockExamPage.resultSummary":
+    "{total}問中 {correct}問正解 / 所要時間: {time}",
   "mockExamPage.questionNumber": "問題 {number}",
   "mockExamPage.questionProgress": "問題 {current} / {total}",
   "mockExamPage.answeredProgress": "回答済み: {answered} / {total}",
@@ -609,24 +730,30 @@ export const ja = {
   "loginPage.signInWithGoogle": "Googleでログイン",
   "loginPage.copyright": "© 2026 マナビ",
   "aiChatPage.heroTitle": "わからないことを、そのまま質問してください",
-  "aiChatPage.heroDescription": "学習計画、用語の整理、問題の考え方を対話形式でサポートします。",
+  "aiChatPage.heroDescription":
+    "学習計画、用語の整理、問題の考え方を対話形式でサポートします。",
   "aiChatPage.thinking": "AIが考えています...",
   "aiChatPage.quickQuestions": "すぐ聞ける質問",
   "materialsPage.termsTitle": "ITパスポート 重要用語まとめ",
-  "materialsPage.termsDescription": "ストラテジ、マネジメント、テクノロジの基礎用語を確認できます。",
+  "materialsPage.termsDescription":
+    "ストラテジ、マネジメント、テクノロジの基礎用語を確認できます。",
   "materialsPage.pastQuestionsTitle": "過去問の解き方ガイド",
-  "materialsPage.pastQuestionsDescription": "選択肢の読み方と時間配分のコツを短い動画で確認できます。",
+  "materialsPage.pastQuestionsDescription":
+    "選択肢の読み方と時間配分のコツを短い動画で確認できます。",
   "materialsPage.slidesTitle": "授業スライド一覧",
-  "materialsPage.slidesDescription": "授業で使ったスライドや補足資料をいつでも見返せます。",
+  "materialsPage.slidesDescription":
+    "授業で使ったスライドや補足資料をいつでも見返せます。",
   "adminPage.easy": "簡単",
   "adminPage.starter": "初級",
   "adminPage.mid": "中級",
   "adminPage.hard": "難しい",
   "adminPage.expert": "上級",
   "adminPage.englishExplanationPlaceholder": "英語の解説を入力してください...",
-  "adminPage.vietnameseExplanationPlaceholder": "ベトナム語の解説を入力してください...",
+  "adminPage.vietnameseExplanationPlaceholder":
+    "ベトナム語の解説を入力してください...",
   "adminPage.subjectNameRequired": "科目名を入力してください。",
-  "adminPage.deleteSubjectConfirmation": "この科目を削除しますか？関連する問題も影響を受ける可能性があります。",
+  "adminPage.deleteSubjectConfirmation":
+    "この科目を削除しますか？関連する問題も影響を受ける可能性があります。",
   "adminPage.addSubject": "科目を追加",
   "adminPage.editSubject": "科目を編集",
   "adminPage.subjectName": "科目名",
@@ -655,7 +782,8 @@ export const ja = {
   "practiceListPage.strategy": "ストラテジ系",
   "practiceListPage.management": "マネジメント系",
   "practiceListPage.technology": "テクノロジ系",
-  "aiChat.defaultReply": "学習内容について質問できます。たとえば「基本情報の午後問題をどう勉強すればいい？」や「この問題の考え方を教えて」と聞いてください。",
+  "aiChat.defaultReply":
+    "学習内容について質問できます。たとえば「基本情報の午後問題をどう勉強すればいい？」や「この問題の考え方を教えて」と聞いてください。",
   "aiChat.noRecentQuestions": "直近の問題データはありません。",
   "aiChat.questionSummary": "問{number}: {text}",
   "aiChat.currentSubject": "現在の科目",
@@ -663,48 +791,62 @@ export const ja = {
   "aiChat.planStep1": "1. {subject}の重要用語を先に確認する",
   "aiChat.planStep2": "2. 問題演習を解いたあと、解説を1問ずつ要約する",
   "aiChat.planStep3": "3. 間違えた論点だけをAIチャットで質問し直す",
-  "aiChat.difficultyStep1": "{subject}でつまずいたときは、まず「何を問われているか」を1文で言い換えるのが有効です。",
-  "aiChat.difficultyStep2": "次に、選択肢を先に見ずに用語の意味を思い出してから答えを選ぶと、消去法より理解が進みます。",
-  "aiChat.difficultyStep3": "必要なら、問題文をそのまま送ってくれれば考え方を分解して説明します。",
-  "aiChat.afternoonStep1": "午後問題は、いきなり全文を理解しようとせず、設問と図表から先に読むのがコツです。",
-  "aiChat.afternoonStep2": "キーワードを拾って、問われている範囲を限定してから本文に戻ると読みやすくなります。",
+  "aiChat.difficultyStep1":
+    "{subject}でつまずいたときは、まず「何を問われているか」を1文で言い換えるのが有効です。",
+  "aiChat.difficultyStep2":
+    "次に、選択肢を先に見ずに用語の意味を思い出してから答えを選ぶと、消去法より理解が進みます。",
+  "aiChat.difficultyStep3":
+    "必要なら、問題文をそのまま送ってくれれば考え方を分解して説明します。",
+  "aiChat.afternoonStep1":
+    "午後問題は、いきなり全文を理解しようとせず、設問と図表から先に読むのがコツです。",
+  "aiChat.afternoonStep2":
+    "キーワードを拾って、問われている範囲を限定してから本文に戻ると読みやすくなります。",
   "aiChat.recentExamples": "直近の問題例:\n{questions}",
   "aiChat.systemRole": "あなたは学習支援のAIチューターです。",
   "aiChat.systemLanguage": "日本語で、簡潔かつ実践的に答えてください。",
   "aiChat.systemStructure": "必要なら箇条書きや手順に分けて説明してください。",
-  "aiChat.systemAudience": "高校・専門学校の学習者にもわかる表現を優先してください。",
+  "aiChat.systemAudience":
+    "高校・専門学校の学習者にもわかる表現を優先してください。",
   "aiChat.systemSubject": "対象科目: {subject}",
   "aiChat.systemLearner": "学習者: {name}",
-  "aiChat.systemRecentQuestions": "最近の問題データ:\n{questions}"
-  , "practiceListPage.examDate": "試験日"
-  , "adminPage.examDate": "試験日"
-  , "adminPage.examDateRequired": "試験日を選択してください。"
-  , "ui.examDate": "試験日"
-  , "ui.uncategorized": "未分類"
-  , "aiChat.remoteUnavailable": "現在AIサービスを利用できません。しばらくしてからもう一度お試しください。"
-  , "settingsPage.deleteAccount": "アカウントを削除"
-  , "settingsPage.deleteAccountWarningTitle": "この操作は取り消せません"
-  , "settingsPage.deleteAccountWarningBody": "プロフィール、学習履歴、解答、ポイント、メッセージ、バトルが完全に削除されます。アップロードした教材は引き続き利用できます。"
-  , "settingsPage.deleteAccountConfirmEmail": "確認のため {email} を入力してください"
-  , "settingsPage.deleteAccountEmailMismatch": "メールアドレスがアカウントと一致しません。"
-  , "settingsPage.deleteAccountFailed": "アカウントの削除に失敗しました: {error}"
-  , "settingsPage.deletingAccount": "アカウントを削除中..."
-  , "settingsPage.deleteAccountAction": "アカウントを完全に削除する"
-  ,"aiChatPage.error": "エラーが発生しました。もう一度お試しください。",
-  "practiceQuestionPage.flagQuestion": "この問題にフラグを付ける"
-  , "practiceQuestionPage.clearFlag": "もう一度押すと解除"
-  , "practiceQuestionPage.flagGreen": "緑フラグ"
-  , "practiceQuestionPage.flagOrange": "オレンジフラグ"
-  , "practiceQuestionPage.flagRed": "赤フラグ"
-  , "practiceListPage.flaggedQuestions": "フラグ付き問題"
-  , "practiceListPage.flaggedCount": "{count}問にフラグがあります"
-  , "practiceListPage.noFlaggedQuestions": "このフラグの問題はありません。"
-  , "practiceListPage.flaggedLoadFailed": "フラグ付き問題を読み込めませんでした。"
-  , "practiceQuestionPage.askAi": "AIに解説を依頼"
-  , "practiceQuestionPage.aiThinking": "AIが問題を読み取っています..."
-  , "practiceQuestionPage.aiImageFailed": "問題画像を読み取れませんでした。ページを再読み込みして、もう一度お試しください。"
-  , "practiceQuestionPage.aiExplanationFailed": "AI解説を取得できませんでした。もう一度お試しください。"
-  , "adminPage.pdfHybridImport": "図表画像を{count}件保存（{size} MB）"
-  , "adminPage.pdfKeepDiagram": "この問題画像を保存する"
-  , "adminPage.pdfKeepDiagramHelp": "図、グラフ、表、数式、または画像形式の選択肢がある場合に有効にします。テキストのみの問題ではプレビュー画像を保存しません。"
+  "aiChat.systemRecentQuestions": "最近の問題データ:\n{questions}",
+  "practiceListPage.examDate": "試験日",
+  "adminPage.examDate": "試験日",
+  "adminPage.examDateRequired": "試験日を選択してください。",
+  "ui.examDate": "試験日",
+  "ui.uncategorized": "未分類",
+  "aiChat.remoteUnavailable":
+    "現在AIサービスを利用できません。しばらくしてからもう一度お試しください。",
+  "settingsPage.deleteAccount": "アカウントを削除",
+  "settingsPage.deleteAccountWarningTitle": "この操作は取り消せません",
+  "settingsPage.deleteAccountWarningBody":
+    "プロフィール、学習履歴、解答、ポイント、メッセージ、バトルが完全に削除されます。アップロードした教材は引き続き利用できます。",
+  "settingsPage.deleteAccountConfirmEmail":
+    "確認のため {email} を入力してください",
+  "settingsPage.deleteAccountEmailMismatch":
+    "メールアドレスがアカウントと一致しません。",
+  "settingsPage.deleteAccountFailed": "アカウントの削除に失敗しました: {error}",
+  "settingsPage.deletingAccount": "アカウントを削除中...",
+  "settingsPage.deleteAccountAction": "アカウントを完全に削除する",
+  "aiChatPage.error": "エラーが発生しました。もう一度お試しください。",
+  "practiceQuestionPage.flagQuestion": "この問題にフラグを付ける",
+  "practiceQuestionPage.clearFlag": "もう一度押すと解除",
+  "practiceQuestionPage.flagGreen": "緑フラグ",
+  "practiceQuestionPage.flagOrange": "オレンジフラグ",
+  "practiceQuestionPage.flagRed": "赤フラグ",
+  "practiceListPage.flaggedQuestions": "フラグ付き問題",
+  "practiceListPage.flaggedCount": "{count}問にフラグがあります",
+  "practiceListPage.noFlaggedQuestions": "このフラグの問題はありません。",
+  "practiceListPage.flaggedLoadFailed":
+    "フラグ付き問題を読み込めませんでした。",
+  "practiceQuestionPage.askAi": "AIに解説を依頼",
+  "practiceQuestionPage.aiThinking": "AIが問題を読み取っています...",
+  "practiceQuestionPage.aiImageFailed":
+    "問題画像を読み取れませんでした。ページを再読み込みして、もう一度お試しください。",
+  "practiceQuestionPage.aiExplanationFailed":
+    "AI解説を取得できませんでした。もう一度お試しください。",
+  "adminPage.pdfHybridImport": "図表画像を{count}件保存（{size} MB）",
+  "adminPage.pdfKeepDiagram": "この問題画像を保存する",
+  "adminPage.pdfKeepDiagramHelp":
+    "図、グラフ、表、数式、または画像形式の選択肢がある場合に有効にします。テキストのみの問題ではプレビュー画像を保存しません。",
 } as const;

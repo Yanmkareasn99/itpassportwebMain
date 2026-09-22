@@ -1,11 +1,14 @@
 export const en = {
   "ui.refreshPoints": "Refresh points",
   "ui.versus": "vs",
-  "ui.settingsUnavailable": "Mock exam settings are unavailable. Ask an administrator to apply the mock exam settings migration.",
-  "ui.settingsDenied": "Settings could not be saved. Administrator access is required.",
+  "ui.settingsUnavailable":
+    "Mock exam settings are unavailable. Ask an administrator to apply the mock exam settings migration.",
+  "ui.settingsDenied":
+    "Settings could not be saved. Administrator access is required.",
   "ui.loadPoints": "Unable to load points.",
   "ui.noBattleQuestions": "This battle room has no questions.",
-  "ui.missingBattleQuestions": "Some battle questions are unavailable. Please retry.",
+  "ui.missingBattleQuestions":
+    "Some battle questions are unavailable. Please retry.",
   "ui.loadBattleQuestions": "Unable to load battle questions.",
   "ui.loadBattleAnswers": "Unable to load battle answers.",
   "ui.refreshBattle": "Unable to refresh battle room.",
@@ -25,10 +28,13 @@ export const en = {
   "ui.loadProgress": "Unable to load practice progress.",
   "ui.startReview": "Unable to start review.",
   "ui.loadAccuracy": "Unable to load practice accuracy.",
-  "ui.loadExamSettings": "Unable to load exam settings. Please try starting the exam again.",
+  "ui.loadExamSettings":
+    "Unable to load exam settings. Please try starting the exam again.",
   "ui.startExam": "Unable to start the exam. Please try again.",
-  "ui.examShortage": "This exam requires {required} questions, but only {available} are available. Please ask an administrator to add questions or reduce the exam question count.",
-  "ui.adminLoadSettings": "Unable to load mock exam settings. Check the database migration and reload this tab.",
+  "ui.examShortage":
+    "This exam requires {required} questions, but only {available} are available. Please ask an administrator to add questions or reduce the exam question count.",
+  "ui.adminLoadSettings":
+    "Unable to load mock exam settings. Check the database migration and reload this tab.",
   "ui.saveExamSettings": "Unable to save mock exam settings.",
   "ui.loadStats": "Unable to load statistics.",
   "ui.savePoints": "Unable to save point setting.",
@@ -36,11 +42,14 @@ export const en = {
   "ui.timeLimit": "Time limit",
   "ui.passingScore": "Passing score",
   "ui.battleCountInvalid": "Question count must be between 1 and 20.",
-  "ui.battleTimeInvalid": "Time per question must be between 5 and 300 seconds.",
+  "ui.battleTimeInvalid":
+    "Time per question must be between 5 and 300 seconds.",
   "ui.insufficientPoints": "Insufficient points",
   "ui.roomUnavailable": "Battle room is no longer available",
-  "ui.resumeUnavailable": "This practice session cannot be resumed. Please start a new session.",
-  "ui.removedQuestions": "Some questions in this session are no longer available. Please start a new session.",
+  "ui.resumeUnavailable":
+    "This practice session cannot be resumed. Please start a new session.",
+  "ui.removedQuestions":
+    "Some questions in this session are no longer available. Please start a new session.",
   "ui.createPractice": "Unable to create practice session.",
   "ui.loading": "Loading...",
   "ui.retry": "Retry",
@@ -54,13 +63,16 @@ export const en = {
   "ui.loadingRanking": "Loading rankings...",
   "ui.noRanking": "No ranking data is available yet.",
   "ui.loadRanking": "Unable to load battle rankings.",
-  "ui.rankingMigration": "Battle rankings are unavailable. Ask an administrator to apply the battle ranking migration.",
+  "ui.rankingMigration":
+    "Battle rankings are unavailable. Ask an administrator to apply the battle ranking migration.",
   "ui.rank": "Rank",
   "ui.player": "Player",
   "ui.wins": "Wins",
   "ui.battleCorrect": "Battle correct",
-  "ui.roomIntro": "Create or join a room, wager points, and answer the same questions against another online user.",
-  "ui.onlineRequired": "Online user-vs-user battle needs Supabase enabled because rooms, wagers, and realtime updates live in the database.",
+  "ui.roomIntro":
+    "Create or join a room, wager points, and answer the same questions against another online user.",
+  "ui.onlineRequired":
+    "Online user-vs-user battle needs Supabase enabled because rooms, wagers, and realtime updates live in the database.",
   "ui.questions": "Questions",
   "ui.perQuestion": "Per question",
   "ui.defaultWager": "Default wager",
@@ -81,7 +93,8 @@ export const en = {
   "ui.createRoom": "Create Room",
   "ui.waitingOpponent": "Waiting for Opponent",
   "ui.wagerLocked": "Wager locked: {count} pts",
-  "ui.keepOpen": "The battle starts automatically while you wait here. Your room stays open if you browse other rooms.",
+  "ui.keepOpen":
+    "The battle starts automatically while you wait here. Your room stays open if you browse other rooms.",
   "ui.checkRooms": "Check Rooms",
   "ui.cancelRefund": "Cancel and Refund",
   "ui.victory": "Victory",
@@ -95,46 +108,55 @@ export const en = {
   "ui.balance": "Balance: {count} pts",
   "ui.backLobby": "Back to Lobby",
   "ui.waitingFinish": "Waiting for opponent to finish",
-  "ui.settleHelp": "The result will settle automatically when both players answer all questions.",
+  "ui.settleHelp":
+    "The result will settle automatically when both players answer all questions.",
   "ui.questionNumber": "Question {count}",
   "ui.correct": "Correct",
   "ui.incorrect": "Incorrect. Correct answer: {answer}",
   "ui.mockSettings": "Mock exam settings",
-  "ui.mockHelp": "Changes apply to new exams for all students. Exams already in progress keep their original settings.",
+  "ui.mockHelp":
+    "Changes apply to new exams for all students. Exams already in progress keep their original settings.",
   "ui.loadingSettings": "Loading settings...",
   "ui.settingsSaved": "Mock exam settings saved.",
   "ui.questionCount": "Question count",
   "ui.timeMinutes": "Time limit (minutes)",
   "ui.passingPercent": "Passing score (%)",
-  "ui.questionBankHelp": "The question bank must contain at least the configured number of questions.",
+  "ui.questionBankHelp":
+    "The question bank must contain at least the configured number of questions.",
   "ui.saving": "Saving...",
   "ui.saveSettings": "Save settings",
   "ui.pointRewards": "Point Rewards",
-  "ui.pointHelp": "Control how many points users earn from login, practice, and mock exams.",
+  "ui.pointHelp":
+    "Control how many points users earn from login, practice, and mock exams.",
   "ui.dailyLogin": "Daily login",
   "ui.practiceCorrect": "Practice correct",
   "ui.practiceWrong": "Practice wrong",
   "ui.mockCorrect": "Mock correct",
   "ui.mockWrong": "Mock wrong",
-  "ui.progressWarning": "Practice questions are available, but progress history could not be loaded: {error}",
-  "ui.noMatches": "No questions match these filters. Try another exam date or learning mode.",
+  "ui.progressWarning":
+    "Practice questions are available, but progress history could not be loaded: {error}",
+  "ui.noMatches":
+    "No questions match these filters. Try another exam date or learning mode.",
   "ui.noMistakes": "No mistakes are waiting for review.",
   "ui.dismiss": "Dismiss",
   "ui.noData": "No data available",
   "ui.errorCode": "Code: {code}",
-  'loginPage.signUpWithGoogle': 'Sign up with Google',
-  'loginPage.chooseAnotherGoogleAccount': 'Choose another Google account, or add one. Existing accounts will sign in.',
-  'practiceListPage.countingMatches': 'Counting matching questions...',
-  'practiceListPage.matchingQuestions': '{count} matching questions',
-  'practiceListPage.practiceFiltered': 'Practice filtered questions',
+  "loginPage.signUpWithGoogle": "Sign up with Google",
+  "loginPage.chooseAnotherGoogleAccount":
+    "Choose another Google account, or add one. Existing accounts will sign in.",
+  "practiceListPage.countingMatches": "Counting matching questions...",
+  "practiceListPage.matchingQuestions": "{count} matching questions",
+  "practiceListPage.practiceFiltered": "Practice filtered questions",
 
   "adminPage.add": "Add",
-  "adminPage.adminAccessRequired": "Administrator access is required to view this page.",
+  "adminPage.adminAccessRequired":
+    "Administrator access is required to view this page.",
   "adminPage.announcements": "Announcements",
   "adminPage.newAnnouncement": "New announcement",
   "adminPage.editAnnouncement": "Edit announcement",
   "adminPage.deleteAnnouncement": "Delete announcement",
-  "adminPage.announcementHelp": "Publish a scheduled message on every user's Home page. Empty translations fall back to another language.",
+  "adminPage.announcementHelp":
+    "Publish a scheduled message on every user's Home page. Empty translations fall back to another language.",
   "adminPage.announcementTitle": "Title (optional)",
   "adminPage.announcementMessage": "Message",
   "adminPage.japanese": "Japanese",
@@ -150,9 +172,12 @@ export const en = {
   "adminPage.announcementActive": "Active",
   "adminPage.announcementInactive": "Inactive",
   "adminPage.announcementSaved": "Announcement saved.",
-  "adminPage.announcementMessageRequired": "Enter a message in at least one language.",
-  "adminPage.announcementDateInvalid": "The end date must be later than the start date.",
-  "adminPage.announcementLoadFailed": "Unable to load announcements. Apply the announcements migration and try again.",
+  "adminPage.announcementMessageRequired":
+    "Enter a message in at least one language.",
+  "adminPage.announcementDateInvalid":
+    "The end date must be later than the start date.",
+  "adminPage.announcementLoadFailed":
+    "Unable to load announcements. Apply the announcements migration and try again.",
   "adminPage.announcementSaveFailed": "Unable to save the announcement.",
   "adminPage.announcementDeleteFailed": "Unable to delete the announcement.",
   "adminPage.announcementDeleteConfirm": "Delete this announcement?",
@@ -164,39 +189,54 @@ export const en = {
   "adminPage.answersCsv": "Answer CSV",
   "adminPage.pdfImport": "Import PDFs",
   "adminPage.pdfImportTitle": "Import questions from PDFs",
-  "adminPage.pdfImportDescription": "Choose a question PDF and its answer key. Review the detected questions and answers, then import them directly.",
+  "adminPage.pdfImportDescription":
+    "Choose a question PDF and its answer key. Review the detected questions and answers, then import them directly.",
   "adminPage.pdfSubjectFallback": "Fallback subject",
-  "adminPage.pdfSubjectDetectionHelp": "Set the subject ranges for this exam before reading the PDFs.",
+  "adminPage.pdfSubjectDetectionHelp":
+    "Set the subject ranges for this exam before reading the PDFs.",
   "adminPage.pdfSubjectRanges": "Question subject ranges",
-  "adminPage.pdfSubjectRangesHelp": "Questions outside these ranges go to Unassigned. Gaps are allowed, but ranges cannot overlap.",
+  "adminPage.pdfSubjectRangesHelp":
+    "Questions outside these ranges go to Unassigned. Gaps are allowed, but ranges cannot overlap.",
   "adminPage.pdfRangeFrom": "From",
   "adminPage.pdfRangeTo": "To",
-  "adminPage.pdfInvalidSubjectRanges": "Subject ranges must stay within Questions 1–100, start before they end, and not overlap.",
+  "adminPage.pdfInvalidSubjectRanges":
+    "Subject ranges must stay within Questions 1–100, start before they end, and not overlap.",
   "adminPage.pdfExamType": "Exam to import",
   "adminPage.pdfExamItPassport": "IT Passport",
-  "adminPage.pdfExamFundamentalA": "Fundamental Information Technology Engineer — Subject A",
-  "adminPage.pdfExamFundamentalB": "Fundamental Information Technology Engineer — Subject B",
-  "adminPage.pdfExamApplied": "Applied Information Technology Engineer — Morning",
-  "adminPage.pdfSubjectDetectionFundamentalA": "Every imported question will be assigned to Fundamental Information Technology Engineer Subject A.",
-  "adminPage.pdfSubjectDetectionFundamentalB": "Every imported question will be assigned to Fundamental Information Technology Engineer Subject B.",
-  "adminPage.pdfSubjectDetectionApplied": "Every imported question will be assigned to the AP morning-exam subject.",
+  "adminPage.pdfExamFundamentalA":
+    "Fundamental Information Technology Engineer — Subject A",
+  "adminPage.pdfExamFundamentalB":
+    "Fundamental Information Technology Engineer — Subject B",
+  "adminPage.pdfExamApplied":
+    "Applied Information Technology Engineer — Morning",
+  "adminPage.pdfSubjectDetectionFundamentalA":
+    "Every imported question will be assigned to Fundamental Information Technology Engineer Subject A.",
+  "adminPage.pdfSubjectDetectionFundamentalB":
+    "Every imported question will be assigned to Fundamental Information Technology Engineer Subject B.",
+  "adminPage.pdfSubjectDetectionApplied":
+    "Every imported question will be assigned to the AP morning-exam subject.",
   "adminPage.pdfExamKey": "Exam key (unique)",
   "adminPage.pdfQuestionFile": "Question PDF",
   "adminPage.pdfJsonFile": "Saved question JSON",
-  "adminPage.pdfJsonFileHelp": "Reload a previously reviewed PDF conversion and continue editing or importing it.",
+  "adminPage.pdfJsonFileHelp":
+    "Reload a previously reviewed PDF conversion and continue editing or importing it.",
   "adminPage.pdfJsonDownload": "Download JSON",
   "adminPage.pdfJsonLoaded": "Loaded {count} questions from JSON.",
   "adminPage.pdfJsonSaved": "Saved {count} questions as JSON.",
-  "adminPage.pdfJsonLoadFailed": "The question JSON could not be loaded: {reason}",
-  "adminPage.pdfJsonSaveFailed": "The question JSON could not be saved: {reason}",
+  "adminPage.pdfJsonLoadFailed":
+    "The question JSON could not be loaded: {reason}",
+  "adminPage.pdfJsonSaveFailed":
+    "The question JSON could not be saved: {reason}",
   "adminPage.pdfAnswerFile": "Answer PDF (optional)",
   "adminPage.pdfChooseQuestion": "Choose a question PDF first.",
   "adminPage.pdfEnterExamKey": "Enter a unique exam key, for example 2026B.",
   "adminPage.pdfProcess": "Read PDFs",
   "adminPage.pdfProcessing": "Reading PDFs…",
   "adminPage.pdfProcessingFailed": "The PDFs could not be processed.",
-  "adminPage.pdfLocalProcessing": "You can navigate elsewhere while OCR runs. Keep this browser tab open and do not refresh it.",
-  "adminPage.pdfAnswersNotDetected": "The questions were detected, but the answer key was not. Select each correct answer during review.",
+  "adminPage.pdfLocalProcessing":
+    "You can navigate elsewhere while OCR runs. Keep this browser tab open and do not refresh it.",
+  "adminPage.pdfAnswersNotDetected":
+    "The questions were detected, but the answer key was not. Select each correct answer during review.",
   "adminPage.pdfReviewCount": "Review {count} detected questions",
   "adminPage.pdfReviewProblems": "{count} questions still need attention",
   "adminPage.pdfReadyToImport": "All questions are ready to import",
@@ -206,23 +246,67 @@ export const en = {
   "adminPage.pdfImportComplete": "Successfully imported {count} questions.",
   "adminPage.pdfImportFailed": "PDF question import failed.",
   "adminPage.pdfImportFailedWithReason": "PDF question import failed: {reason}",
-  "adminPage.pdfFixReviewErrors": "Fix the highlighted review items before importing.",
-  "adminPage.pdfRequiresSupabase": "PDF import requires Supabase to be enabled.",
-  "adminPage.pdfMigrationRequired": "The PDF import table is missing or unavailable. Run migration 20260903010000_add_single_csv_question_import.sql in Supabase first.",
+  "adminPage.pdfFixReviewErrors":
+    "Fix the highlighted review items before importing.",
+  "adminPage.pdfRequiresSupabase":
+    "PDF import requires Supabase to be enabled.",
+  "adminPage.pdfMigrationRequired":
+    "The PDF import table is missing or unavailable. Run migration 20260903010000_add_single_csv_question_import.sql in Supabase first.",
   "adminPage.admin": "Admin",
   "adminPage.allSubjects": "All subjects",
   "adminPage.cancel": "Cancel",
   "adminPage.csvImportFailed": "CSV import failed.",
-  "adminPage.duplicateQuestionsFound": "Import stopped because these questions already exist or are repeated in the import: {questions}",
-  "adminPage.duplicateQuestionExists": "Import stopped because this question already exists.",
+  "adminPage.duplicateQuestionsFound":
+    "Import stopped because these questions already exist or are repeated in the import: {questions}",
+  "adminPage.duplicateQuestionExists":
+    "Import stopped because this question already exists.",
   "adminPage.pageOf": "Page {current} of {total}",
   "adminPage.previousPage": "Previous",
   "adminPage.nextPage": "Next",
-  "adminPage.csvImportFormat": "Select both CSV files. Use the exported questions.csv and answer_choices.csv column format.",
+  "adminPage.csvImportFormat":
+    "Select both CSV files. Use the exported questions.csv and answer_choices.csv column format.",
   "adminPage.csvReadFailed": "Could not read the CSV file.",
   "adminPage.csvReadyToImport": "CSV files ready to import",
+  "adminPage.csvModalTitle": "Import questions with CSV",
+  "adminPage.csvModalDescription": "Import the question file and answer file.",
+  "adminPage.csvChooseSubject": "Choose a subject",
+  "adminPage.csvAutoDetectSubject": "Detect from CSV automatically",
+  "adminPage.csvSubjectHelp":
+    "If the CSV includes subject_id, it takes priority.",
+  "adminPage.csvDataFiles": "Choose data files",
+  "adminPage.csvDataFilesHelp":
+    "Select both the question file and answer file.",
+  "adminPage.csvQuestionFile": "Question file",
+  "adminPage.csvAnswerFile": "Answer file",
+  "adminPage.csvDropFile": "Drag and drop a CSV file here",
+  "adminPage.csvChooseFile": "Choose CSV file",
+  "adminPage.csvFileLimit": "CSV · maximum 10MB",
+  "adminPage.csvImportErrorTitle": "CSV import could not continue",
+  "adminPage.csvStatus": "Data status",
+  "adminPage.csvStatusHelp": "Check the data counts before importing.",
+  "adminPage.csvQuestionCount": "{count} questions",
+  "adminPage.csvAnswerCount": "{count} answers",
+  "adminPage.csvNoQuestions": "No questions",
+  "adminPage.csvNoAnswers": "No answers",
+  "adminPage.csvNotes": "Notes",
+  "adminPage.csvQuestionColumns":
+    "The question file needs id, question_number, and question_text columns.",
+  "adminPage.csvAnswerColumn":
+    "The answer file needs question_id to link answers to questions.",
+  "adminPage.csvAnyCount":
+    "Any number of questions can be imported; 100 is not required.",
+  "adminPage.csvReady": "Ready to import",
+  "adminPage.csvSelectBoth": "Select both files to continue",
+  "adminPage.csvImporting": "Importing...",
+  "adminPage.csvInvalidExtension": "Only CSV files can be uploaded.",
+  "adminPage.csvFileTooLarge": "CSV files must not exceed 10MB.",
+  "adminPage.csvManualDescription": "Create a question manually",
+  "adminPage.csvImportDescription": "Import questions and answers",
+  "adminPage.csvRemoveQuestionFile": "Remove question file",
+  "adminPage.csvRemoveAnswerFile": "Remove answer file",
   "adminPage.choices": "Choices",
-  "adminPage.clickTheRoundButtonToSelectTheCorrect": "Click the round button to select the correct answer.",
+  "adminPage.clickTheRoundButtonToSelectTheCorrect":
+    "Click the round button to select the correct answer.",
   "adminPage.deleteThisQuestion": "Delete this question?",
   "adminPage.deleteQuestion": "Delete question",
   "adminPage.difficulty": "Difficulty",
@@ -238,23 +322,35 @@ export const en = {
   "adminPage.explanationVietnamese": "Explanation (Vietnamese)",
   "adminPage.failedToSave": "Failed to save.",
   "adminPage.imageUrlOptional": "Image URL (optional)",
+  "adminPage.questionImageOptional": "Question image (optional)",
+  "adminPage.uploadQuestionImage": "Upload image",
+  "adminPage.imageUploading": "Uploading...",
+  "adminPage.imageUploadHelp": "PNG, JPG, WEBP or GIF · maximum 10MB",
+  "adminPage.questionImagePreview": "Question image preview",
+  "adminPage.removeQuestionImage": "Remove image",
+  "adminPage.imageUploadInvalid": "Please choose an image file.",
+  "adminPage.imageUploadTooLarge": "The image must not exceed 10MB.",
+  "adminPage.imageUploadFailed": "The image could not be uploaded.",
   "adminPage.importCsv": "Import CSV",
   "adminPage.items": " items",
   "adminPage.loading": "Loading...",
   "adminPage.multipleChoice": "Multiple choice",
-  "adminPage.noQuestionsYetStartByAddingOne": "No questions yet. Start by adding one.",
+  "adminPage.noQuestionsYetStartByAddingOne":
+    "No questions yet. Start by adding one.",
   "adminPage.pleaseEnterTheQuestionText": "Please enter the question text.",
   "adminPage.pleaseSelectASubject": "Please select a subject.",
   "adminPage.points": "Points",
   "adminPage.questionNumber": "Question number",
   "adminPage.questionsCsv": "Questions CSV",
   "adminPage.questions": "Questions",
-  "adminPage.questionsAndChoicesStayInJapaneseOnlyExplanations": "Questions and choices stay in Japanese; only explanations switch by display language.",
+  "adminPage.questionsAndChoicesStayInJapaneseOnlyExplanations":
+    "Questions and choices stay in Japanese; only explanations switch by display language.",
   "adminPage.questionText": "Question text",
   "adminPage.questionType": "Question type",
   "adminPage.save": "Save",
   "adminPage.searchQuestions": "Search questions...",
-  "adminPage.selectAtLeastOneCorrectChoice": "Select at least one correct choice.",
+  "adminPage.selectAtLeastOneCorrectChoice":
+    "Select at least one correct choice.",
   "adminPage.stats": "Stats",
   "adminPage.subject": "Subject",
   "adminPage.subjects": "Subjects",
@@ -262,7 +358,8 @@ export const en = {
   "adminPage.trueFalse": "True/false",
   "adminPage.users": "Users",
   "aiChatPage.aiChat": "AI Chat",
-  "aiChatPage.exampleExplainThisQuestionCreateAStudyPlan": "Example: Explain this question / Create a study plan",
+  "aiChatPage.exampleExplainThisQuestionCreateAStudyPlan":
+    "Example: Explain this question / Create a study plan",
   "aiChatPage.reset": "Reset",
   "aiChatPage.send": "Send",
   "aiChatPage.studyAssistant": "Study Assistant",
@@ -289,7 +386,8 @@ export const en = {
   "battlePage.roomsWaitingForMatch": "Rooms waiting for match",
   "battlePage.startBattle": "Start battle",
   "battlePage.studyMenu": "Study menu",
-  "battlePage.testYourselfBySolvingQuestionsAgainstAnAi": "Test yourself by solving questions against an AI rival!",
+  "battlePage.testYourselfBySolvingQuestionsAgainstAnAi":
+    "Test yourself by solving questions against an AI rival!",
   "battlePage.tryAgain": "Try again!",
   "battlePage.victory": "Victory!",
   "battlePage.you": "You",
@@ -303,20 +401,26 @@ export const en = {
   "header.openNotifications": "Open notifications",
   "header.read": "Read",
   "header.reviewRecommended": "Review recommended",
-  "header.reviewTheQuestionsYouMissedLastTime": "Review the questions you missed last time.",
+  "header.reviewTheQuestionsYouMissedLastTime":
+    "Review the questions you missed last time.",
   "header.search": "Search...",
-  "header.studentsCanCheckMaterialsAnytimeMakingInformationSharing": "Students can check materials anytime, making information sharing smoother.",
-  "header.takeOneMockExamAndReviewWeakAreas": "Take one mock exam and review weak areas.",
+  "header.studentsCanCheckMaterialsAnytimeMakingInformationSharing":
+    "Students can check materials anytime, making information sharing smoother.",
+  "header.takeOneMockExamAndReviewWeakAreas":
+    "Take one mock exam and review weak areas.",
   "header.todayStudyReminder": "Today study reminder",
   "header.unread": "Unread",
   "header.yesterday": "Yesterday",
   "homePage.accuracy": "Accuracy",
   "homePage.aiChat": "AI chat",
   "homePage.askAi": "Ask AI",
-  "homePage.askAiAboutUnclearProblemsOrStudyPlans": "Ask AI about unclear problems or study plans.",
+  "homePage.askAiAboutUnclearProblemsOrStudyPlans":
+    "Ask AI about unclear problems or study plans.",
   "homePage.battle": "Battle",
-  "homePage.challengeOthersAndSharpenYourSkills": "Challenge others and sharpen your skills.",
-  "homePage.checkYourLevelWithATimedExamFormat": "Check your level with a timed exam format.",
+  "homePage.challengeOthersAndSharpenYourSkills":
+    "Challenge others and sharpen your skills.",
+  "homePage.checkYourLevelWithATimedExamFormat":
+    "Check your level with a timed exam format.",
   "homePage.days": " days",
   "homePage.examAvg": "Exam avg",
   "homePage.goodMorning": ", good morning!",
@@ -327,12 +431,14 @@ export const en = {
   "homePage.noStudyHistoryYet": "No study history yet",
   "homePage.practice": "Practice",
   "homePage.practice2": "Practice",
-  "homePage.practiceBySubjectAndSteadilyImproveYourSkills": "Practice by subject and steadily improve your skills.",
+  "homePage.practiceBySubjectAndSteadilyImproveYourSkills":
+    "Practice by subject and steadily improve your skills.",
   "homePage.recentActivity": "Recent activity",
   "homePage.startBattle": "Start battle",
   "homePage.startPractice": "Start practice",
   "homePage.startPractice2": "Start practice",
-  "homePage.studentsCanCheckMaterialsAnytimeMakingInformationSharing": "Students can check materials anytime, making information sharing smoother.",
+  "homePage.studentsCanCheckMaterialsAnytimeMakingInformationSharing":
+    "Students can check materials anytime, making information sharing smoother.",
   "homePage.takeExam": "Take exam",
   "homePage.today": "Today",
   "homePage.untilExam": "Until exam",
@@ -341,7 +447,8 @@ export const en = {
   "loginPage.backToSignIn": "Back to sign in",
   "loginPage.brand": "Manabi",
   "loginPage.confirmNewPassword": "Confirm new password",
-  "loginPage.confirmationEmailSentConfirmYourEmailThenSign": "Confirmation email sent. Confirm your email, then sign in.",
+  "loginPage.confirmationEmailSentConfirmYourEmailThenSign":
+    "Confirmation email sent. Confirm your email, then sign in.",
   "loginPage.createAccount": "Create account",
   "loginPage.createANewAccount": "Create a new account.",
   "loginPage.email": "Email",
@@ -353,21 +460,25 @@ export const en = {
   "loginPage.featureDailyPreparation": "Manage your daily exam preparation",
   "loginPage.featureFocusedStudy": "Build skills steadily by subject",
   "loginPage.forgotPassword": "Forgot password?",
-  "loginPage.forgotPasswordHelp": "Enter your email and we’ll send you a password reset link.",
+  "loginPage.forgotPasswordHelp":
+    "Enter your email and we’ll send you a password reset link.",
   "loginPage.forgotPasswordTitle": "Forgot your password?",
   "loginPage.headline": "Learn with clarity and grow your confidence",
   "loginPage.hidePassword": "Hide password",
   "loginPage.name": "Name",
   "loginPage.newPassword": "New password",
   "loginPage.noAccountCreateOne": "No account? Create one",
-  "loginPage.osakaDenshiLearningSupportSystem": "IT Passport Exam Learning Support System",
+  "loginPage.osakaDenshiLearningSupportSystem":
+    "IT Passport Exam Learning Support System",
   "loginPage.password": "Password",
   "loginPage.passwordMinimum": "Password must be at least 6 characters.",
   "loginPage.passwordsDoNotMatch": "The passwords do not match.",
   "loginPage.pleaseEnterYourName": "Please enter your name.",
   "loginPage.processing": "Processing...",
-  "loginPage.resetEmailFailed": "Unable to send the reset email. Please try again.",
-  "loginPage.resetEmailSent": "If an account exists for this email, a password reset link has been sent.",
+  "loginPage.resetEmailFailed":
+    "Unable to send the reset email. Please try again.",
+  "loginPage.resetEmailSent":
+    "If an account exists for this email, a password reset link has been sent.",
   "loginPage.resetPasswordHelp": "Choose a new password for your account.",
   "loginPage.resetPasswordTitle": "Reset your password",
   "loginPage.sendResetLink": "Send reset link",
@@ -376,14 +487,17 @@ export const en = {
   "loginPage.showPassword": "Show password",
   "loginPage.studentIdOptional": "Student ID (optional)",
   "loginPage.updatePassword": "Update password",
-  "loginPage.updatePasswordFailed": "Unable to update your password. The reset link may have expired.",
-  "loginPage.invalidRecoveryLink": "This password reset link is invalid, expired, or has already been used. Please request a new link.",
+  "loginPage.updatePasswordFailed":
+    "Unable to update your password. The reset link may have expired.",
+  "loginPage.invalidRecoveryLink":
+    "This password reset link is invalid, expired, or has already been used. Please request a new link.",
   "materialsPage.download": "Download",
   "materialsPage.delete": "Delete",
   "materialsPage.cancel": "Cancel",
   "materialsPage.deleting": "Deleting…",
   "materialsPage.deleteDialogTitle": "Delete material?",
-  "materialsPage.deleteConfirm": "This permanently removes the material for everyone.",
+  "materialsPage.deleteConfirm":
+    "This permanently removes the material for everyone.",
   "materialsPage.deleted": "Material deleted.",
   "materialsPage.deleteFailed": "Unable to delete material.",
   "materialsPage.upload": "Upload material",
@@ -392,25 +506,30 @@ export const en = {
   "materialsPage.title": "Title",
   "materialsPage.file": "File",
   "materialsPage.description": "Description (optional)",
-  "materialsPage.fileHelp": "PDF, PNG, JPEG, DOCX, PPTX, or XLSX · maximum 20 MB",
+  "materialsPage.fileHelp":
+    "PDF, PNG, JPEG, DOCX, PPTX, or XLSX · maximum 20 MB",
   "materialsPage.sharedFiles": "Shared materials",
   "materialsPage.refresh": "Refresh",
   "materialsPage.empty": "No materials have been uploaded yet.",
-  "materialsPage.requiresSupabase": "Shared materials need a connected Supabase project. Enable Supabase to upload and view files across accounts.",
+  "materialsPage.requiresSupabase":
+    "Shared materials need a connected Supabase project. Enable Supabase to upload and view files across accounts.",
   "materialsPage.loadFailed": "Unable to load materials.",
   "materialsPage.uploadFailed": "Unable to upload material.",
   "materialsPage.openFailed": "Unable to open material.",
-  "materialsPage.invalidType": "Choose a PDF, PNG, JPEG, DOCX, PPTX, or XLSX file.",
+  "materialsPage.invalidType":
+    "Choose a PDF, PNG, JPEG, DOCX, PPTX, or XLSX file.",
   "materialsPage.emptyFile": "Choose a file that is not empty.",
   "materialsPage.fileTooLarge": "Files must be 20 MB or smaller.",
   "materialsPage.titleRequired": "Enter a title.",
   "materialsPage.goToPractice": "Go to practice",
   "materialsPage.materials": "Materials",
   "materialsPage.open": "Open",
-  "materialsPage.studentsCanCheckMaterialsAnytimeMakingInformationSharing": "Students can check materials anytime, making information sharing smoother.",
+  "materialsPage.studentsCanCheckMaterialsAnytimeMakingInformationSharing":
+    "Students can check materials anytime, making information sharing smoother.",
   "materialsPage.studyMenu": "Study menu",
   "materialsPage.updated": "Updated",
-  "mockExamPage.checkYourAbilityInTheSameFormatAs": "Check your ability in the same format as the real exam",
+  "mockExamPage.checkYourAbilityInTheSameFormatAs":
+    "Check your ability in the same format as the real exam",
   "mockExamPage.correct": "Correct",
   "mockExamPage.examResults": "Exam results",
   "mockExamPage.finishExam": "Finish exam",
@@ -431,12 +550,15 @@ export const en = {
   "mockExamPage.studyMenu": "Study menu",
   "mockExamPage.submit": "Submit",
   "mockExamPage.timeLimitMin": "Time limit (min)",
-  "mockExamPage.youCannotPauseTheExamOnceItStarts": "You cannot pause the exam once it starts. Press start when ready.",
+  "mockExamPage.youCannotPauseTheExamOnceItStarts":
+    "You cannot pause the exam once it starts. Press start when ready.",
   "practiceListPage.accuracy": "Accuracy",
   "practiceListPage.action": "Action",
   "practiceListPage.all": "All",
-  "practiceListPage.checkYourLevelWithAMockExam": "Check your level with a mock exam",
-  "practiceListPage.chooseASubjectAndFiltersToBeginPractice": "Choose a subject and filters to begin practice.",
+  "practiceListPage.checkYourLevelWithAMockExam":
+    "Check your level with a mock exam",
+  "practiceListPage.chooseASubjectAndFiltersToBeginPractice":
+    "Choose a subject and filters to begin practice.",
   "practiceListPage.difficulty": "Difficulty",
   "practiceListPage.easy": "Easy",
   "practiceListPage.filterBy": "Filter by",
@@ -466,7 +588,8 @@ export const en = {
   "practiceListPage.solve": "Solve",
   "practiceListPage.studyMenu": "Study menu",
   "practiceListPage.subject": "Subject",
-  "practiceListPage.takeItUnderRealExamTiming": "Take it under real exam timing",
+  "practiceListPage.takeItUnderRealExamTiming":
+    "Take it under real exam timing",
   "practiceListPage.treeQuestion": "Tree question",
   "practiceQuestionPage.accuracy": "Accuracy",
   "practiceQuestionPage.answer": "Answer",
@@ -503,15 +626,20 @@ export const en = {
   "settingsPage.help": "Help",
   "settingsPage.helpIntro": "A quick guide to the main features of the app.",
   "settingsPage.helpPracticeTitle": "Practice",
-  "settingsPage.helpPracticeBody": "Pick a topic in Practice, then filter by exam date or learning mode. Each practice session is saved so you can track your progress.",
+  "settingsPage.helpPracticeBody":
+    "Pick a topic in Practice, then filter by exam date or learning mode. Each practice session is saved so you can track your progress.",
   "settingsPage.helpMockExamTitle": "Mock exam",
-  "settingsPage.helpMockExamBody": "The mock exam has a time limit and a fixed number of questions. You need to reach a minimum correct-answer rate (set by your teacher or admin) to pass.",
+  "settingsPage.helpMockExamBody":
+    "The mock exam has a time limit and a fixed number of questions. You need to reach a minimum correct-answer rate (set by your teacher or admin) to pass.",
   "settingsPage.helpBattleTitle": "Battle",
-  "settingsPage.helpBattleBody": "Challenge another player in real time. Each match has a set number of questions with a time limit per question; the winner earns bonus points.",
+  "settingsPage.helpBattleBody":
+    "Challenge another player in real time. Each match has a set number of questions with a time limit per question; the winner earns bonus points.",
   "settingsPage.helpPointsTitle": "Points",
-  "settingsPage.helpPointsBody": "You earn points for logging in each day and for answering questions in Practice and Mock exam (correct answers earn more than wrong ones). Points can be used to join Battle.",
+  "settingsPage.helpPointsBody":
+    "You earn points for logging in each day and for answering questions in Practice and Mock exam (correct answers earn more than wrong ones). Points can be used to join Battle.",
   "settingsPage.helpAccountTitle": "Account & Settings",
-  "settingsPage.helpAccountBody": "In Account, you can update your name, student ID, and class, choose an avatar, change the display language, set a target exam date, and change your password.",
+  "settingsPage.helpAccountBody":
+    "In Account, you can update your name, student ID, and class, choose an avatar, change the display language, set a target exam date, and change your password.",
   "settingsPage.avatar": "Avatar",
   "settingsPage.avatarHint": "This image will appear on your profile.",
   "settingsPage.avatarNone": "No avatar",
@@ -553,7 +681,8 @@ export const en = {
   "mobileTabBar.signOut": "Sign out",
   "mobileTabBar.more": "More",
   "mobileTabBar.admin": "Admin",
-  "aiChatPage.welcome": "Ask me about solving questions, study plans, or organizing key terms.",
+  "aiChatPage.welcome":
+    "Ask me about solving questions, study plans, or organizing key terms.",
   "aiChatPage.starterPlan": "Create a study plan for today",
   "aiChatPage.starterAfternoon": "How should I study the afternoon exam?",
   "aiChatPage.starterThinking": "Explain how to approach this question",
@@ -566,7 +695,8 @@ export const en = {
   "battlePage.questionNumber": "Question {number}",
   "homePage.daysRemaining": "{count} days",
   "homePage.practiceQuestionCount": "Practice — {count}",
-  "mockExamPage.resultSummary": "{correct} correct out of {total} / Time: {time}",
+  "mockExamPage.resultSummary":
+    "{correct} correct out of {total} / Time: {time}",
   "mockExamPage.questionNumber": "Question {number}",
   "mockExamPage.questionProgress": "Question {current} / {total}",
   "mockExamPage.answeredProgress": "Answered: {answered} / {total}",
@@ -610,24 +740,30 @@ export const en = {
   "loginPage.signInWithGoogle": "Sign in with Google",
   "loginPage.copyright": "© 2026 Manabi",
   "aiChatPage.heroTitle": "Ask anything you do not understand",
-  "aiChatPage.heroDescription": "Get conversational help with study plans, terminology, and problem-solving.",
+  "aiChatPage.heroDescription":
+    "Get conversational help with study plans, terminology, and problem-solving.",
   "aiChatPage.thinking": "AI is thinking...",
   "aiChatPage.quickQuestions": "Quick questions",
   "materialsPage.termsTitle": "IT Passport key terms",
-  "materialsPage.termsDescription": "Review essential strategy, management, and technology terminology.",
+  "materialsPage.termsDescription":
+    "Review essential strategy, management, and technology terminology.",
   "materialsPage.pastQuestionsTitle": "Past-question solving guide",
-  "materialsPage.pastQuestionsDescription": "Learn how to read choices and manage your time in a short video.",
+  "materialsPage.pastQuestionsDescription":
+    "Learn how to read choices and manage your time in a short video.",
   "materialsPage.slidesTitle": "Class slides",
-  "materialsPage.slidesDescription": "Review class slides and supplementary materials at any time.",
+  "materialsPage.slidesDescription":
+    "Review class slides and supplementary materials at any time.",
   "adminPage.easy": "Easy",
   "adminPage.starter": "Starter",
   "adminPage.mid": "Intermediate",
   "adminPage.hard": "Hard",
   "adminPage.expert": "Expert",
   "adminPage.englishExplanationPlaceholder": "Enter the English explanation...",
-  "adminPage.vietnameseExplanationPlaceholder": "Enter the Vietnamese explanation...",
+  "adminPage.vietnameseExplanationPlaceholder":
+    "Enter the Vietnamese explanation...",
   "adminPage.subjectNameRequired": "Enter a subject name.",
-  "adminPage.deleteSubjectConfirmation": "Delete this subject? Related questions may also be affected.",
+  "adminPage.deleteSubjectConfirmation":
+    "Delete this subject? Related questions may also be affected.",
   "adminPage.addSubject": "Add subject",
   "adminPage.editSubject": "Edit subject",
   "adminPage.subjectName": "Subject name",
@@ -656,56 +792,71 @@ export const en = {
   "practiceListPage.strategy": "Strategy",
   "practiceListPage.management": "Management",
   "practiceListPage.technology": "Technology",
-  "aiChat.defaultReply": "Ask me about your studies—for example, how to prepare for afternoon exam questions or how to approach a difficult problem.",
+  "aiChat.defaultReply":
+    "Ask me about your studies—for example, how to prepare for afternoon exam questions or how to approach a difficult problem.",
   "aiChat.noRecentQuestions": "There is no recent question data.",
   "aiChat.questionSummary": "Q{number}: {text}",
   "aiChat.currentSubject": "the current subject",
   "aiChat.planIntro": "Here is a study plan for {name}.",
   "aiChat.planStep1": "1. Review the key terms for {subject}",
   "aiChat.planStep2": "2. After practicing, summarize each explanation",
-  "aiChat.planStep3": "3. Ask the AI chat again about only the topics you missed",
-  "aiChat.difficultyStep1": "When you get stuck in {subject}, first restate what the question is asking in one sentence.",
-  "aiChat.difficultyStep2": "Next, recall the meaning of the terms before looking at the choices; this builds understanding better than relying only on elimination.",
-  "aiChat.difficultyStep3": "If needed, send the full question and I will break down the reasoning.",
-  "aiChat.afternoonStep1": "For afternoon questions, read the prompt and diagrams first instead of trying to understand the entire passage immediately.",
-  "aiChat.afternoonStep2": "Identify the keywords, narrow the scope of the question, and then return to the passage.",
+  "aiChat.planStep3":
+    "3. Ask the AI chat again about only the topics you missed",
+  "aiChat.difficultyStep1":
+    "When you get stuck in {subject}, first restate what the question is asking in one sentence.",
+  "aiChat.difficultyStep2":
+    "Next, recall the meaning of the terms before looking at the choices; this builds understanding better than relying only on elimination.",
+  "aiChat.difficultyStep3":
+    "If needed, send the full question and I will break down the reasoning.",
+  "aiChat.afternoonStep1":
+    "For afternoon questions, read the prompt and diagrams first instead of trying to understand the entire passage immediately.",
+  "aiChat.afternoonStep2":
+    "Identify the keywords, narrow the scope of the question, and then return to the passage.",
   "aiChat.recentExamples": "Recent question examples:\n{questions}",
   "aiChat.systemRole": "You are an AI tutor who supports learning.",
   "aiChat.systemLanguage": "Answer concisely and practically in English.",
   "aiChat.systemStructure": "Use bullet points or numbered steps when helpful.",
-  "aiChat.systemAudience": "Prefer language that high-school and vocational-school students can understand.",
+  "aiChat.systemAudience":
+    "Prefer language that high-school and vocational-school students can understand.",
   "aiChat.systemSubject": "Subject: {subject}",
   "aiChat.systemLearner": "Learner: {name}",
-  "aiChat.systemRecentQuestions": "Recent question data:\n{questions}"
-  , "practiceListPage.examDate": "Exam date"
-  , "adminPage.examDate": "Exam date"
-  , "adminPage.examDateRequired": "Please select the exam date."
-  , "ui.examDate": "Exam date"
-  , "ui.uncategorized": "Uncategorized"
-  , "aiChat.remoteUnavailable": "The AI service is unavailable right now. Please try again shortly."
-  , "settingsPage.deleteAccount": "Delete account"
-  , "settingsPage.deleteAccountWarningTitle": "This action is permanent"
-  , "settingsPage.deleteAccountWarningBody": "Your profile, study history, answers, points, messages, and battles will be permanently deleted. Your uploaded materials will remain available. This cannot be undone."
-  , "settingsPage.deleteAccountConfirmEmail": "Enter {email} to confirm"
-  , "settingsPage.deleteAccountEmailMismatch": "The email address does not match your account."
-  , "settingsPage.deleteAccountFailed": "Failed to delete account: {error}"
-  , "settingsPage.deletingAccount": "Deleting account..."
-  , "settingsPage.deleteAccountAction": "Permanently delete my account"
-  ,"aiChatPage.error": "An error occurred. Please try again.",
-  "practiceQuestionPage.flagQuestion": "Flag this question"
-  , "practiceQuestionPage.clearFlag": "click again to clear"
-  , "practiceQuestionPage.flagGreen": "Green flag"
-  , "practiceQuestionPage.flagOrange": "Orange flag"
-  , "practiceQuestionPage.flagRed": "Red flag"
-  , "practiceListPage.flaggedQuestions": "Flagged questions"
-  , "practiceListPage.flaggedCount": "{count} flagged questions"
-  , "practiceListPage.noFlaggedQuestions": "No questions are saved with this flag."
-  , "practiceListPage.flaggedLoadFailed": "Unable to load flagged questions."
-  , "practiceQuestionPage.askAi": "Ask AI for explanation"
-  , "practiceQuestionPage.aiThinking": "AI is reading the question..."
-  , "practiceQuestionPage.aiImageFailed": "The question image could not be read. Please reload the page and try again."
-  , "practiceQuestionPage.aiExplanationFailed": "Failed to get an AI explanation. Please try again."
-  , "adminPage.pdfHybridImport": "{count} diagram images kept ({size} MB)"
-  , "adminPage.pdfKeepDiagram": "Keep this question image"
-  , "adminPage.pdfKeepDiagramHelp": "Enable this for diagrams, charts, tables, formulas, or image-based answer choices. Text-only questions will not upload the preview."
+  "aiChat.systemRecentQuestions": "Recent question data:\n{questions}",
+  "practiceListPage.examDate": "Exam date",
+  "adminPage.examDate": "Exam date",
+  "adminPage.examDateRequired": "Please select the exam date.",
+  "ui.examDate": "Exam date",
+  "ui.uncategorized": "Uncategorized",
+  "aiChat.remoteUnavailable":
+    "The AI service is unavailable right now. Please try again shortly.",
+  "settingsPage.deleteAccount": "Delete account",
+  "settingsPage.deleteAccountWarningTitle": "This action is permanent",
+  "settingsPage.deleteAccountWarningBody":
+    "Your profile, study history, answers, points, messages, and battles will be permanently deleted. Your uploaded materials will remain available. This cannot be undone.",
+  "settingsPage.deleteAccountConfirmEmail": "Enter {email} to confirm",
+  "settingsPage.deleteAccountEmailMismatch":
+    "The email address does not match your account.",
+  "settingsPage.deleteAccountFailed": "Failed to delete account: {error}",
+  "settingsPage.deletingAccount": "Deleting account...",
+  "settingsPage.deleteAccountAction": "Permanently delete my account",
+  "aiChatPage.error": "An error occurred. Please try again.",
+  "practiceQuestionPage.flagQuestion": "Flag this question",
+  "practiceQuestionPage.clearFlag": "click again to clear",
+  "practiceQuestionPage.flagGreen": "Green flag",
+  "practiceQuestionPage.flagOrange": "Orange flag",
+  "practiceQuestionPage.flagRed": "Red flag",
+  "practiceListPage.flaggedQuestions": "Flagged questions",
+  "practiceListPage.flaggedCount": "{count} flagged questions",
+  "practiceListPage.noFlaggedQuestions":
+    "No questions are saved with this flag.",
+  "practiceListPage.flaggedLoadFailed": "Unable to load flagged questions.",
+  "practiceQuestionPage.askAi": "Ask AI for explanation",
+  "practiceQuestionPage.aiThinking": "AI is reading the question...",
+  "practiceQuestionPage.aiImageFailed":
+    "The question image could not be read. Please reload the page and try again.",
+  "practiceQuestionPage.aiExplanationFailed":
+    "Failed to get an AI explanation. Please try again.",
+  "adminPage.pdfHybridImport": "{count} diagram images kept ({size} MB)",
+  "adminPage.pdfKeepDiagram": "Keep this question image",
+  "adminPage.pdfKeepDiagramHelp":
+    "Enable this for diagrams, charts, tables, formulas, or image-based answer choices. Text-only questions will not upload the preview.",
 } as const;
