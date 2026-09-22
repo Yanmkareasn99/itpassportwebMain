@@ -521,6 +521,38 @@ def find_starts(
     return starts
 
 
+def detect_question_starts(pages, dpi: int, lang: str, maximum: int) -> list[QuestionStart]:
+    """Detect headings at a scale that is stable for small Japanese type."""
+    heading_dpi = min(dpi, 200)
+    scale = heading_dpi / dpi
+    if scale < 1:
+        _, _, Image, _, _, _ = load_runtime()
+        heading_pages = [
+            page.resize(
+                (max(1, round(page.width * scale)), max(1, round(page.height * scale))),
+                Image.Resampling.LANCZOS,
+            )
+            for page in pages
+        ]
+    else:
+        heading_pages = pages
+    page_lines = []
+    for page in heading_pages:
+        headings: list[OcrLine] = []
+        # Automatic layout and sparse-text modes recover complementary
+        # headings on pages containing diagrams or multi-column choices.
+        for psm in (3, 11, 12):
+            for line in ocr_lines(page, lang, psm):
+                if not HEADING_RE.match(normalize(line.text)):
+                    continue
+                scaled = OcrLine(line.text, round(line.top / scale), round(line.bottom / scale))
+                if any(abs(existing.top - scaled.top) <= 24 / scale for existing in headings):
+                    continue
+                headings.append(scaled)
+        page_lines.append(sorted(headings, key=lambda line: line.top))
+    return find_starts(page_lines, maximum)
+
+
 def question_crop(pages, starts: list[QuestionStart], index: int):
     start = starts[index]
     next_start = starts[index + 1] if index + 1 < len(starts) else None
