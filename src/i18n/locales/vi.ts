@@ -612,6 +612,7 @@ export const vi = {
   "settingsPage.name": "Họ và tên",
   "settingsPage.newPassword": "Mật khẩu mới",
   "settingsPage.help": "Trợ giúp",
+  "settingsPage.reportIssue": "Báo cáo sự cố",
   "settingsPage.helpIntro":
     "Hướng dẫn nhanh cách sử dụng các tính năng chính trong ứng dụng.",
   "settingsPage.helpPracticeTitle": "Luyện tập",
@@ -835,10 +836,11 @@ export const vi = {
   "practiceQuestionPage.flagQuestion": "Gắn cờ câu hỏi này",
   "practiceQuestionPage.clearFlag": "nhấn lại để bỏ cờ",
   "practiceQuestionPage.flagGreen": "Cờ xanh",
-  "practiceQuestionPage.flagOrange": "Cờ cam",
+  "practiceQuestionPage.flagOrange": "Cờ vàng",
   "practiceQuestionPage.flagRed": "Cờ đỏ",
   "practiceListPage.flaggedQuestions": "Câu hỏi đã gắn cờ",
   "practiceListPage.flaggedCount": "{count} câu hỏi đã gắn cờ",
+  "practiceListPage.practiceAllFlags": "Luyện tập tất cả câu đã gắn cờ",
   "practiceListPage.noFlaggedQuestions":
     "Không có câu hỏi nào được lưu với cờ này.",
   "practiceListPage.flaggedLoadFailed": "Không thể tải câu hỏi đã gắn cờ.",

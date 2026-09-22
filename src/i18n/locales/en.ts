@@ -624,6 +624,7 @@ export const en = {
   "settingsPage.name": "Name",
   "settingsPage.newPassword": "New Password",
   "settingsPage.help": "Help",
+  "settingsPage.reportIssue": "Report an issue",
   "settingsPage.helpIntro": "A quick guide to the main features of the app.",
   "settingsPage.helpPracticeTitle": "Practice",
   "settingsPage.helpPracticeBody":
@@ -846,10 +847,11 @@ export const en = {
   "practiceQuestionPage.flagQuestion": "Flag this question",
   "practiceQuestionPage.clearFlag": "click again to clear",
   "practiceQuestionPage.flagGreen": "Green flag",
-  "practiceQuestionPage.flagOrange": "Orange flag",
+  "practiceQuestionPage.flagOrange": "Yellow flag",
   "practiceQuestionPage.flagRed": "Red flag",
   "practiceListPage.flaggedQuestions": "Flagged questions",
   "practiceListPage.flaggedCount": "{count} flagged questions",
+  "practiceListPage.practiceAllFlags": "Practice all flagged questions",
   "practiceListPage.noFlaggedQuestions":
     "No questions are saved with this flag.",
   "practiceListPage.flaggedLoadFailed": "Unable to load flagged questions.",

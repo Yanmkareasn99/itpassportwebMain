@@ -233,7 +233,7 @@ function ReviewCard({
   );
 }
 
-function FlaggedQuestionsCard({
+export function FlaggedQuestionsCard({
   counts,
   onStart,
   loading,
@@ -244,46 +244,247 @@ function FlaggedQuestionsCard({
   loading: boolean;
   language: LanguageCode;
 }) {
-  const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+  const [expanded, setExpanded] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const total = Object.values(counts).reduce(
+    (sum, count) => sum + count,
+    0,
+  );
+
   const styles = {
-    green: 'bg-emerald-500 hover:bg-emerald-600',
-    orange: 'bg-orange-500 hover:bg-orange-600',
-    red: 'bg-red-500 hover:bg-red-600',
+    green:
+      "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300",
+    orange:
+      "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300",
+    red:
+      "border-red-200 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300",
   } as const;
+
+  useEffect(() => {
+    if (!expanded) return;
+
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!cardRef.current?.contains(event.target as Node)) {
+        setExpanded(false);
+      }
+    };
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setExpanded(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [expanded]);
+
   return (
-    <div className="w-full min-w-0 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left shadow-sm dark:border-slate-600/80 dark:bg-slate-900/40 sm:p-5 xl:p-6">
+    <div
+      ref={cardRef}
+      className={`
+        relative
+        w-full
+        min-w-0
+        rounded-2xl
+        border
+        border-slate-200
+        bg-slate-50
+        p-4
+        text-left
+        shadow-sm
+        transition-all
+
+        hover:-translate-y-0.5
+        hover:border-slate-300
+        hover:shadow-lg
+
+        dark:border-slate-600/80
+        dark:bg-slate-900/40
+        dark:hover:border-slate-500
+        dark:hover:bg-slate-900/60
+
+        sm:p-5
+        xl:p-6
+
+        ${expanded ? "z-20" : ""}
+      `}
+    >
+      {/* Full-card clickable button */}
       <button
         type="button"
-        onClick={() => onStart()}
-        disabled={loading || total === 0}
-        className="flex w-full items-center gap-2.5 text-left disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-600 text-white">
-          <Flag className="h-4 w-4 fill-current" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-base font-bold text-slate-700 dark:text-slate-200">
-            {translate(language, 'practiceListPage.flaggedQuestions')}
+        onClick={() => setExpanded((open) => !open)}
+        disabled={loading}
+        aria-expanded={expanded}
+        aria-controls="flagged-question-actions"
+        aria-label={translate(
+          language,
+          "practiceListPage.flaggedQuestions",
+        )}
+        className="
+          absolute
+          inset-0
+          z-0
+          rounded-2xl
+          bg-transparent
+          hover:bg-transparent
+          focus:bg-transparent
+          focus:outline-none
+          focus-visible:ring-2
+          focus-visible:ring-blue-500
+          focus-visible:ring-offset-2
+          disabled:cursor-not-allowed
+        "
+      />
+
+      {/* Visible card content */}
+      <div className="pointer-events-none relative z-10">
+        <div className="mb-3 flex min-w-0 items-center gap-2.5">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-600 text-white">
+            <Flag className="h-4 w-4 fill-current" />
           </span>
-          <span className="text-xs text-gray-500 dark:text-slate-300">
-            {translate(language, 'practiceListPage.flaggedCount', { count: total })}
+
+          <span className="min-w-0 flex-1 truncate text-base font-bold text-slate-700 dark:text-slate-200">
+            {translate(
+              language,
+              "practiceListPage.flaggedQuestions",
+            )}
           </span>
+
+          <ChevronDown
+            className={`
+              h-4
+              w-4
+              shrink-0
+              text-slate-500
+              transition-transform
+              ${expanded ? "rotate-180" : ""}
+            `}
+          />
+        </div>
+
+        <span className="block text-xs text-gray-500 dark:text-slate-300">
+          {translate(
+            language,
+            "practiceListPage.flaggedCount",
+            { count: total },
+          )}
         </span>
-      </button>
-      <div className="mt-3 grid grid-cols-3 gap-1.5">
-        {QUESTION_FLAG_LEVELS.map(level => (
-          <button
-            key={level}
-            type="button"
-            onClick={() => onStart(level)}
-            disabled={loading || counts[level] === 0}
-            aria-label={translate(language, `practiceQuestionPage.flag${level[0].toUpperCase()}${level.slice(1)}` as 'practiceQuestionPage.flagGreen' | 'practiceQuestionPage.flagOrange' | 'practiceQuestionPage.flagRed')}
-            className={`rounded-lg px-2 py-1.5 text-xs font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-30 ${styles[level]}`}
-          >
-            {counts[level]}
-          </button>
-        ))}
       </div>
+
+      {expanded && (
+        <div
+          id="flagged-question-actions"
+          className="
+            absolute
+            left-0
+            top-full
+            z-30
+            mt-2
+            w-full
+            space-y-2
+            rounded-2xl
+            border
+            border-slate-200
+            bg-white
+            p-3
+            shadow-xl
+            dark:border-slate-600
+            dark:bg-slate-900
+          "
+        >
+          <button
+            type="button"
+            onClick={() => {
+              setExpanded(false);
+              onStart();
+            }}
+            disabled={loading || total === 0}
+            className="
+              flex
+              w-full
+              items-center
+              justify-center
+              gap-2
+              rounded-lg
+              bg-slate-700
+              px-3
+              py-2
+              text-sm
+              font-semibold
+              text-white
+              transition-colors
+              hover:bg-slate-800
+              disabled:cursor-not-allowed
+              disabled:opacity-50
+              dark:bg-slate-600
+              dark:hover:bg-slate-500
+            "
+          >
+            <Play className="h-3.5 w-3.5" />
+
+            {translate(
+              language,
+              "practiceListPage.practiceAllFlags",
+            )}{" "}
+            ({total})
+          </button>
+
+          <div className="grid grid-cols-3 gap-1.5">
+            {QUESTION_FLAG_LEVELS.map((level) => {
+              const label = translate(
+                language,
+                `practiceQuestionPage.flag${
+                  level[0].toUpperCase() + level.slice(1)
+                }` as
+                  | "practiceQuestionPage.flagGreen"
+                  | "practiceQuestionPage.flagOrange"
+                  | "practiceQuestionPage.flagRed",
+              );
+
+              return (
+                <button
+                  key={level}
+                  type="button"
+                  onClick={() => {
+                    setExpanded(false);
+                    onStart(level);
+                  }}
+                  disabled={loading || counts[level] === 0}
+                  aria-label={`${label}: ${counts[level]}`}
+                  className={`
+                    min-w-0
+                    rounded-lg
+                    border
+                    px-1.5
+                    py-2
+                    text-xs
+                    font-semibold
+                    transition-colors
+                    disabled:cursor-not-allowed
+                    disabled:opacity-50
+                    ${styles[level]}
+                  `}
+                >
+                  <span className="block truncate">
+                    {label}
+                  </span>
+
+                  <span className="block text-base font-bold">
+                    {counts[level]}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -834,7 +1035,7 @@ export default function PracticeListPage({
           </div>
         )}
 
-        <div className="motion-stagger grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <div className="motion-stagger grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
           {categories.map((cat) => (
             <CategoryCard
               key={cat.id}

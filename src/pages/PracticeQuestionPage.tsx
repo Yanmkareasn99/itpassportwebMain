@@ -530,7 +530,7 @@ export default function PracticeQuestionPage({
                     const active = questionFlags[question.id] === level;
                     const colors = {
                       green: active ? 'bg-emerald-500 text-white border-emerald-500' : 'text-emerald-600 border-emerald-200 hover:bg-emerald-50',
-                      orange: active ? 'bg-orange-500 text-white border-orange-500' : 'text-orange-600 border-orange-200 hover:bg-orange-50',
+                      orange: active ? 'bg-amber-500 text-white border-amber-500' : 'text-amber-600 border-amber-200 hover:bg-amber-50',
                       red: active ? 'bg-red-500 text-white border-red-500' : 'text-red-600 border-red-200 hover:bg-red-50',
                     } as const;
                     const levelLabel = translate(language, `practiceQuestionPage.flag${level[0].toUpperCase()}${level.slice(1)}` as 'practiceQuestionPage.flagGreen' | 'practiceQuestionPage.flagOrange' | 'practiceQuestionPage.flagRed');
@@ -821,7 +821,7 @@ export default function PracticeQuestionPage({
                         {questionIndex + 1}
                         {mappedFlag && (
                           <span className={`absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full ${
-                            mappedFlag === 'green' ? 'bg-emerald-500' : mappedFlag === 'orange' ? 'bg-orange-500' : 'bg-red-500'
+                            mappedFlag === 'green' ? 'bg-emerald-500' : mappedFlag === 'orange' ? 'bg-amber-500' : 'bg-red-500'
                           }`} />
                         )}
                       </button>

@@ -118,6 +118,7 @@ export default function QuestionsTab() {
     () => getPdfImportJobSnapshot().status !== "idle",
   );
   const [showQuestionInputMenu, setShowQuestionInputMenu] = useState(false);
+  const [showSubjectMenu, setShowSubjectMenu] = useState(false);
   const [showCsvImportModal, setShowCsvImportModal] = useState(false);
   const [csvSubjectId, setCsvSubjectId] = useState("");
   const [csvFileNames, setCsvFileNames] = useState({
@@ -127,6 +128,33 @@ export default function QuestionsTab() {
   const questionCsvInput = useRef<HTMLInputElement>(null);
   const choiceCsvInput = useRef<HTMLInputElement>(null);
   const questionImageInput = useRef<HTMLInputElement>(null);
+  const questionInputMenuRef = useRef<HTMLDivElement>(null);
+  const subjectMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showQuestionInputMenu && !showSubjectMenu) return;
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (showQuestionInputMenu && !questionInputMenuRef.current?.contains(target)) {
+        setShowQuestionInputMenu(false);
+      }
+      if (showSubjectMenu && !subjectMenuRef.current?.contains(target)) {
+        setShowSubjectMenu(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowQuestionInputMenu(false);
+        setShowSubjectMenu(false);
+      }
+    };
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [showQuestionInputMenu, showSubjectMenu]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1110,23 +1138,49 @@ export default function QuestionsTab() {
             className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
           />
         </div>
-        <select
-          value={filterSubject}
-          onChange={(e) => {
-            setFilterSubject(e.target.value);
-            setListPage(1);
-          }}
-          className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-        >
-          <option value="all">
-            {translate(language, "adminPage.allSubjects")}
-          </option>
-          {subjects.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
+        <div ref={subjectMenuRef} className="relative w-56 max-w-full">
+          <button
+            type="button"
+            aria-haspopup="listbox"
+            aria-expanded={showSubjectMenu}
+            onClick={() => {
+              setShowSubjectMenu((current) => !current);
+              setShowQuestionInputMenu(false);
+            }}
+            className="flex w-full items-center justify-between gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-left text-sm text-gray-700 transition hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300"
+          >
+            <span className="truncate">
+              {filterSubject === "all"
+                ? translate(language, "adminPage.allSubjects")
+                : subjects.find((subject) => subject.id === filterSubject)?.name ?? translate(language, "adminPage.allSubjects")}
+            </span>
+            <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${showSubjectMenu ? "rotate-180" : ""}`} />
+          </button>
+          {showSubjectMenu && (
+            <div
+              role="listbox"
+              aria-label={translate(language, "adminPage.allSubjects")}
+              className="absolute left-0 top-full z-30 mt-2 max-h-72 w-64 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl border border-gray-200 bg-white p-2 shadow-lg"
+            >
+              {[{ id: "all", name: translate(language, "adminPage.allSubjects") }, ...subjects].map((subject) => (
+                <button
+                  key={subject.id}
+                  type="button"
+                  role="option"
+                  aria-selected={filterSubject === subject.id}
+                  onClick={() => {
+                    setFilterSubject(subject.id);
+                    setListPage(1);
+                    setShowSubjectMenu(false);
+                  }}
+                  className={`w-full rounded-xl px-3 py-2.5 text-left text-sm transition hover:bg-blue-50 hover:text-blue-700 ${filterSubject === subject.id ? "bg-blue-50 font-semibold text-blue-700" : "text-gray-700"}`}
+                >
+                  {subject.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <button
           onClick={load}
           className="p-2 hover:bg-gray-100 rounded-xl transition text-gray-500"
@@ -1149,10 +1203,15 @@ export default function QuestionsTab() {
           className="hidden"
           onChange={(e) => handleCsvFileChange("choices", e.target.files?.[0])}
         />
-        <div className="relative">
+        <div ref={questionInputMenuRef} className="relative">
           <button
             type="button"
-            onClick={() => setShowQuestionInputMenu((current) => !current)}
+            aria-expanded={showQuestionInputMenu}
+            aria-haspopup="menu"
+            onClick={() => {
+              setShowQuestionInputMenu((current) => !current);
+              setShowSubjectMenu(false);
+            }}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition"
           >
             <Plus className="w-4 h-4" />
@@ -1165,9 +1224,10 @@ export default function QuestionsTab() {
           </button>
 
           {showQuestionInputMenu && (
-            <div className="absolute right-0 top-full z-20 mt-2 w-72 overflow-hidden rounded-2xl border border-gray-200 bg-white p-2 shadow-lg">
+            <div role="menu" className="absolute right-0 top-full z-20 mt-2 w-72 overflow-hidden rounded-2xl border border-gray-200 bg-white p-2 shadow-lg">
               <button
                 type="button"
+                role="menuitem"
                 onClick={() => {
                   setShowQuestionInputMenu(false);
                   startNew();
@@ -1186,6 +1246,7 @@ export default function QuestionsTab() {
               </button>
               <button
                 type="button"
+                role="menuitem"
                 onClick={() => {
                   setShowQuestionInputMenu(false);
                   setShowCsvImportModal(true);
@@ -1204,6 +1265,7 @@ export default function QuestionsTab() {
               </button>
               <button
                 type="button"
+                role="menuitem"
                 onClick={() => {
                   setShowQuestionInputMenu(false);
                   setShowPdfImporter((current) => !current);
