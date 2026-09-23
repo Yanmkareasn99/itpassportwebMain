@@ -1,6 +1,7 @@
 export interface ChoiceForm {
   id?: string;
   choice_text: string;
+  image_url: string;
   is_correct: boolean;
   sort_order: number;
 }
@@ -46,10 +47,10 @@ export const emptyQuestionForm = (): QuestionForm => ({
   points: 1,
   image_url: '',
   choices: [
-    { choice_text: '', is_correct: false, sort_order: 1 },
-    { choice_text: '', is_correct: false, sort_order: 2 },
-    { choice_text: '', is_correct: false, sort_order: 3 },
-    { choice_text: '', is_correct: false, sort_order: 4 },
+    { choice_text: '', image_url: '', is_correct: false, sort_order: 1 },
+    { choice_text: '', image_url: '', is_correct: false, sort_order: 2 },
+    { choice_text: '', image_url: '', is_correct: false, sort_order: 3 },
+    { choice_text: '', image_url: '', is_correct: false, sort_order: 4 },
   ],
 });
 
