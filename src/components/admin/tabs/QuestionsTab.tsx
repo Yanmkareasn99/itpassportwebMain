@@ -91,7 +91,10 @@ async function fetchAnswerImageQuestionIds() {
 
     if (error) throw error;
 
-    const page = (data ?? []) as Pick<AnswerChoice, "question_id" | "image_url">[];
+    const page = (data ?? []) as Pick<
+      AnswerChoice,
+      "question_id" | "image_url"
+    >[];
     page.forEach((choice) => {
       if (choice.image_url?.trim()) questionIds.add(choice.question_id);
     });
@@ -135,9 +138,13 @@ export default function QuestionsTab() {
   const [filterSubject, setFilterSubject] = useState("all");
   const [filterQuestionNumber, setFilterQuestionNumber] = useState("");
   const [filterExamYear, setFilterExamYear] = useState("");
-  const [filterQuestionImage, setFilterQuestionImage] = useState<ImagePresenceFilter>("all");
-  const [filterAnswerImage, setFilterAnswerImage] = useState<ImagePresenceFilter>("all");
-  const [answerImageQuestionIds, setAnswerImageQuestionIds] = useState<Set<string>>(new Set());
+  const [filterQuestionImage, setFilterQuestionImage] =
+    useState<ImagePresenceFilter>("all");
+  const [filterAnswerImage, setFilterAnswerImage] =
+    useState<ImagePresenceFilter>("all");
+  const [answerImageQuestionIds, setAnswerImageQuestionIds] = useState<
+    Set<string>
+  >(new Set());
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
   const [form, setForm] = useState<QuestionForm>(emptyQuestionForm());
   const [saving, setSaving] = useState(false);
@@ -151,7 +158,9 @@ export default function QuestionsTab() {
   const [importData, setImportData] = useState<CsvImportData | null>(null);
   const [importing, setImporting] = useState(false);
   const [uploadingQuestionImage, setUploadingQuestionImage] = useState(false);
-  const [uploadingChoiceImageIndex, setUploadingChoiceImageIndex] = useState<number | null>(null);
+  const [uploadingChoiceImageIndex, setUploadingChoiceImageIndex] = useState<
+    number | null
+  >(null);
   const [showEditImageCropper, setShowEditImageCropper] = useState(false);
   const [showPdfImporter, setShowPdfImporter] = useState(
     () => getPdfImportJobSnapshot().status !== "idle",
@@ -175,7 +184,10 @@ export default function QuestionsTab() {
     if (!showQuestionInputMenu && !showSubjectMenu) return;
     const closeOnOutsideClick = (event: PointerEvent) => {
       const target = event.target as Node;
-      if (showQuestionInputMenu && !questionInputMenuRef.current?.contains(target)) {
+      if (
+        showQuestionInputMenu &&
+        !questionInputMenuRef.current?.contains(target)
+      ) {
         setShowQuestionInputMenu(false);
       }
       if (showSubjectMenu && !subjectMenuRef.current?.contains(target)) {
@@ -200,11 +212,12 @@ export default function QuestionsTab() {
     setLoading(true);
     setError("");
     try {
-      const [qs, { data: ss, error: subjectError }, answerImageIds] = await Promise.all([
-        fetchAllQuestions(),
-        supabase.from("subjects").select("*").order("name"),
-        fetchAnswerImageQuestionIds(),
-      ]);
+      const [qs, { data: ss, error: subjectError }, answerImageIds] =
+        await Promise.all([
+          fetchAllQuestions(),
+          supabase.from("subjects").select("*").order("name"),
+          fetchAnswerImageQuestionIds(),
+        ]);
       if (subjectError) throw subjectError;
       setQuestions(qs);
       setSubjects((ss ?? []) as Subject[]);
@@ -248,11 +261,11 @@ export default function QuestionsTab() {
     [subjects],
   );
   const hasActiveQuestionFilters = Boolean(
-    filterSubject !== "all"
-    || filterQuestionNumber
-    || filterExamYear
-    || filterQuestionImage !== "all"
-    || filterAnswerImage !== "all",
+    filterSubject !== "all" ||
+    filterQuestionNumber ||
+    filterExamYear ||
+    filterQuestionImage !== "all" ||
+    filterAnswerImage !== "all",
   );
   const listPageCount = Math.max(
     1,
@@ -427,7 +440,12 @@ export default function QuestionsTab() {
       setError(translate(language, "adminPage.pleaseSelectASubject"));
       return;
     }
-    if (form.exam_year && (!Number.isInteger(Number(form.exam_year)) || Number(form.exam_year) < 1900 || Number(form.exam_year) > 2100)) {
+    if (
+      form.exam_year &&
+      (!Number.isInteger(Number(form.exam_year)) ||
+        Number(form.exam_year) < 1900 ||
+        Number(form.exam_year) > 2100)
+    ) {
       setError(translate(language, "adminPage.examYearInvalid"));
       return;
     }
@@ -435,14 +453,20 @@ export default function QuestionsTab() {
       setError(translate(language, "adminPage.examMonthRequiresYear"));
       return;
     }
-    const correctCount = form.choices.filter((c) => c.is_correct).length;
-    if (correctCount === 0) {
-      setError(translate(language, "adminPage.selectAtLeastOneCorrectChoice"));
-      return;
-    }
-    const filledChoices = form.choices.filter((c) => c.choice_text.trim());
+
+    const filledChoices = form.choices.filter(
+      (c) => c.choice_text.trim() || c.image_url.trim(),
+    );
+
     if (filledChoices.length < 2) {
       setError(translate(language, "adminPage.enterAtLeastTwoChoices"));
+      return;
+    }
+
+    const correctCount = filledChoices.filter((c) => c.is_correct).length;
+
+    if (correctCount === 0) {
+      setError(translate(language, "adminPage.selectAtLeastOneCorrectChoice"));
       return;
     }
 
@@ -547,19 +571,21 @@ export default function QuestionsTab() {
   }
 
   async function uploadManualImage(image: Blob, target: string) {
-    const extension = image.type === "image/png"
-      ? "png"
-      : image.type === "image/jpeg"
-        ? "jpg"
-        : image.type === "image/gif"
-          ? "gif"
-          : "webp";
+    const extension =
+      image.type === "image/png"
+        ? "png"
+        : image.type === "image/jpeg"
+          ? "jpg"
+          : image.type === "image/gif"
+            ? "gif"
+            : "webp";
     const path = `manual/${Date.now()}-${crypto.randomUUID()}-${target}.${extension}`;
     const { error: uploadError } = await supabase.storage
       .from("question-images")
       .upload(path, image, { contentType: image.type, upsert: false });
     if (uploadError) throw uploadError;
-    return supabase.storage.from("question-images").getPublicUrl(path).data.publicUrl;
+    return supabase.storage.from("question-images").getPublicUrl(path).data
+      .publicUrl;
   }
 
   async function handleQuestionImageUpload(file: File | undefined) {
@@ -587,7 +613,10 @@ export default function QuestionsTab() {
     }
   }
 
-  async function handleChoiceImageUpload(choiceIndex: number, file: File | undefined) {
+  async function handleChoiceImageUpload(
+    choiceIndex: number,
+    file: File | undefined,
+  ) {
     if (!file) return;
     const problem = validateImageFile(file);
     if (problem) {
@@ -598,7 +627,10 @@ export default function QuestionsTab() {
     setError("");
     setUploadingChoiceImageIndex(choiceIndex);
     try {
-      const imageUrl = await uploadManualImage(file, `choice-${choiceIndex + 1}`);
+      const imageUrl = await uploadManualImage(
+        file,
+        `choice-${choiceIndex + 1}`,
+      );
       setChoice(choiceIndex, { image_url: imageUrl });
     } catch (uploadError) {
       setError(
@@ -619,7 +651,10 @@ export default function QuestionsTab() {
       const combined = await combineCropImages(targetCrops);
       const response = await fetch(combined.dataUrl);
       const blob = await response.blob();
-      uploadedImages.set(targetId, await uploadManualImage(blob, targetId.replace(":", "-")));
+      uploadedImages.set(
+        targetId,
+        await uploadManualImage(blob, targetId.replace(":", "-")),
+      );
     }
 
     setForm((current) => ({
@@ -627,7 +662,8 @@ export default function QuestionsTab() {
       image_url: uploadedImages.get("question") ?? current.image_url,
       choices: current.choices.map((choice, choiceIndex) => ({
         ...choice,
-        image_url: uploadedImages.get(`choice:${choiceIndex}`) ?? choice.image_url,
+        image_url:
+          uploadedImages.get(`choice:${choiceIndex}`) ?? choice.image_url,
       })),
     }));
   }
@@ -705,9 +741,20 @@ export default function QuestionsTab() {
         throw new Error(
           `Question ${question.id} has an invalid question_number.`,
         );
-      if (question.exam_year && (!Number.isInteger(Number(question.exam_year)) || Number(question.exam_year) < 1900 || Number(question.exam_year) > 2100))
+      if (
+        question.exam_year &&
+        (!Number.isInteger(Number(question.exam_year)) ||
+          Number(question.exam_year) < 1900 ||
+          Number(question.exam_year) > 2100)
+      )
         throw new Error(`Question ${question.id} has an invalid exam_year.`);
-      if (question.exam_month && (!question.exam_year || !Number.isInteger(Number(question.exam_month)) || Number(question.exam_month) < 1 || Number(question.exam_month) > 12))
+      if (
+        question.exam_month &&
+        (!question.exam_year ||
+          !Number.isInteger(Number(question.exam_month)) ||
+          Number(question.exam_month) < 1 ||
+          Number(question.exam_month) > 12)
+      )
         throw new Error(`Question ${question.id} has an invalid exam_month.`);
       const resolvedSubjectId = resolveImportedSubjectId(
         question.subject_id || csvSubjectId,
@@ -888,423 +935,530 @@ export default function QuestionsTab() {
   if (editingId !== null) {
     return (
       <>
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-bold text-gray-800">
-            {editingId === "new"
-              ? translate(language, "adminPage.addQuestion")
-              : translate(language, "adminPage.editQuestion")}
-          </h2>
-          <button
-            onClick={() => setEditingId(null)}
-            className="p-2 hover:bg-gray-100 rounded-xl transition"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
-
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 flex items-center gap-2">
-            <XCircle className="w-4 h-4 shrink-0" />
-            {error}
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">
-              {translate(language, "adminPage.subject")}
-            </label>
-            <select
-              value={form.subject_id}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  subject_id: e.target.value,
-                  question_number:
-                    editingId === "new"
-                      ? String(getNextQuestionNumber(e.target.value))
-                      : f.question_number,
-                }))
-              }
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-bold text-gray-800">
+              {editingId === "new"
+                ? translate(language, "adminPage.addQuestion")
+                : translate(language, "adminPage.editQuestion")}
+            </h2>
+            <button
+              onClick={() => setEditingId(null)}
+              className="p-2 hover:bg-gray-100 rounded-xl transition"
             >
-              {subjects.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">
-              {translate(language, "adminPage.questionNumber")}
-            </label>
-            <input
-              type="number"
-              value={form.question_number}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, question_number: e.target.value }))
-              }
-              placeholder={translate(language, "adminPage.eG1")}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">
-              {translate(language, "adminPage.questionType")}
-            </label>
-            <select
-              value={form.question_type}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  question_type: e.target
-                    .value as QuestionForm["question_type"],
-                }))
-              }
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-            >
-              <option value="multiple_choice">
-                {translate(language, "adminPage.multipleChoice")}
-              </option>
-              <option value="true_false">
-                {translate(language, "adminPage.trueFalse")}
-              </option>
-              <option value="tree">
-                {translate(language, "adminPage.tree")}
-              </option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">
-              {translate(language, "adminPage.examDate")}
-            </label>
-            <div className="flex gap-2">
-              <input type="number" min="1900" max="2100" placeholder={translate(language, "adminPage.examYear")} value={form.exam_year}
-                onChange={(e) => setForm((f) => ({ ...f, exam_year: e.target.value }))}
-                className="w-1/2 border border-gray-200 rounded-xl px-3 py-2 text-sm" />
-              <select value={form.exam_month}
-                onChange={(e) => setForm((f) => ({ ...f, exam_month: e.target.value }))}
-                className="w-1/2 border border-gray-200 rounded-xl px-3 py-2 text-sm">
-                <option value="">{translate(language, "adminPage.examMonthUnknown")}</option>
-                {Array.from({ length: 12 }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1}</option>)}
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 flex items-center gap-2">
+              <XCircle className="w-4 h-4 shrink-0" />
+              {error}
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                {translate(language, "adminPage.subject")}
+              </label>
+              <select
+                value={form.subject_id}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    subject_id: e.target.value,
+                    question_number:
+                      editingId === "new"
+                        ? String(getNextQuestionNumber(e.target.value))
+                        : f.question_number,
+                  }))
+                }
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+              >
+                {subjects.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
               </select>
             </div>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">
-              {translate(language, "adminPage.difficulty")} ({form.difficulty})
-            </label>
-            <input
-              type="range"
-              min={1}
-              max={5}
-              value={form.difficulty}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, difficulty: parseInt(e.target.value) }))
-              }
-              className="w-full mt-2"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">
-              {translate(language, "adminPage.points")}
-            </label>
-            <input
-              type="number"
-              min={1}
-              value={form.points}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  points: parseQuestionPoints(e.target.value, f.points),
-                }))
-              }
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">
-              {translate(language, "adminPage.questionImageOptional")}
-            </label>
-            <input
-              ref={questionImageInput}
-              type="file"
-              accept="image/png,image/jpeg,image/webp,image/gif"
-              className="hidden"
-              onChange={(event) =>
-                void handleQuestionImageUpload(event.target.files?.[0])
-              }
-            />
-            <div className="flex items-center gap-3 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-3">
-              {form.image_url ? (
-                <img
-                  src={form.image_url}
-                  alt={translate(language, "adminPage.questionImagePreview")}
-                  className="h-16 w-16 rounded-lg border border-gray-200 bg-white object-contain p-1"
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                {translate(language, "adminPage.questionNumber")}
+              </label>
+              <input
+                type="number"
+                value={form.question_number}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, question_number: e.target.value }))
+                }
+                placeholder={translate(language, "adminPage.eG1")}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                {translate(language, "adminPage.questionType")}
+              </label>
+              <select
+                value={form.question_type}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    question_type: e.target
+                      .value as QuestionForm["question_type"],
+                  }))
+                }
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+              >
+                <option value="multiple_choice">
+                  {translate(language, "adminPage.multipleChoice")}
+                </option>
+                <option value="true_false">
+                  {translate(language, "adminPage.trueFalse")}
+                </option>
+                <option value="tree">
+                  {translate(language, "adminPage.tree")}
+                </option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                {translate(language, "adminPage.examDate")}
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min="1900"
+                  max="2100"
+                  placeholder={translate(language, "adminPage.examYear")}
+                  value={form.exam_year}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, exam_year: e.target.value }))
+                  }
+                  className="w-1/2 border border-gray-200 rounded-xl px-3 py-2 text-sm"
                 />
-              ) : (
-                <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-blue-50 text-blue-500">
-                  <Upload className="h-5 w-5" />
-                </div>
-              )}
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => questionImageInput.current?.click()}
-                    disabled={uploadingQuestionImage}
-                    className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60"
-                  >
-                    {uploadingQuestionImage
-                      ? translate(language, "adminPage.imageUploading")
-                      : translate(language, "adminPage.uploadQuestionImage")}
-                  </button>
+                <select
+                  value={form.exam_month}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, exam_month: e.target.value }))
+                  }
+                  className="w-1/2 border border-gray-200 rounded-xl px-3 py-2 text-sm"
+                >
+                  <option value="">
+                    {translate(language, "adminPage.examMonthUnknown")}
+                  </option>
+                  {Array.from({ length: 12 }, (_, index) => (
+                    <option key={index + 1} value={index + 1}>
+                      {index + 1}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                {translate(language, "adminPage.difficulty")} ({form.difficulty}
+                )
+              </label>
+              <input
+                type="range"
+                min={1}
+                max={5}
+                value={form.difficulty}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    difficulty: parseInt(e.target.value),
+                  }))
+                }
+                className="w-full mt-2"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                {translate(language, "adminPage.points")}
+              </label>
+              <input
+                type="number"
+                min={1}
+                value={form.points}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    points: parseQuestionPoints(e.target.value, f.points),
+                  }))
+                }
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                {translate(language, "adminPage.questionImageOptional")}
+              </label>
+              <input
+                ref={questionImageInput}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                className="hidden"
+                onChange={(event) =>
+                  void handleQuestionImageUpload(event.target.files?.[0])
+                }
+              />
+              <div className="flex items-center gap-3 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-3">
+                {form.image_url ? (
+                  <img
+                    src={form.image_url}
+                    alt={translate(language, "adminPage.questionImagePreview")}
+                    className="h-16 w-16 rounded-lg border border-gray-200 bg-white object-contain p-1"
+                  />
+                ) : (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-blue-50 text-blue-500">
+                    <Upload className="h-5 w-5" />
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => questionImageInput.current?.click()}
+                      disabled={uploadingQuestionImage}
+                      className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60"
+                    >
+                      {uploadingQuestionImage
+                        ? translate(language, "adminPage.imageUploading")
+                        : translate(language, "adminPage.uploadQuestionImage")}
+                    </button>
+                    {form.image_url && (
+                      <button
+                        type="button"
+                        onClick={() => setShowEditImageCropper(true)}
+                        className="flex items-center gap-1.5 rounded-lg border border-violet-200 bg-white px-3 py-2 text-xs font-semibold text-violet-700 transition hover:bg-violet-50"
+                      >
+                        <Crop className="h-3.5 w-3.5" />
+                        {translate(language, "adminPage.pdfManualCrop")}
+                      </button>
+                    )}
+                  </div>
+                  <p className="mt-1 text-[11px] text-gray-400">
+                    {translate(language, "adminPage.imageUploadHelp")}
+                  </p>
                   {form.image_url && (
                     <button
                       type="button"
-                      onClick={() => setShowEditImageCropper(true)}
-                      className="flex items-center gap-1.5 rounded-lg border border-violet-200 bg-white px-3 py-2 text-xs font-semibold text-violet-700 transition hover:bg-violet-50"
+                      onClick={() =>
+                        setForm((current) => ({ ...current, image_url: "" }))
+                      }
+                      className="mt-1 text-[11px] text-red-500 hover:text-red-600"
                     >
-                      <Crop className="h-3.5 w-3.5" />
-                      {translate(language, "adminPage.pdfManualCrop")}
+                      {translate(language, "adminPage.removeQuestionImage")}
                     </button>
                   )}
                 </div>
-                <p className="mt-1 text-[11px] text-gray-400">
-                  {translate(language, "adminPage.imageUploadHelp")}
-                </p>
-                {form.image_url && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setForm((current) => ({ ...current, image_url: "" }))
-                    }
-                    className="mt-1 text-[11px] text-red-500 hover:text-red-600"
-                  >
-                    {translate(language, "adminPage.removeQuestionImage")}
-                  </button>
-                )}
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="mb-4">
-          <label className="block text-xs font-semibold text-gray-500 mb-1">
-            {translate(language, "adminPage.questionText")}
-          </label>
-          <textarea
-            value={form.question_text}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, question_text: e.target.value }))
-            }
-            rows={4}
-            placeholder={translate(language, "adminPage.enterTheQuestionText")}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
-          />
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-xs font-semibold text-gray-500 mb-1">
-            {translate(language, "adminPage.explanationJapanese")}
-          </label>
-          <textarea
-            value={form.explanation}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, explanation: e.target.value }))
-            }
-            rows={3}
-            placeholder={translate(language, "adminPage.enterAnExplanation")}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
+          <div className="mb-4">
             <label className="block text-xs font-semibold text-gray-500 mb-1">
-              {translate(language, "adminPage.explanationEnglish")}
+              {translate(language, "adminPage.questionText")}
             </label>
             <textarea
-              value={form.explanation_en}
+              value={form.question_text}
               onChange={(e) =>
-                setForm((f) => ({ ...f, explanation_en: e.target.value }))
+                setForm((f) => ({ ...f, question_text: e.target.value }))
               }
-              rows={3}
+              rows={4}
               placeholder={translate(
                 language,
-                "adminPage.englishExplanationPlaceholder",
+                "adminPage.enterTheQuestionText",
               )}
               className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
             />
           </div>
-          <div>
+
+          <div className="mb-4">
             <label className="block text-xs font-semibold text-gray-500 mb-1">
-              {translate(language, "adminPage.explanationVietnamese")}
+              {translate(language, "adminPage.explanationJapanese")}
             </label>
             <textarea
-              value={form.explanation_vi}
+              value={form.explanation}
               onChange={(e) =>
-                setForm((f) => ({ ...f, explanation_vi: e.target.value }))
+                setForm((f) => ({ ...f, explanation: e.target.value }))
               }
               rows={3}
-              placeholder={translate(
-                language,
-                "adminPage.vietnameseExplanationPlaceholder",
-              )}
+              placeholder={translate(language, "adminPage.enterAnExplanation")}
               className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
             />
           </div>
-        </div>
 
-        <p className="mb-4 text-xs text-gray-400">
-          {translate(
-            language,
-            "adminPage.questionsAndChoicesStayInJapaneseOnlyExplanations",
-          )}
-        </p>
-
-        {/* Choices */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-xs font-semibold text-gray-500">
-              {translate(language, "adminPage.choices")}
-            </label>
-            <button
-              onClick={addChoice}
-              className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
-            >
-              <Plus className="w-3.5 h-3.5" />{" "}
-              {translate(language, "adminPage.add")}
-            </button>
-          </div>
-          <div className="space-y-2">
-            {form.choices.map((c, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    if (c.is_correct) {
-                      setChoice(i, { is_correct: false });
-                    } else {
-                      setForm((f) => ({
-                        ...f,
-                        choices: f.choices.map((ch, idx) => ({
-                          ...ch,
-                          is_correct: idx === i,
-                        })),
-                      }));
-                    }
-                  }}
-                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition ${
-                    c.is_correct
-                      ? "bg-emerald-500 border-emerald-500"
-                      : "border-gray-300 hover:border-emerald-400"
-                  }`}
-                >
-                  {c.is_correct && (
-                    <CheckCircle className="w-4 h-4 text-white" />
-                  )}
-                </button>
-                <input
-                  type="text"
-                  value={c.choice_text}
-                  onChange={(e) =>
-                    setChoice(i, { choice_text: e.target.value })
-                  }
-                  placeholder={translate(
-                    language,
-                    "adminPage.choicePlaceholder",
-                    { number: i + 1 },
-                  )}
-                  className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                />
-                {form.choices.length > 2 && (
-                  <button
-                    onClick={() => removeChoice(i)}
-                    className="p-1 text-gray-400 hover:text-red-500 transition"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                {translate(language, "adminPage.explanationEnglish")}
+              </label>
+              <textarea
+                value={form.explanation_en}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, explanation_en: e.target.value }))
+                }
+                rows={3}
+                placeholder={translate(
+                  language,
+                  "adminPage.englishExplanationPlaceholder",
                 )}
-              </div>
-            ))}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                {translate(language, "adminPage.explanationVietnamese")}
+              </label>
+              <textarea
+                value={form.explanation_vi}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, explanation_vi: e.target.value }))
+                }
+                rows={3}
+                placeholder={translate(
+                  language,
+                  "adminPage.vietnameseExplanationPlaceholder",
+                )}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
+              />
+            </div>
           </div>
-          <p className="text-xs text-gray-400 mt-2">
+
+          <p className="mb-4 text-xs text-gray-400">
             {translate(
               language,
-              "adminPage.clickTheRoundButtonToSelectTheCorrect",
+              "adminPage.questionsAndChoicesStayInJapaneseOnlyExplanations",
             )}
           </p>
+
+          {/* Choices */}
+          <div className="mb-6">
+            <div className="mb-2 flex items-center justify-between">
+              <label className="text-xs font-semibold text-gray-500">
+                {translate(language, "adminPage.choices")}
+              </label>
+
+              <button
+                type="button"
+                onClick={addChoice}
+                className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                {translate(language, "adminPage.add")}
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {form.choices.map((c, i) => (
+                <div
+                  key={c.id ?? i}
+                  className="rounded-xl border border-gray-200 bg-white p-3"
+                >
+                  <div className="flex items-center gap-2">
+                    {/* Correct answer */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (c.is_correct) {
+                          setChoice(i, { is_correct: false });
+                        } else {
+                          setForm((f) => ({
+                            ...f,
+                            choices: f.choices.map((choice, index) => ({
+                              ...choice,
+                              is_correct: index === i,
+                            })),
+                          }));
+                        }
+                      }}
+                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition ${
+                        c.is_correct
+                          ? "border-emerald-500 bg-emerald-500"
+                          : "border-gray-300 hover:border-emerald-400"
+                      }`}
+                    >
+                      {c.is_correct && (
+                        <CheckCircle className="h-4 w-4 text-white" />
+                      )}
+                    </button>
+
+                    {/* Choice text */}
+                    <input
+                      type="text"
+                      value={c.choice_text}
+                      onChange={(e) =>
+                        setChoice(i, {
+                          choice_text: e.target.value,
+                        })
+                      }
+                      placeholder={translate(
+                        language,
+                        "adminPage.choicePlaceholder",
+                        { number: i + 1 },
+                      )}
+                      className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    />
+
+                    {/* Delete choice */}
+                    {form.choices.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => removeChoice(i)}
+                        className="p-1 text-gray-400 transition hover:text-red-500"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Choice image */}
+                  <div className="mt-3 flex flex-wrap items-center gap-3 pl-8">
+                    {c.image_url ? (
+                      <img
+                        src={c.image_url}
+                        alt={`Choice ${i + 1}`}
+                        className="h-20 w-28 rounded-lg border border-gray-200 bg-gray-50 object-contain p-1"
+                      />
+                    ) : (
+                      <div className="flex h-20 w-28 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 text-gray-400">
+                        <ImagePlus className="h-5 w-5" />
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label
+                        className={`flex cursor-pointer items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-600 transition hover:bg-blue-100 ${
+                          uploadingChoiceImageIndex === i
+                            ? "pointer-events-none opacity-50"
+                            : ""
+                        }`}
+                      >
+                        <ImagePlus className="h-3.5 w-3.5" />
+
+                        {uploadingChoiceImageIndex === i
+                          ? "Uploading..."
+                          : c.image_url
+                            ? "Change image"
+                            : "Add image"}
+
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp,image/gif"
+                          className="hidden"
+                          disabled={uploadingChoiceImageIndex === i}
+                          onChange={(event) => {
+                            void handleChoiceImageUpload(
+                              i,
+                              event.target.files?.[0],
+                            );
+
+                            event.target.value = "";
+                          }}
+                        />
+                      </label>
+
+                      {c.image_url && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setChoice(i, {
+                              image_url: "",
+                            })
+                          }
+                          className="rounded-lg px-3 py-2 text-xs font-semibold text-red-500 transition hover:bg-red-50"
+                        >
+                          Remove image
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <p className="mt-2 text-xs text-gray-400">
+              {translate(
+                language,
+                "adminPage.clickTheRoundButtonToSelectTheCorrect",
+              )}
+            </p>
+          </div>
+
+          {/* Save / Cancel */}
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setEditingId(null)}
+              className="rounded-xl px-4 py-2 text-sm text-gray-600 transition hover:bg-gray-100"
+            >
+              {translate(language, "adminPage.cancel")}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
+            >
+              {saving ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+
+              {translate(language, "adminPage.save")}
+            </button>
+          </div>
         </div>
 
-                <div className="flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={() => setEditingId(null)}
-            className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl transition"
-          >
-            {translate(language, "adminPage.cancel")}
-          </button>
-
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition disabled:opacity-60"
-          >
-            {saving ? (
-              <RefreshCw className="w-4 h-4 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
-
-            {translate(language, "adminPage.save")}
-          </button>
-        </div>
-      </div>
-
-      {showEditImageCropper && form.image_url && (
-        <ManualImageCropper
-          sourceUrl={form.image_url}
-          title="Manual Image Crop"
-          targets={[
-            {
-              id: "question",
-              label: "Question image",
-            },
-            ...form.choices.map((choice, index) => ({
-              id: `choice:${index}`,
-              label: `Choice ${index + 1}${
-                choice.choice_text.trim()
-                  ? ` — ${choice.choice_text.trim().slice(0, 30)}`
-                  : ""
-              }`,
-            })),
-          ]}
-          labels={{
-            instructions:
-              "Drag over the image to select an area. Choose where the crop should be used, then click Add Crop.",
-            target: "Use crop for",
-            addCrop: "Add Crop",
-            crops: "Selected crops",
-            empty: "No crops added yet.",
-            apply: "Apply Crops",
-            cancel: "Cancel",
-            applying: "Applying...",
-            zoomIn: "Zoom in",
-            zoomOut: "Zoom out",
-            resetZoom: "Reset zoom",
-            cropTool: "Crop",
-            moveTool: "Move",
-          }}
-          onApply={applyEditImageCrops}
-          onClose={() => setShowEditImageCropper(false)}
-        />
-      )}
-    </>
-  );
-}
+        {/* Manual image cropper */}
+        {showEditImageCropper && form.image_url && (
+          <ManualImageCropper
+            sourceUrl={form.image_url}
+            title="Manual Image Crop"
+            targets={[
+              {
+                id: "question",
+                label: "Question image",
+              },
+              ...form.choices.map((choice, index) => ({
+                id: `choice:${index}`,
+                label: `Choice ${index + 1}${
+                  choice.choice_text.trim()
+                    ? ` — ${choice.choice_text.trim().slice(0, 30)}`
+                    : ""
+                }`,
+              })),
+            ]}
+            labels={{
+              instructions:
+                "Drag over the image to select an area. Choose where the crop should be used, then click Add Crop.",
+              target: "Use crop for",
+              addCrop: "Add Crop",
+              crops: "Selected crops",
+              empty: "No crops added yet.",
+              apply: "Apply Crops",
+              cancel: "Cancel",
+              applying: "Applying...",
+              zoomIn: "Zoom in",
+              zoomOut: "Zoom out",
+              resetZoom: "Reset zoom",
+              cropTool: "Crop",
+              moveTool: "Move",
+            }}
+            onApply={applyEditImageCrops}
+            onClose={() => setShowEditImageCropper(false)}
+          />
+        )}
+      </>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -1325,7 +1479,9 @@ export default function QuestionsTab() {
             <SlidersHorizontal className="h-4 w-4 text-blue-600" />
             {translate(language, "adminPage.questionSearchOptions")}
           </span>
-          <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${showSearchOptions ? "rotate-180" : ""}`} />
+          <ChevronDown
+            className={`h-4 w-4 shrink-0 transition-transform ${showSearchOptions ? "rotate-180" : ""}`}
+          />
         </button>
         <div ref={subjectMenuRef} className="relative w-56 max-w-full">
           <button
@@ -1342,7 +1498,8 @@ export default function QuestionsTab() {
             <span className="truncate">
               {filterSubject === "all"
                 ? translate(language, "adminPage.allSubjects")
-                : subjects.find((subject) => subject.id === filterSubject)?.name ?? translate(language, "adminPage.allSubjects")}
+                : (subjects.find((subject) => subject.id === filterSubject)
+                    ?.name ?? translate(language, "adminPage.allSubjects"))}
             </span>
             <ChevronDown
               className={`
@@ -1361,7 +1518,13 @@ export default function QuestionsTab() {
               aria-label={translate(language, "adminPage.allSubjects")}
               className="absolute left-0 top-full z-30 mt-2 max-h-72 w-64 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl border border-gray-200 bg-white p-2 shadow-lg"
             >
-              {[{ id: "all", name: translate(language, "adminPage.allSubjects") }, ...subjects].map((subject) => (
+              {[
+                {
+                  id: "all",
+                  name: translate(language, "adminPage.allSubjects"),
+                },
+                ...subjects,
+              ].map((subject) => (
                 <button
                   key={subject.id}
                   type="button"
@@ -1496,7 +1659,10 @@ export default function QuestionsTab() {
       </div>
 
       {showSearchOptions && (
-        <div id="question-search-options" className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+        <div
+          id="question-search-options"
+          className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm"
+        >
           <div className="mb-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
               <SlidersHorizontal className="h-4 w-4 text-blue-600" />
@@ -1513,65 +1679,81 @@ export default function QuestionsTab() {
             )}
           </div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <label className="text-xs font-semibold text-gray-600">
-            {translate(language, "adminPage.filterQuestionNumber")}
-            <input
-              type="number"
-              min="1"
-              value={filterQuestionNumber}
-              onChange={(event) => {
-                setFilterQuestionNumber(event.target.value);
-                setListPage(1);
-              }}
-              placeholder={translate(language, "adminPage.anyQuestionNumber")}
-              className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm font-normal text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
-            />
-          </label>
-          <label className="text-xs font-semibold text-gray-600">
-            {translate(language, "adminPage.filterExamYear")}
-            <input
-              type="number"
-              min="1900"
-              max="2100"
-              value={filterExamYear}
-              onChange={(event) => {
-                setFilterExamYear(event.target.value);
-                setListPage(1);
-              }}
-              placeholder={translate(language, "adminPage.anyExamYear")}
-              className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm font-normal text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
-            />
-          </label>
-          <label className="text-xs font-semibold text-gray-600">
-            {translate(language, "adminPage.filterQuestionImage")}
-            <select
-              value={filterQuestionImage}
-              onChange={(event) => {
-                setFilterQuestionImage(event.target.value as ImagePresenceFilter);
-                setListPage(1);
-              }}
-              className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-normal text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
-            >
-              <option value="all">{translate(language, "adminPage.anyImageStatus")}</option>
-              <option value="with">{translate(language, "adminPage.includesImage")}</option>
-              <option value="without">{translate(language, "adminPage.noImage")}</option>
-            </select>
-          </label>
-          <label className="text-xs font-semibold text-gray-600">
-            {translate(language, "adminPage.filterAnswerImage")}
-            <select
-              value={filterAnswerImage}
-              onChange={(event) => {
-                setFilterAnswerImage(event.target.value as ImagePresenceFilter);
-                setListPage(1);
-              }}
-              className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-normal text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
-            >
-              <option value="all">{translate(language, "adminPage.anyImageStatus")}</option>
-              <option value="with">{translate(language, "adminPage.includesImage")}</option>
-              <option value="without">{translate(language, "adminPage.noImage")}</option>
-            </select>
-          </label>
+            <label className="text-xs font-semibold text-gray-600">
+              {translate(language, "adminPage.filterQuestionNumber")}
+              <input
+                type="number"
+                min="1"
+                value={filterQuestionNumber}
+                onChange={(event) => {
+                  setFilterQuestionNumber(event.target.value);
+                  setListPage(1);
+                }}
+                placeholder={translate(language, "adminPage.anyQuestionNumber")}
+                className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm font-normal text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+            </label>
+            <label className="text-xs font-semibold text-gray-600">
+              {translate(language, "adminPage.filterExamYear")}
+              <input
+                type="number"
+                min="1900"
+                max="2100"
+                value={filterExamYear}
+                onChange={(event) => {
+                  setFilterExamYear(event.target.value);
+                  setListPage(1);
+                }}
+                placeholder={translate(language, "adminPage.anyExamYear")}
+                className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm font-normal text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+            </label>
+            <label className="text-xs font-semibold text-gray-600">
+              {translate(language, "adminPage.filterQuestionImage")}
+              <select
+                value={filterQuestionImage}
+                onChange={(event) => {
+                  setFilterQuestionImage(
+                    event.target.value as ImagePresenceFilter,
+                  );
+                  setListPage(1);
+                }}
+                className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-normal text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              >
+                <option value="all">
+                  {translate(language, "adminPage.anyImageStatus")}
+                </option>
+                <option value="with">
+                  {translate(language, "adminPage.includesImage")}
+                </option>
+                <option value="without">
+                  {translate(language, "adminPage.noImage")}
+                </option>
+              </select>
+            </label>
+            <label className="text-xs font-semibold text-gray-600">
+              {translate(language, "adminPage.filterAnswerImage")}
+              <select
+                value={filterAnswerImage}
+                onChange={(event) => {
+                  setFilterAnswerImage(
+                    event.target.value as ImagePresenceFilter,
+                  );
+                  setListPage(1);
+                }}
+                className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-normal text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              >
+                <option value="all">
+                  {translate(language, "adminPage.anyImageStatus")}
+                </option>
+                <option value="with">
+                  {translate(language, "adminPage.includesImage")}
+                </option>
+                <option value="without">
+                  {translate(language, "adminPage.noImage")}
+                </option>
+              </select>
+            </label>
           </div>
         </div>
       )}
@@ -2081,7 +2263,11 @@ export default function QuestionsTab() {
                         )}
                         {q.exam_year && (
                           <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                            {formatExamPeriod(q.exam_year, q.exam_month, language)}
+                            {formatExamPeriod(
+                              q.exam_year,
+                              q.exam_month,
+                              language,
+                            )}
                           </span>
                         )}
                         <DiffBadge d={q.difficulty ?? 3} />
