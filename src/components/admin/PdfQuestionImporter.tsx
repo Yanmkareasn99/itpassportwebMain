@@ -3,6 +3,7 @@ import {
   CheckCircle,
   ChevronDown,
   ChevronUp,
+  Crop,
   Download,
   FileText,
   Plus,
@@ -41,6 +42,13 @@ import {
   serializePdfImportArchive,
   type ReviewPdfImportQuestion,
 } from '../../lib/pdfImportJson';
+import ManualImageCropper from './ManualImageCropper';
+import ZoomableImagePreview from './ZoomableImagePreview';
+import {
+  combineCropImages,
+  groupCropsByTarget,
+  type ManualImageCrop,
+} from '../../lib/manualImageCrop';
 
 interface PdfQuestionImporterProps {
   subjects: Subject[];
@@ -97,6 +105,24 @@ async function uploadQuestionImage(question: PdfImportQuestion, examKey: string)
   return supabase.storage.from('question-images').getPublicUrl(path).data.publicUrl;
 }
 
+async function uploadChoiceImage(
+  choice: PdfImportChoice,
+  questionNumber: number,
+  examKey: string,
+) {
+  if (!choice.imageDataUrl) return null;
+  const response = await fetch(choice.imageDataUrl);
+  const blob = await response.blob();
+  const safeExamKey = examKey.replace(/[^a-zA-Z0-9_-]/g, '-');
+  const extension = blob.type === 'image/png' ? 'png' : blob.type === 'image/jpeg' ? 'jpg' : 'webp';
+  const path = `${safeExamKey}/question-${questionNumber}-choice-${choice.sortOrder}.${extension}`;
+  const { error } = await supabase.storage
+    .from('question-images')
+    .upload(path, blob, { contentType: blob.type, upsert: true });
+  if (error) throw error;
+  return supabase.storage.from('question-images').getPublicUrl(path).data.publicUrl;
+}
+
 export default function PdfQuestionImporter({
   subjects,
   onClose,
@@ -119,6 +145,7 @@ export default function PdfQuestionImporter({
   const [answerFile, setAnswerFile] = useState<File | null>(pdfJob.answerFile);
   const [questions, setQuestions] = useState<ReviewPdfImportQuestion[]>([]);
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [cropperQuestionIndex, setCropperQuestionIndex] = useState<number | null>(null);
   const [importing, setImporting] = useState(false);
   const [exportingJson, setExportingJson] = useState(false);
   const [importProgress, setImportProgress] = useState('');
@@ -126,6 +153,7 @@ export default function PdfQuestionImporter({
   const [success, setSuccess] = useState('');
   const appliedJobId = useRef(0);
   const initializedJobId = useRef(0);
+  const cropSourcesRef = useRef(new Map<string, string>());
   const processing = pdfJob.status === 'processing';
 
   useEffect(() => {
@@ -135,6 +163,8 @@ export default function PdfQuestionImporter({
       initializedJobId.current = pdfJob.id;
       setQuestions([]);
       setExpandedIndex(null);
+      setCropperQuestionIndex(null);
+      cropSourcesRef.current.clear();
       setError('');
       setSuccess('');
       return;
@@ -158,6 +188,8 @@ export default function PdfQuestionImporter({
         ) ?? '',
       }));
       appliedJobId.current = pdfJob.id;
+      setCropperQuestionIndex(null);
+      cropSourcesRef.current.clear();
       setImportExam(pdfJob.importExam);
       setSubjectRanges(pdfJob.subjectRanges.map(range => ({ ...range })));
       setExamKey(pdfJob.examKey);
@@ -181,14 +213,26 @@ export default function PdfQuestionImporter({
     [questions],
   );
   const keptImageCount = useMemo(
-    () => questions.filter(question => question.keepImage).length,
+    () => questions.reduce(
+      (count, question) => count
+        + (question.keepImage ? 1 : 0)
+        + question.choices.filter(choice => Boolean(choice.imageDataUrl)).length,
+      0,
+    ),
     [questions],
   );
   const keptImageSizeMb = useMemo(
     () => questions.reduce(
-      (sum, question) => question.keepImage
-        ? sum + (question.imageSizeBytes ?? question.imageDataUrl.length * 0.75)
-        : sum,
+      (sum, question) => sum
+        + (question.keepImage
+          ? question.imageSizeBytes ?? question.imageDataUrl.length * 0.75
+          : 0)
+        + question.choices.reduce(
+          (choiceSum, choice) => choiceSum + (choice.imageDataUrl
+            ? choice.imageSizeBytes ?? choice.imageDataUrl.length * 0.75
+            : 0),
+          0,
+        ),
       0,
     ) / 1024 / 1024,
     [questions],
@@ -282,6 +326,43 @@ export default function PdfQuestionImporter({
     }));
   }
 
+  function openCropper(questionIndex: number) {
+    const question = questions[questionIndex];
+    if (!question) return;
+    if (!cropSourcesRef.current.has(question.sourceKey)) {
+      cropSourcesRef.current.set(question.sourceKey, question.imageDataUrl);
+    }
+    setCropperQuestionIndex(questionIndex);
+  }
+
+  async function applyManualCrops(questionIndex: number, crops: ManualImageCrop[]) {
+    const combinedByTarget = new Map<string, Awaited<ReturnType<typeof combineCropImages>>>();
+    for (const [targetId, targetCrops] of groupCropsByTarget(crops)) {
+      combinedByTarget.set(targetId, await combineCropImages(targetCrops));
+    }
+
+    setQuestions(current => current.map((question, currentIndex) => {
+      if (currentIndex !== questionIndex) return question;
+      const questionImage = combinedByTarget.get('question');
+      return {
+        ...question,
+        ...(questionImage ? {
+          imageDataUrl: questionImage.dataUrl,
+          imageSizeBytes: questionImage.sizeBytes,
+          keepImage: true,
+        } : {}),
+        choices: question.choices.map((choice, choiceIndex) => {
+          const choiceImage = combinedByTarget.get(`choice:${choiceIndex}`);
+          return choiceImage ? {
+            ...choice,
+            imageDataUrl: choiceImage.dataUrl,
+            imageSizeBytes: choiceImage.sizeBytes,
+          } : choice;
+        }),
+      };
+    }));
+  }
+
   function removeChoice(questionIndex: number, choiceIndex: number) {
     setQuestions(current => current.map((question, currentIndex) => {
       if (currentIndex !== questionIndex) return question;
@@ -352,6 +433,8 @@ export default function PdfQuestionImporter({
       setExamDate(archive.examDate.slice(0, 7));
       setQuestionFile(null);
       setAnswerFile(null);
+      setCropperQuestionIndex(null);
+      cropSourcesRef.current.clear();
       setQuestions(restoredQuestions);
       setExpandedIndex(restoredQuestions.length ? 0 : null);
       setSuccess(translate(language, 'adminPage.pdfJsonLoaded', { count: restoredQuestions.length }));
@@ -440,13 +523,13 @@ export default function PdfQuestionImporter({
         const imageUrl = question.keepImage
           ? await uploadQuestionImage(question, examKey.trim())
           : null;
-        const answerChoices = question.choices.map((choice, choiceIndex) => ({
+        const answerChoices = await Promise.all(question.choices.map(async (choice, choiceIndex) => ({
           label: choice.label,
           text: choice.text.trim() || choice.label,
-          image_url: null,
+          image_url: await uploadChoiceImage(choice, question.number, examKey.trim()),
           is_correct: choice.label === question.correctChoice,
           sort_order: choiceIndex + 1,
-        }));
+        })));
         const { error: importError } = await supabase.from('question_import_staging').insert({
           source_key: question.sourceKey,
           exam_year: Number(examDate.slice(0, 4)),
@@ -750,6 +833,16 @@ export default function PdfQuestionImporter({
 
                   {expanded && (
                     <div className="space-y-4 p-4">
+                      {question.warnings.length > 0 && (
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                          <p className="font-semibold">Review this question</p>
+                          <ul className="mt-1 list-disc space-y-1 pl-4">
+                            {question.warnings.map((warning, warningIndex) => (
+                              <li key={`${warningIndex}-${warning}`}>{warning}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                       <label className="block text-xs font-semibold text-gray-600">
                         {translate(language, 'adminPage.subject')}
                         <select
@@ -760,9 +853,25 @@ export default function PdfQuestionImporter({
                           {subjects.map(subject => <option key={subject.id} value={subject.id}>{subject.name}</option>)}
                         </select>
                       </label>
-                      <div className="max-h-[34rem] overflow-auto rounded-xl border border-gray-200 bg-gray-50 p-2">
-                        <img src={question.imageDataUrl} alt={`Question ${question.number} PDF preview`} className="mx-auto h-auto max-w-full" />
-                      </div>
+                      <ZoomableImagePreview
+                        src={question.imageDataUrl}
+                        alt={`Question ${question.number} PDF preview`}
+                        labels={{
+                          zoomIn: translate(language, 'adminPage.pdfZoomIn'),
+                          zoomOut: translate(language, 'adminPage.pdfZoomOut'),
+                          resetZoom: translate(language, 'adminPage.pdfResetZoom'),
+                          moveTool: translate(language, 'adminPage.pdfMoveTool'),
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => openCropper(questionIndex)}
+                        disabled={!hasImportablePdfQuestionImage(question)}
+                        className="flex items-center gap-2 rounded-xl border border-violet-200 bg-white px-4 py-2.5 text-sm font-semibold text-violet-700 transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <Crop className="h-4 w-4" />
+                        {translate(language, 'adminPage.pdfManualCrop')}
+                      </button>
                       <label className="flex items-start gap-3 rounded-xl border border-violet-100 bg-violet-50 p-3 text-sm text-violet-900">
                         <input
                           type="checkbox"
@@ -812,6 +921,13 @@ export default function PdfQuestionImporter({
                                 onChange={event => patchChoice(questionIndex, choiceIndex, { text: event.target.value })}
                                 className="min-w-0 flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
                               />
+                              {choice.imageDataUrl && (
+                                <img
+                                  src={choice.imageDataUrl}
+                                  alt={`Question ${question.number}, choice ${choice.label}`}
+                                  className="h-16 w-28 shrink-0 rounded-lg border border-gray-200 bg-white object-contain"
+                                />
+                              )}
                               <button
                                 onClick={() => removeChoice(questionIndex, choiceIndex)}
                                 className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-500"
@@ -839,6 +955,39 @@ export default function PdfQuestionImporter({
             })}
           </div>
         </div>
+      )}
+      {cropperQuestionIndex !== null && questions[cropperQuestionIndex] && (
+        <ManualImageCropper
+          sourceUrl={cropSourcesRef.current.get(questions[cropperQuestionIndex].sourceKey)
+            ?? questions[cropperQuestionIndex].imageDataUrl}
+          title={translate(language, 'adminPage.pdfManualCropTitle', {
+            number: questions[cropperQuestionIndex].number,
+          })}
+          targets={[
+            { id: 'question', label: translate(language, 'adminPage.pdfCropQuestionImage') },
+            ...questions[cropperQuestionIndex].choices.map((choice, choiceIndex) => ({
+              id: `choice:${choiceIndex}`,
+              label: translate(language, 'adminPage.pdfCropChoiceImage', { choice: choice.label }),
+            })),
+          ]}
+          labels={{
+            instructions: translate(language, 'adminPage.pdfCropInstructions'),
+            target: translate(language, 'adminPage.pdfCropTarget'),
+            addCrop: translate(language, 'adminPage.pdfAddCrop'),
+            crops: translate(language, 'adminPage.pdfCrops'),
+            empty: translate(language, 'adminPage.pdfNoCrops'),
+            apply: translate(language, 'adminPage.pdfApplyCrops'),
+            cancel: translate(language, 'adminPage.cancel'),
+            applying: translate(language, 'adminPage.pdfApplyingCrops'),
+            zoomIn: translate(language, 'adminPage.pdfZoomIn'),
+            zoomOut: translate(language, 'adminPage.pdfZoomOut'),
+            resetZoom: translate(language, 'adminPage.pdfResetZoom'),
+            cropTool: translate(language, 'adminPage.pdfCropTool'),
+            moveTool: translate(language, 'adminPage.pdfMoveTool'),
+          }}
+          onApply={crops => applyManualCrops(cropperQuestionIndex, crops)}
+          onClose={() => setCropperQuestionIndex(null)}
+        />
       )}
     </section>
   );

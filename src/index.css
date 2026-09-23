@@ -554,7 +554,7 @@ html.dark .profile-avatar-gradient {
     text-decoration-thickness: 2px;
   }
 
-  button:not(:disabled):hover svg:not(.animate-spin) {
+  button:not(:disabled):hover svg:not(.animate-spin):not(.transition-transform) {
     transform: scale(1.06);
   }
 }

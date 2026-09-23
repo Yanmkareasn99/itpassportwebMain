@@ -4,13 +4,12 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ChevronUp,
   Copy,
   Edit2,
   Plus,
   RefreshCw,
   Save,
-  Search,
+  SlidersHorizontal,
   Trash2,
   Upload,
   X,
@@ -33,6 +32,10 @@ import { resolveImportedSubjectId } from "../../../lib/questionSubject";
 import { findDuplicateQuestionKeys } from "../../../lib/questionDuplicates";
 import { getPdfImportJobSnapshot } from "../../../lib/pdfImportJob";
 import { formatExamPeriod } from "../../../lib/examDate";
+import {
+  filterAdminQuestions,
+  type ImagePresenceFilter,
+} from "../../../lib/adminQuestionFilters";
 
 const QUESTION_FETCH_PAGE_SIZE = 1000;
 const QUESTION_LIST_PAGE_SIZE = 50;
@@ -68,6 +71,28 @@ async function fetchAllQuestions(): Promise<Question[]> {
   );
 }
 
+async function fetchAnswerImageQuestionIds() {
+  const questionIds = new Set<string>();
+
+  for (let from = 0; ; from += QUESTION_FETCH_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("answer_choices")
+      .select("question_id, image_url")
+      .order("id")
+      .range(from, from + QUESTION_FETCH_PAGE_SIZE - 1);
+
+    if (error) throw error;
+
+    const page = (data ?? []) as Pick<AnswerChoice, "question_id" | "image_url">[];
+    page.forEach((choice) => {
+      if (choice.image_url?.trim()) questionIds.add(choice.question_id);
+    });
+    if (page.length < QUESTION_FETCH_PAGE_SIZE) break;
+  }
+
+  return questionIds;
+}
+
 function DiffBadge({ d }: { d: number }) {
   const { language } = useLanguage();
   const map = [
@@ -99,8 +124,12 @@ export default function QuestionsTab() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
   const [filterSubject, setFilterSubject] = useState("all");
+  const [filterQuestionNumber, setFilterQuestionNumber] = useState("");
+  const [filterExamYear, setFilterExamYear] = useState("");
+  const [filterQuestionImage, setFilterQuestionImage] = useState<ImagePresenceFilter>("all");
+  const [filterAnswerImage, setFilterAnswerImage] = useState<ImagePresenceFilter>("all");
+  const [answerImageQuestionIds, setAnswerImageQuestionIds] = useState<Set<string>>(new Set());
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
   const [form, setForm] = useState<QuestionForm>(emptyQuestionForm());
   const [saving, setSaving] = useState(false);
@@ -119,6 +148,7 @@ export default function QuestionsTab() {
   );
   const [showQuestionInputMenu, setShowQuestionInputMenu] = useState(false);
   const [showSubjectMenu, setShowSubjectMenu] = useState(false);
+  const [showSearchOptions, setShowSearchOptions] = useState(false);
   const [showCsvImportModal, setShowCsvImportModal] = useState(false);
   const [csvSubjectId, setCsvSubjectId] = useState("");
   const [csvFileNames, setCsvFileNames] = useState({
@@ -160,13 +190,15 @@ export default function QuestionsTab() {
     setLoading(true);
     setError("");
     try {
-      const [qs, { data: ss, error: subjectError }] = await Promise.all([
+      const [qs, { data: ss, error: subjectError }, answerImageIds] = await Promise.all([
         fetchAllQuestions(),
         supabase.from("subjects").select("*").order("name"),
+        fetchAnswerImageQuestionIds(),
       ]);
       if (subjectError) throw subjectError;
       setQuestions(qs);
       setSubjects((ss ?? []) as Subject[]);
+      setAnswerImageQuestionIds(answerImageIds);
       setChoicesByQuestion({});
     } catch (loadError) {
       setError(
@@ -184,20 +216,33 @@ export default function QuestionsTab() {
   }, [load]);
 
   const filtered = useMemo(() => {
-    const normalizedSearch = search.trim().toLocaleLowerCase();
-    return questions.filter((q) => {
-      const matchSub =
-        filterSubject === "all" || q.subject_id === filterSubject;
-      const matchSearch =
-        !normalizedSearch ||
-        q.question_text.toLocaleLowerCase().includes(normalizedSearch) ||
-        String(q.question_number).includes(normalizedSearch);
-      return matchSub && matchSearch;
+    return filterAdminQuestions(questions, answerImageQuestionIds, {
+      search: "",
+      subjectId: filterSubject,
+      questionNumber: filterQuestionNumber,
+      examYear: filterExamYear,
+      questionImage: filterQuestionImage,
+      answerImage: filterAnswerImage,
     });
-  }, [filterSubject, questions, search]);
+  }, [
+    answerImageQuestionIds,
+    filterAnswerImage,
+    filterExamYear,
+    filterQuestionImage,
+    filterQuestionNumber,
+    filterSubject,
+    questions,
+  ]);
   const subjectById = useMemo(
     () => new Map(subjects.map((subject) => [subject.id, subject])),
     [subjects],
+  );
+  const hasActiveQuestionFilters = Boolean(
+    filterSubject !== "all"
+    || filterQuestionNumber
+    || filterExamYear
+    || filterQuestionImage !== "all"
+    || filterAnswerImage !== "all",
   );
   const listPageCount = Math.max(
     1,
@@ -222,6 +267,15 @@ export default function QuestionsTab() {
     });
     setEditingId("new");
     setError("");
+  }
+
+  function clearQuestionFilters() {
+    setFilterSubject("all");
+    setFilterQuestionNumber("");
+    setFilterExamYear("");
+    setFilterQuestionImage("all");
+    setFilterAnswerImage("all");
+    setListPage(1);
   }
 
   function getNextQuestionNumber(subjectId: string) {
@@ -1126,23 +1180,29 @@ export default function QuestionsTab() {
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setListPage(1);
-            }}
-            placeholder={translate(language, "adminPage.searchQuestions")}
-            className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-          />
-        </div>
+        <button
+          type="button"
+          aria-expanded={showSearchOptions}
+          aria-controls="question-search-options"
+          onClick={() => {
+            setShowSearchOptions((current) => !current);
+            setShowQuestionInputMenu(false);
+            setShowSubjectMenu(false);
+          }}
+          className={`flex min-w-56 items-center justify-between gap-3 rounded-xl border bg-white px-3 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-300 ${showSearchOptions ? "border-blue-300 text-blue-700" : "border-gray-200 text-gray-700 hover:border-blue-300"}`}
+        >
+          <span className="flex items-center gap-2">
+            <SlidersHorizontal className="h-4 w-4 text-blue-600" />
+            {translate(language, "adminPage.questionSearchOptions")}
+          </span>
+          <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${showSearchOptions ? "rotate-180" : ""}`} />
+        </button>
         <div ref={subjectMenuRef} className="relative w-56 max-w-full">
           <button
             type="button"
             aria-haspopup="listbox"
             aria-expanded={showSubjectMenu}
+            aria-controls="question-subject-menu"
             onClick={() => {
               setShowSubjectMenu((current) => !current);
               setShowQuestionInputMenu(false);
@@ -1154,10 +1214,19 @@ export default function QuestionsTab() {
                 ? translate(language, "adminPage.allSubjects")
                 : subjects.find((subject) => subject.id === filterSubject)?.name ?? translate(language, "adminPage.allSubjects")}
             </span>
-            <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${showSubjectMenu ? "rotate-180" : ""}`} />
+            <ChevronDown
+              className={`
+                h-4
+                w-4
+                shrink-0
+                transition-transform
+                ${showSubjectMenu ? "rotate-180" : ""}
+              `}
+            />
           </button>
           {showSubjectMenu && (
             <div
+              id="question-subject-menu"
               role="listbox"
               aria-label={translate(language, "adminPage.allSubjects")}
               className="absolute left-0 top-full z-30 mt-2 max-h-72 w-64 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl border border-gray-200 bg-white p-2 shadow-lg"
@@ -1208,6 +1277,7 @@ export default function QuestionsTab() {
             type="button"
             aria-expanded={showQuestionInputMenu}
             aria-haspopup="menu"
+            aria-controls="question-input-menu"
             onClick={() => {
               setShowQuestionInputMenu((current) => !current);
               setShowSubjectMenu(false);
@@ -1217,14 +1287,22 @@ export default function QuestionsTab() {
             <Plus className="w-4 h-4" />
             {translate(language, "adminPage.addQuestion")}
             <ChevronDown
-              className={`w-4 h-4 transition-transform ${
-                showQuestionInputMenu ? "rotate-180" : ""
-              }`}
+              className={`
+                h-4
+                w-4
+                shrink-0
+                transition-transform
+                ${showQuestionInputMenu ? "rotate-180" : ""}
+              `}
             />
           </button>
 
           {showQuestionInputMenu && (
-            <div role="menu" className="absolute right-0 top-full z-20 mt-2 w-72 overflow-hidden rounded-2xl border border-gray-200 bg-white p-2 shadow-lg">
+            <div
+              id="question-input-menu"
+              role="menu"
+              className="absolute right-0 top-full z-20 mt-2 w-72 overflow-hidden rounded-2xl border border-gray-200 bg-white p-2 shadow-lg"
+            >
               <button
                 type="button"
                 role="menuitem"
@@ -1286,6 +1364,87 @@ export default function QuestionsTab() {
           )}
         </div>
       </div>
+
+      {showSearchOptions && (
+        <div id="question-search-options" className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+              <SlidersHorizontal className="h-4 w-4 text-blue-600" />
+              {translate(language, "adminPage.questionSearchOptions")}
+            </div>
+            {hasActiveQuestionFilters && (
+              <button
+                type="button"
+                onClick={clearQuestionFilters}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+              >
+                {translate(language, "adminPage.clearFilters")}
+              </button>
+            )}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <label className="text-xs font-semibold text-gray-600">
+            {translate(language, "adminPage.filterQuestionNumber")}
+            <input
+              type="number"
+              min="1"
+              value={filterQuestionNumber}
+              onChange={(event) => {
+                setFilterQuestionNumber(event.target.value);
+                setListPage(1);
+              }}
+              placeholder={translate(language, "adminPage.anyQuestionNumber")}
+              className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm font-normal text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+            />
+          </label>
+          <label className="text-xs font-semibold text-gray-600">
+            {translate(language, "adminPage.filterExamYear")}
+            <input
+              type="number"
+              min="1900"
+              max="2100"
+              value={filterExamYear}
+              onChange={(event) => {
+                setFilterExamYear(event.target.value);
+                setListPage(1);
+              }}
+              placeholder={translate(language, "adminPage.anyExamYear")}
+              className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm font-normal text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+            />
+          </label>
+          <label className="text-xs font-semibold text-gray-600">
+            {translate(language, "adminPage.filterQuestionImage")}
+            <select
+              value={filterQuestionImage}
+              onChange={(event) => {
+                setFilterQuestionImage(event.target.value as ImagePresenceFilter);
+                setListPage(1);
+              }}
+              className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-normal text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+            >
+              <option value="all">{translate(language, "adminPage.anyImageStatus")}</option>
+              <option value="with">{translate(language, "adminPage.includesImage")}</option>
+              <option value="without">{translate(language, "adminPage.noImage")}</option>
+            </select>
+          </label>
+          <label className="text-xs font-semibold text-gray-600">
+            {translate(language, "adminPage.filterAnswerImage")}
+            <select
+              value={filterAnswerImage}
+              onChange={(event) => {
+                setFilterAnswerImage(event.target.value as ImagePresenceFilter);
+                setListPage(1);
+              }}
+              className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-normal text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+            >
+              <option value="all">{translate(language, "adminPage.anyImageStatus")}</option>
+              <option value="with">{translate(language, "adminPage.includesImage")}</option>
+              <option value="without">{translate(language, "adminPage.noImage")}</option>
+            </select>
+          </label>
+          </div>
+        </div>
+      )}
 
       {showCsvImportModal && (
         <div className="w-full mb-4">
@@ -1801,7 +1960,10 @@ export default function QuestionsTab() {
                         {q.question_text}
                       </p>
                       {isExpanded && (
-                        <div className="mt-3 space-y-1.5">
+                        <div
+                          id={`question-details-${q.id}`}
+                          className="mt-3 space-y-1.5"
+                        >
                           {choicesLoading && (
                             <div className="flex items-center gap-2 px-3 py-2 text-xs text-gray-400">
                               <RefreshCw className="h-3.5 w-3.5 animate-spin" />
@@ -1834,15 +1996,16 @@ export default function QuestionsTab() {
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       <button
+                        type="button"
                         onClick={() => void toggleExpanded(q)}
                         disabled={choicesLoading}
+                        aria-expanded={isExpanded}
+                        aria-controls={`question-details-${q.id}`}
                         className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition"
                       >
-                        {isExpanded ? (
-                          <ChevronUp className="w-4 h-4" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4" />
-                        )}
+                        <ChevronDown
+                          className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                        />
                       </button>
                       <button
                         onClick={() => void startEdit(q)}

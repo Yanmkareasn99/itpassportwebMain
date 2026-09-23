@@ -4,9 +4,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from scan_exam import (
+    clean_detected_text,
+    horizontal_choice_row,
+    detect_choice_regions,
     VISUAL_KEYWORD_RE,
     find_starts,
     OcrLine,
+    OcrWord,
     parse_answers,
     parse_choices,
     subject_id,
@@ -89,6 +93,26 @@ class ScannerParsingTests(unittest.TestCase):
             OcrWord("エ", 50, 280, 18, 20),
         ]
         self.assertIsNone(horizontal_choice_row(words, 650))
+
+    def test_detects_vertical_choice_image_rows(self):
+        words = [
+            OcrWord("ア", 20, 200, 20, 20),
+            OcrWord("イ", 22, 300, 20, 20),
+            OcrWord("ウ", 19, 400, 20, 20),
+            OcrWord("工", 21, 500, 20, 20),
+        ]
+        regions = detect_choice_regions(words, 900, 700)
+        self.assertEqual(set(regions), set("アイウエ"))
+        self.assertLess(regions["ア"][1], regions["イ"][1])
+
+    def test_rejects_ambiguous_choice_image_geometry(self):
+        words = [
+            OcrWord("ア", 10, 10, 10, 10),
+            OcrWord("イ", 300, 80, 10, 10),
+            OcrWord("ウ", 50, 150, 10, 10),
+            OcrWord("エ", 500, 240, 10, 10),
+        ]
+        self.assertEqual(detect_choice_regions(words, 800, 600), {})
 
     def test_starts_preserve_missing_number(self):
         lines = [[OcrLine("問1 本文", 10, 20), OcrLine("問3 本文", 30, 40)]]

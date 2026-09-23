@@ -26,3 +26,23 @@ it('closes both admin question menus on outside clicks and Escape', async () => 
   fireEvent.keyDown(document, { key: 'Escape' });
   expect(screen.queryByRole('listbox')).toBeNull();
 });
+
+it('expands and collapses the question search options', () => {
+  localStorage.setItem('manabi_language', 'en');
+  render(<LanguageProvider><QuestionsTab /></LanguageProvider>);
+
+  const searchOptions = screen.getByRole('button', { name: 'Question search options' });
+  expect(searchOptions.getAttribute('aria-expanded')).toBe('false');
+  expect(screen.queryByLabelText('Question number')).toBeNull();
+
+  fireEvent.click(searchOptions);
+  expect(searchOptions.getAttribute('aria-expanded')).toBe('true');
+  expect(screen.getByLabelText('Question number')).toBeTruthy();
+  expect(screen.getByLabelText('Exam year')).toBeTruthy();
+  expect(screen.getByLabelText('Question image')).toBeTruthy();
+  expect(screen.getByLabelText('Answer image')).toBeTruthy();
+
+  fireEvent.click(searchOptions);
+  expect(searchOptions.getAttribute('aria-expanded')).toBe('false');
+  expect(screen.queryByLabelText('Question number')).toBeNull();
+});

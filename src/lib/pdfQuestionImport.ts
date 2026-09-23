@@ -19,6 +19,8 @@ export interface PdfImportChoice {
   label: string;
   text: string;
   sortOrder: number;
+  imageDataUrl?: string;
+  imageSizeBytes?: number;
 }
 
 export interface PdfImportQuestion {

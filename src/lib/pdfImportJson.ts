@@ -1,14 +1,15 @@
 import type { PdfImportChoice, PdfImportQuestion } from './pdfQuestionImport';
 import type { ItPassportSubjectRange, QuestionImportExam } from './questionSubject';
 
-export const PDF_IMPORT_JSON_SCHEMA = 'manabi-question-archive-v2';
+export const PDF_IMPORT_JSON_SCHEMA = 'manabi-question-archive-v3';
+const PREVIOUS_PDF_IMPORT_JSON_SCHEMA = 'manabi-question-archive-v2';
 const LEGACY_PDF_IMPORT_JSON_SCHEMA = 'manabi-pdf-import-v1';
 const EMPTY_PREVIEW_DATA_URL = 'data:image/svg+xml;charset=utf-8,%3Csvg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/%3E';
 
 export type ReviewPdfImportQuestion = PdfImportQuestion & { subjectId: string };
 
 export interface PdfImportArchive {
-  schemaVersion: typeof PDF_IMPORT_JSON_SCHEMA | typeof LEGACY_PDF_IMPORT_JSON_SCHEMA;
+  schemaVersion: typeof PDF_IMPORT_JSON_SCHEMA | typeof PREVIOUS_PDF_IMPORT_JSON_SCHEMA | typeof LEGACY_PDF_IMPORT_JSON_SCHEMA;
   examKey: string;
   examDate: string;
   importExam: QuestionImportExam;
@@ -73,16 +74,49 @@ async function persistentImageDataUrl(question: ReviewPdfImportQuestion) {
   });
 }
 
+async function persistentChoiceImageDataUrl(
+  choice: PdfImportChoice,
+  questionNumber: number,
+) {
+  if (!choice.imageDataUrl) return null;
+  if (!hasImportablePdfQuestionImage({ imageDataUrl: choice.imageDataUrl })) {
+    throw new Error(`Question ${questionNumber}, choice ${choice.label} has an invalid image.`);
+  }
+  if (choice.imageDataUrl.startsWith('data:image/')) return choice.imageDataUrl;
+  const response = await fetch(choice.imageDataUrl);
+  if (!response.ok) throw new Error(`Unable to save the image for question ${questionNumber}, choice ${choice.label}.`);
+  const blob = await response.blob();
+  return await new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error ?? new Error(`Unable to save choice ${choice.label}.`));
+    reader.readAsDataURL(blob);
+  });
+}
+
 export async function serializePdfImportArchive(input: Omit<PdfImportArchive, 'schemaVersion'>) {
   const questions = [];
   for (const question of input.questions) {
     const imageDataUrl = await persistentImageDataUrl(question);
     const safeExamKey = input.examKey.replace(/[^a-zA-Z0-9_-]/g, '-');
+    const choiceFigures: Record<string, unknown> = {};
+    for (const choice of question.choices) {
+      const choiceImage = await persistentChoiceImageDataUrl(choice, question.number);
+      if (choiceImage) {
+        choiceFigures[choice.label] = {
+          filename: `${safeExamKey}-question-${question.number}-choice-${choice.sortOrder}.webp`,
+          mime_type: choiceImage.slice(5, choiceImage.indexOf(';')),
+          data_url: choiceImage,
+          size_bytes: choice.imageSizeBytes ?? null,
+        };
+      }
+    }
     questions.push({
       number: question.number,
       source_key: question.sourceKey,
       text: question.questionText,
       choices: Object.fromEntries(question.choices.map(choice => [choice.label, choice.text])),
+      choice_figures: choiceFigures,
       correct_answer: question.correctChoice,
       has_figure: Boolean(imageDataUrl),
       figure: imageDataUrl ? {
@@ -119,19 +153,32 @@ export async function serializePdfImportArchive(input: Omit<PdfImportArchive, 's
   }, null, 2)}\n`;
 }
 
-function parseChoice(value: unknown, questionIndex: number, choiceIndex: number): PdfImportChoice {
+function parseChoice(
+  value: unknown,
+  questionIndex: number,
+  choiceIndex: number,
+  choiceFigures: Record<string, unknown>,
+): PdfImportChoice {
   if (!isRecord(value)) throw new Error(`Question ${questionIndex + 1}, choice ${choiceIndex + 1} is invalid.`);
+  const label = requiredString(value.label, `questions[${questionIndex}].choices[${choiceIndex}].label`);
+  const figure = isRecord(choiceFigures[label]) ? choiceFigures[label] : null;
+  const storedImage = figure?.data_url;
+  if (storedImage !== undefined && (typeof storedImage !== 'string' || !/^data:image\/(?:webp|png|jpeg);/i.test(storedImage))) {
+    throw new Error(`Question ${questionIndex + 1}, choice ${label} has an invalid figure data_url.`);
+  }
   return {
-    label: requiredString(value.label, `questions[${questionIndex}].choices[${choiceIndex}].label`),
+    label,
     text: requiredString(value.text, `questions[${questionIndex}].choices[${choiceIndex}].text`),
     sortOrder: finiteNumber(value.sort_order, `questions[${questionIndex}].choices[${choiceIndex}].sort_order`),
+    imageDataUrl: typeof storedImage === 'string' ? storedImage : undefined,
+    imageSizeBytes: typeof figure?.size_bytes === 'number' ? figure.size_bytes : undefined,
   };
 }
 
 export function parsePdfImportArchive(text: string): PdfImportArchive {
   const value: unknown = JSON.parse(text);
-  if (!isRecord(value) || ![PDF_IMPORT_JSON_SCHEMA, LEGACY_PDF_IMPORT_JSON_SCHEMA].includes(String(value.schema_version))) {
-    throw new Error(`JSON must use schema_version "${PDF_IMPORT_JSON_SCHEMA}" or "${LEGACY_PDF_IMPORT_JSON_SCHEMA}".`);
+  if (!isRecord(value) || ![PDF_IMPORT_JSON_SCHEMA, PREVIOUS_PDF_IMPORT_JSON_SCHEMA, LEGACY_PDF_IMPORT_JSON_SCHEMA].includes(String(value.schema_version))) {
+    throw new Error(`JSON must use schema_version "${PDF_IMPORT_JSON_SCHEMA}", "${PREVIOUS_PDF_IMPORT_JSON_SCHEMA}", or "${LEGACY_PDF_IMPORT_JSON_SCHEMA}".`);
   }
   const legacy = value.schema_version === LEGACY_PDF_IMPORT_JSON_SCHEMA;
   const importExam = value.import_exam;
@@ -163,6 +210,7 @@ export function parsePdfImportArchive(text: string): PdfImportArchive {
       throw new Error(`Question ${questionIndex + 1} must contain at least two choices.`);
     }
     const figure = isRecord(entry.figure) ? entry.figure : null;
+    const choiceFigures = isRecord(entry.choice_figures) ? entry.choice_figures : {};
     const storedImage = legacy ? entry.image_data_url : figure?.data_url;
     const imageDataUrl = typeof storedImage === 'string'
       && /^data:image\/(?:webp|png|jpeg);/i.test(storedImage)
@@ -187,7 +235,7 @@ export function parsePdfImportArchive(text: string): PdfImportArchive {
       sourcePages: Array.isArray(entry.source_pages)
         ? entry.source_pages.filter(page => typeof page === 'number')
         : [],
-      choices: choiceEntries.map((choice, choiceIndex) => parseChoice(choice, questionIndex, choiceIndex)),
+      choices: choiceEntries.map((choice, choiceIndex) => parseChoice(choice, questionIndex, choiceIndex, choiceFigures)),
       correctChoice: typeof (legacy ? entry.correct_choice : entry.correct_answer) === 'string'
         ? String(legacy ? entry.correct_choice : entry.correct_answer)
         : '',

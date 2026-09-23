@@ -13,6 +13,7 @@ Accuracy-oriented version:
 - duplicate/missing question validation
 - OCR retries for difficult crops, including a sparse-text pass for
   question crops that mix body text with figures/diagrams
+- conservative row/column detection for separate answer-choice images
 """
 
 from __future__ import annotations
@@ -21,6 +22,7 @@ import argparse
 import base64
 import io
 import json
+import itertools
 import re
 import sys
 from dataclasses import dataclass
@@ -78,6 +80,64 @@ class OcrLine:
     top: int
     bottom: int
     confidence: float = 0.0
+
+
+@dataclass(frozen=True)
+class OcrWord:
+    text: str
+    left: int
+    top: int
+    width: int
+    height: int
+
+
+def clean_detected_text(value: str) -> str:
+    """Remove OCR-only spacing inside Japanese while preserving Latin tokens."""
+    value = normalize(value)
+    japanese = r"\u3040-\u30ff\u3400-\u9fff"
+    value = re.sub(rf"(?<=[{japanese}])\s+(?=[{japanese}])", "", value)
+    value = re.sub(r"([、。，．])\s+", r"\1", value)
+    return value
+
+
+def horizontal_choice_row(words: list[OcrWord], image_width: int):
+    """Read four choices printed on one physical row using x coordinates."""
+    markers = []
+    for word in words:
+        label = normalize_choice_label(normalize(word.text))
+        if label in LABELS and len(normalize(word.text)) == 1:
+            markers.append((label, word))
+    for anchor_label, anchor in markers:
+        nearby = [(label, word) for label, word in markers if abs(word.top - anchor.top) <= max(12, anchor.height)]
+        best = {}
+        for label, word in nearby:
+            previous = best.get(label)
+            if previous is None or abs(word.top - anchor.top) < abs(previous.top - anchor.top):
+                best[label] = word
+        if set(best) != set(LABELS):
+            continue
+        ordered = [best[label] for label in LABELS]
+        if any(ordered[index].left >= ordered[index + 1].left for index in range(3)):
+            continue
+        if ordered[-1].left - ordered[0].left < image_width * 0.45:
+            continue
+        centers = [word.left + word.width / 2 for word in ordered]
+        boundaries = [0] + [round((centers[index] + centers[index + 1]) / 2) for index in range(3)] + [image_width]
+        choices = {}
+        for index, label in enumerate(LABELS):
+            parts = [
+                word for word in words
+                if abs(word.top - anchor.top) <= max(12, anchor.height)
+                and boundaries[index] <= word.left + word.width / 2 < boundaries[index + 1]
+                and normalize_choice_label(normalize(word.text)) != label
+            ]
+            parts.sort(key=lambda word: word.left)
+            text = " ".join(clean_detected_text(word.text) for word in parts).strip()
+            if text:
+                choices[label] = text
+        if set(choices) == set(LABELS):
+            return min(word.top for word in ordered), choices
+    return None
 
 
 @dataclass(frozen=True)
@@ -403,6 +463,84 @@ def ocr_lines(image, lang: str, psm: int = 6, dpi: int = 350) -> list[OcrLine]:
     return sorted(result, key=lambda line: (line.top, line.bottom))
 
 
+def ocr_words(image, lang: str, psm: int = 11, dpi: int = 350) -> list[OcrWord]:
+    data = ocr_data(image, lang, psm, dpi=dpi)
+    words = []
+    for index, raw in enumerate(data["text"]):
+        text = normalize(raw)
+        if not text:
+            continue
+        words.append(OcrWord(
+            text=text,
+            left=int(data["left"][index]),
+            top=int(data["top"][index]),
+            width=int(data["width"][index]),
+            height=int(data["height"][index]),
+        ))
+    return words
+
+
+def detect_choice_regions(words: list[OcrWord], width: int, height: int):
+    """Return four safe row/column crops, or an empty dict if ambiguous."""
+    by_label: dict[str, list[OcrWord]] = {label: [] for label in LABELS}
+    for word in words:
+        raw = normalize(word.text)
+        label = normalize_choice_label(raw)
+        if len(raw) == 1 and label in by_label:
+            by_label[label].append(word)
+    if any(not by_label[label] for label in LABELS):
+        return {}
+
+    best = None
+    pools = [by_label[label][-6:] for label in LABELS]
+    for selected in itertools.product(*pools):
+        centers_x = [word.left + word.width / 2 for word in selected]
+        centers_y = [word.top + word.height / 2 for word in selected]
+        x_span = max(centers_x) - min(centers_x)
+        y_span = max(centers_y) - min(centers_y)
+        rows = all(centers_y[i] > centers_y[i - 1] for i in range(1, 4)) and x_span <= width * .14 and y_span >= height * .08
+        columns = all(centers_x[i] > centers_x[i - 1] for i in range(1, 4)) and y_span <= height * .08 and x_span >= width * .25
+        if not rows and not columns:
+            continue
+        score = x_span + y_span * .01 if rows else y_span + x_span * .01
+        if best is None or score < best[0]:
+            best = (score, selected, "rows" if rows else "columns")
+    if best is None:
+        return {}
+
+    _, selected, layout = best
+    margin = max(8, round(width * .008))
+    result = {}
+    if layout == "rows":
+        centers = [word.top + word.height / 2 for word in selected]
+        boundaries = [round((centers[i] + centers[i + 1]) / 2) for i in range(3)]
+        top = max(0, selected[0].top - margin)
+        for index, label in enumerate(LABELS):
+            row_top = boundaries[index - 1] if index else top
+            row_bottom = boundaries[index] if index < 3 else height
+            result[label] = (0, row_top, width, row_bottom)
+    else:
+        centers = [word.left + word.width / 2 for word in selected]
+        boundaries = [round((centers[i] + centers[i + 1]) / 2) for i in range(3)]
+        top = max(0, min(word.top for word in selected) - margin)
+        for index, label in enumerate(LABELS):
+            left = boundaries[index - 1] if index else 0
+            right = boundaries[index] if index < 3 else width
+            result[label] = (left, top, right, height)
+    return result
+
+
+def trim_image(image, margin: int = 12):
+    _, _, _, _, _, ImageOps = load_runtime()
+    gray = ImageOps.grayscale(image)
+    mask = gray.point(lambda value: 255 if value < 245 else 0)
+    box = mask.getbbox()
+    if not box:
+        return image
+    left, top, right, bottom = box
+    return image.crop((max(0, left - margin), max(0, top - margin), min(image.width, right + margin), min(image.height, bottom + margin)))
+
+
 JAPANESE_CHAR_RE = re.compile(
     r"[\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff]"
 )
@@ -704,9 +842,10 @@ def build_archive(args) -> dict:
                     "number": start.number,
                     "source_key": f"{args.exam_key}:Q{start.number}",
                     "text": f"{args.exam_key} 問{start.number}",
-                    "choices": {},
+                    "choices": {label: label for label in LABELS},
+                    "choice_figures": {},
                     "correct_answer": answers.get(start.number, ""),
-                    "has_figure": True,
+                    "has_figure": False,
                     "figure": None,
                     "confidence": "review",
                     "warnings": [f"Question crop failed: {error}"],
@@ -727,8 +866,39 @@ def build_archive(args) -> dict:
         )
         text, choices = parse_choices(raw_ocr, start.number)
 
-        confidence, warnings = question_quality(text, choices)
+        words: list[OcrWord] = []
+        if len(choices) < 4 or VISUAL_KEYWORD_RE.search(raw_ocr):
+            words = ocr_words(crop, args.lang, 11, args.dpi)
+            horizontal = horizontal_choice_row(words, crop.width)
+            if horizontal and len(choices) < 4:
+                _, choices = horizontal
 
+        visual = bool(VISUAL_KEYWORD_RE.search(raw_ocr)) or len(choices) < 4
+
+        warnings: list[str] = []
+        choice_figures = {}
+        if visual:
+            if not words:
+                words = ocr_words(crop, args.lang, 11, args.dpi)
+            regions = detect_choice_regions(words, crop.width, crop.height)
+            for label, box in regions.items():
+                choice_crop = trim_image(crop.crop(box))
+                data_url, size = image_data_url(choice_crop)
+                choice_figures[label] = {
+                    "filename": f"{args.exam_key}-question-{start.number}-choice-{label}.webp",
+                    "mime_type": "image/webp",
+                    "data_url": data_url,
+                    "size_bytes": size,
+                }
+            if len(choice_figures) == 4:
+                choices = {label: choices.get(label, label) for label in LABELS}
+            else:
+                warnings.append(
+                    "Choice images could not be separated safely; verify the full question image."
+                )
+
+        confidence, quality_warnings = question_quality(text, choices)
+        warnings = quality_warnings + warnings
         if start.number not in answers:
             warnings.append("Correct answer was not detected.")
         elif answers[start.number] not in choices:
@@ -736,8 +906,7 @@ def build_archive(args) -> dict:
                 f"Correct answer '{answers[start.number]}' is not among "
                 "the detected choices."
             )
-
-        visual = bool(VISUAL_KEYWORD_RE.search(raw_ocr)) or len(choices) < 4
+        confidence = "high" if not warnings else "review"
 
         figure = None
         if visual or args.keep_all_images:
@@ -755,6 +924,7 @@ def build_archive(args) -> dict:
                 "source_key": f"{args.exam_key}:Q{start.number}",
                 "text": text or f"{args.exam_key} 問{start.number}",
                 "choices": choices,
+                "choice_figures": choice_figures,
                 "correct_answer": answers.get(start.number, ""),
                 "has_figure": figure is not None,
                 "figure": figure,
@@ -788,7 +958,7 @@ def build_archive(args) -> dict:
         )
 
     return {
-        "schema_version": "manabi-question-archive-v2",
+        "schema_version": "manabi-question-archive-v3",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "exam": args.exam_key,
         "exam_year": int(args.exam_period[:4]),

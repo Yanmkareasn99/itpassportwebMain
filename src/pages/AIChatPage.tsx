@@ -13,6 +13,7 @@ import { getChatReply, ChatMessage } from '../lib/aiChat';
 import { useAuth } from '../contexts/AuthContext';
 import { Page, Question, Subject } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
+import { takeAiChatHandoff } from '../lib/aiChatHandoff';
 
 interface AIChatPageProps {
   currentPage: Page;
@@ -55,9 +56,9 @@ export default function AIChatPage({
   currentPage,
   onNavigate,
 }: AIChatPageProps) {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const { language } = useLanguage();
-  const profileId = profile?.id;
+  const profileId = profile?.id ?? user?.id;
 
   const starterPrompts = [
     translate(language, 'aiChatPage.starterPlan'),
@@ -85,6 +86,7 @@ export default function AIChatPage({
 
   useEffect(() => {
     async function loadData() {
+      const handoff = takeAiChatHandoff();
       const [{ data: subjectData }, { data: questionData }] =
         await Promise.all([
           supabase.from('subjects').select('*').order('name'),
@@ -115,18 +117,36 @@ export default function AIChatPage({
             .order('created_at', { ascending: true })
             .limit(500);
 
-          if (msgs && msgs.length > 0) {
-            const loaded = (msgs as StoredChatMessage[]).map((m) => ({
+          const loaded = (msgs as StoredChatMessage[] | null)?.map((m) => ({
               id: `${new Date(m.created_at).getTime()}-${Math.random()
                 .toString(36)
                 .slice(2, 6)}`,
               role: m.role as 'user' | 'assistant',
               content: m.content as string,
               createdAt: new Date(m.created_at).getTime(),
-            }));
+            })) ?? [];
 
-            setMessages(loaded);
+          if (handoff) {
+            const handoffMessages: ChatMessage[] = handoff.turns.map((turn, index) => ({
+              id: `${handoff.createdAt + index}-handoff`,
+              role: turn.role,
+              content: turn.content,
+              createdAt: handoff.createdAt + index,
+            }));
+            loaded.push(...handoffMessages);
+
+            const { error: handoffError } = await supabase.from('ai_chat_messages').insert(
+              handoff.turns.map((turn, index) => ({
+                user_id: profileId,
+                role: turn.role,
+                content: turn.content,
+                created_at: new Date(handoff.createdAt + index).toISOString(),
+              })),
+            );
+            if (handoffError) console.warn('Failed to persist AI chat handoff', handoffError);
           }
+
+          if (loaded.length > 0) setMessages(loaded);
         } catch (err) {
           console.warn('Failed to load ai chat messages', err);
         }
@@ -171,9 +191,9 @@ export default function AIChatPage({
 
     // Save user message
     try {
-      if (profile?.id) {
+      if (profileId) {
         await supabase.from('ai_chat_messages').insert({
-          user_id: profile.id,
+          user_id: profileId,
           role: 'user',
           content,
         });
@@ -203,9 +223,9 @@ export default function AIChatPage({
 
       // Save assistant message
       try {
-        if (profile?.id) {
+        if (profileId) {
           await supabase.from('ai_chat_messages').insert({
-            user_id: profile.id,
+            user_id: profileId,
             role: 'assistant',
             content: reply,
           });
