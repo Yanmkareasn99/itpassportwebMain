@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { AlertTriangle, BookOpen, Download, FileText, Image, PlayCircle, RefreshCw, Trash2, Upload, X } from 'lucide-react';
+import { AlertTriangle, BookOpen, ChevronDown, Download, FileText, Image, PlayCircle, RefreshCw, Trash2, Upload, X } from 'lucide-react';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -31,6 +31,7 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [showUploadForm, setShowUploadForm] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
@@ -93,6 +94,7 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
       if (input) input.value = '';
       await refresh();
       setMessage(t('materialsPage.uploaded'));
+      setShowUploadForm(false);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : t('materialsPage.uploadFailed'));
     } finally {
@@ -158,29 +160,45 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
         </section>
 
         {!isSupabaseEnabled ? <p role="status" className="rounded-xl bg-amber-50 dark:bg-amber-900/30 p-5 text-sm text-amber-900 dark:text-amber-200">{t('materialsPage.requiresSupabase')}</p> : <>
-          <form onSubmit={handleUpload} className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm p-5 space-y-4">
-            <h3 className="font-bold text-gray-800 dark:text-slate-100 flex items-center gap-2"><Upload className="w-5 h-5" />{t('materialsPage.upload')}</h3>
-            <p className="text-sm text-gray-500 dark:text-slate-300">{t('materialsPage.fileHelp')}</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <label className="text-sm font-medium text-gray-700 dark:text-slate-200 space-y-2">
-                <span>{t('materialsPage.title')}</span>
-                <input required maxLength={120} value={title} onChange={event => setTitle(event.target.value)} className="w-full rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-gray-900 dark:text-white" />
-              </label>
-              <label className="text-sm font-medium text-gray-700 dark:text-slate-200 space-y-2">
-                <span>{t('materialsPage.file')}</span>
-                <input id="material-file" required type="file" accept=".pdf,.png,.jpg,.jpeg,.docx,.pptx,.xlsx" onChange={event => {
-                  const selected = event.target.files?.[0] ?? null;
-                  setFile(selected);
-                  if (selected && !title) setTitle(selected.name.replace(/\.[^.]+$/, ''));
-                }} className="block w-full text-sm text-gray-600 dark:text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-blue-700" />
-              </label>
-            </div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 space-y-2">
-              <span>{t('materialsPage.description')}</span>
-              <textarea maxLength={500} rows={2} value={description} onChange={event => setDescription(event.target.value)} className="w-full rounded-xl border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2 text-gray-900 dark:text-white" />
-            </label>
-            <button type="submit" disabled={busy || !file} className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{busy ? t('materialsPage.uploading') : t('materialsPage.upload')}</button>
-          </form>
+          <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            <button
+              type="button"
+              onClick={() => setShowUploadForm(current => !current)}
+              aria-expanded={showUploadForm}
+              aria-controls="material-upload-form"
+              className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition hover:bg-gray-50 dark:hover:bg-slate-800"
+            >
+              <span className="flex items-center gap-2 font-bold text-gray-800 dark:text-slate-100">
+                <Upload className="h-5 w-5" />
+                {t('materialsPage.upload')}
+              </span>
+              <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform ${showUploadForm ? 'rotate-180' : ''}`} />
+            </button>
+            {showUploadForm && (
+              <form id="material-upload-form" onSubmit={handleUpload} className="space-y-4 border-t border-gray-100 px-5 pb-5 pt-4 dark:border-slate-700">
+                <p className="text-sm text-gray-500 dark:text-slate-300">{t('materialsPage.fileHelp')}</p>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <label className="space-y-2 text-sm font-medium text-gray-700 dark:text-slate-200">
+                    <span>{t('materialsPage.title')}</span>
+                    <input required maxLength={120} value={title} onChange={event => setTitle(event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-gray-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+                  </label>
+                  <label className="space-y-2 text-sm font-medium text-gray-700 dark:text-slate-200">
+                    <span>{t('materialsPage.file')}</span>
+                    <input id="material-file" required type="file" accept=".pdf,.png,.jpg,.jpeg,.docx,.pptx,.xlsx" onChange={event => {
+                      const selected = event.target.files?.[0] ?? null;
+                      setFile(selected);
+                      if (selected && !title) setTitle(selected.name.replace(/\.[^.]+$/, ''));
+                    }} className="block w-full text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-blue-700 dark:text-slate-300" />
+                  </label>
+                </div>
+                <label className="block space-y-2 text-sm font-medium text-gray-700 dark:text-slate-200">
+                  <span>{t('materialsPage.description')}</span>
+                  <textarea maxLength={500} rows={2} value={description} onChange={event => setDescription(event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-gray-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+                </label>
+                <button type="submit" disabled={busy || !file} className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{busy ? t('materialsPage.uploading') : t('materialsPage.upload')}</button>
+              </form>
+            )}
+          </section>
 
           {error && <p role="alert" className="rounded-xl bg-red-50 dark:bg-red-900/30 p-4 text-sm text-red-700 dark:text-red-200">{error}</p>}
           {message && <p role="status" className="rounded-xl bg-emerald-50 dark:bg-emerald-900/30 p-4 text-sm text-emerald-700 dark:text-emerald-200">{message}</p>}

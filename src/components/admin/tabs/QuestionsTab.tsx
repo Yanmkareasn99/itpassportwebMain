@@ -8,6 +8,7 @@ import {
   Crop,
   Edit2,
   ImagePlus,
+  MessageSquare,
   Plus,
   RefreshCw,
   Save,
@@ -21,6 +22,7 @@ import PdfQuestionImporter from "../PdfQuestionImporter";
 import ManualImageCropper from "../ManualImageCropper";
 import { translate } from "../../../i18n";
 import { useLanguage } from "../../../contexts/LanguageContext";
+import { useAuth } from "../../../contexts/AuthContext";
 import { getLocalizedExplanation } from "../../../lib/localizedQuestion";
 import { readCsvFile } from "../../../lib/csv";
 import { supabase } from "../../../lib/supabase";
@@ -35,6 +37,7 @@ import { resolveImportedSubjectId } from "../../../lib/questionSubject";
 import { findDuplicateQuestionKeys } from "../../../lib/questionDuplicates";
 import { getPdfImportJobSnapshot } from "../../../lib/pdfImportJob";
 import { formatExamPeriod } from "../../../lib/examDate";
+import { invalidatePracticeQuestionCache } from "../../../lib/practice";
 import {
   filterAdminQuestions,
   type ImagePresenceFilter,
@@ -47,6 +50,52 @@ import {
 
 const QUESTION_FETCH_PAGE_SIZE = 1000;
 const QUESTION_LIST_PAGE_SIZE = 50;
+const ADMIN_QUESTION_CACHE_TTL_MS = 5 * 60 * 1000;
+type QuestionReviewStatus = "draft" | "editing" | "ready_for_review" | "needs_changes" | "approved";
+
+interface QuestionAdminReview {
+  question_id: string;
+  review_status: QuestionReviewStatus;
+  message: string;
+  updated_by: string | null;
+  updated_at: string;
+}
+
+interface AdminQuestionData {
+  questions: Question[];
+  subjects: Subject[];
+  answerImageQuestionIds: Set<string>;
+  reviews: QuestionAdminReview[];
+  reviewerNames: Record<string, string>;
+}
+
+let adminQuestionDataCache: {
+  data: AdminQuestionData;
+  expiresAt: number;
+} | null = null;
+let adminQuestionDataRequest: Promise<AdminQuestionData> | null = null;
+let adminQuestionDataGeneration = 0;
+
+// Exported for deterministic cache isolation in component tests.
+// eslint-disable-next-line react-refresh/only-export-components
+export function invalidateAdminQuestionCache() {
+  adminQuestionDataGeneration += 1;
+  adminQuestionDataCache = null;
+  adminQuestionDataRequest = null;
+}
+
+function invalidateQuestionCaches() {
+  invalidateAdminQuestionCache();
+  invalidatePracticeQuestionCache();
+}
+
+const REVIEW_STATUS_STYLES: Record<QuestionReviewStatus, string> = {
+  draft: "bg-gray-100 text-gray-600",
+  editing: "bg-blue-100 text-blue-700",
+  ready_for_review: "bg-violet-100 text-violet-700",
+  needs_changes: "bg-amber-100 text-amber-700",
+  approved: "bg-emerald-100 text-emerald-700",
+};
 
 function parseQuestionPoints(value: string, fallback = 1) {
   const trimmed = value.trim();
@@ -104,6 +153,86 @@ async function fetchAnswerImageQuestionIds() {
   return questionIds;
 }
 
+async function fetchAllQuestionAdminReviews(): Promise<QuestionAdminReview[]> {
+  const reviews: QuestionAdminReview[] = [];
+
+  for (let from = 0; ; from += QUESTION_FETCH_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("question_admin_reviews")
+      .select("question_id, review_status, message, updated_by, updated_at")
+      .order("question_id")
+      .range(from, from + QUESTION_FETCH_PAGE_SIZE - 1);
+
+    if (error) throw error;
+    const page = (data ?? []) as QuestionAdminReview[];
+    reviews.push(...page);
+    if (page.length < QUESTION_FETCH_PAGE_SIZE) break;
+  }
+
+  return reviews;
+}
+
+async function loadAdminQuestionData(force = false): Promise<AdminQuestionData> {
+  if (force) invalidateAdminQuestionCache();
+  if (adminQuestionDataCache && adminQuestionDataCache.expiresAt > Date.now()) {
+    return adminQuestionDataCache.data;
+  }
+  if (adminQuestionDataRequest) return adminQuestionDataRequest;
+
+  const generation = adminQuestionDataGeneration;
+  const request = (async () => {
+    const [questions, subjectResult, answerImageQuestionIds, reviews] =
+      await Promise.all([
+        fetchAllQuestions(),
+        supabase.from("subjects").select("*").order("name"),
+        fetchAnswerImageQuestionIds(),
+        fetchAllQuestionAdminReviews(),
+      ]);
+    if (subjectResult.error) throw subjectResult.error;
+    const reviewerIds = [
+      ...new Set(
+        reviews.flatMap((review) =>
+          review.updated_by ? [review.updated_by] : [],
+        ),
+      ),
+    ];
+    let reviewerNames: Record<string, string> = {};
+    if (reviewerIds.length > 0) {
+      const { data: reviewers, error: reviewerError } = await supabase
+        .from("profiles")
+        .select("id, name")
+        .in("id", reviewerIds);
+      if (reviewerError) throw reviewerError;
+      reviewerNames = Object.fromEntries(
+        ((reviewers ?? []) as { id: string; name: string }[]).map(
+          (reviewer) => [reviewer.id, reviewer.name],
+        ),
+      );
+    }
+    const data: AdminQuestionData = {
+      questions,
+      subjects: (subjectResult.data ?? []) as Subject[],
+      answerImageQuestionIds,
+      reviews,
+      reviewerNames,
+    };
+    if (generation === adminQuestionDataGeneration) {
+      adminQuestionDataCache = {
+        data,
+        expiresAt: Date.now() + ADMIN_QUESTION_CACHE_TTL_MS,
+      };
+    }
+    return data;
+  })();
+
+  adminQuestionDataRequest = request;
+  try {
+    return await request;
+  } finally {
+    if (adminQuestionDataRequest === request) adminQuestionDataRequest = null;
+  }
+}
+
 function DiffBadge({ d }: { d: number }) {
   const { language } = useLanguage();
   const map = [
@@ -132,6 +261,10 @@ function DiffBadge({ d }: { d: number }) {
 }
 export default function QuestionsTab() {
   const { language } = useLanguage();
+  const { user, profile } = useAuth();
+  const currentAdminId = user?.id ?? null;
+  const currentAdminProfileId = profile?.id;
+  const currentAdminName = profile?.name;
   const [questions, setQuestions] = useState<Question[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
@@ -142,6 +275,9 @@ export default function QuestionsTab() {
     useState<ImagePresenceFilter>("all");
   const [filterAnswerImage, setFilterAnswerImage] =
     useState<ImagePresenceFilter>("all");
+  const [filterReviewStatus, setFilterReviewStatus] = useState<
+    QuestionReviewStatus | "all"
+  >("all");
   const [answerImageQuestionIds, setAnswerImageQuestionIds] = useState<
     Set<string>
   >(new Set());
@@ -162,6 +298,14 @@ export default function QuestionsTab() {
     number | null
   >(null);
   const [showEditImageCropper, setShowEditImageCropper] = useState(false);
+  const [reviewStatus, setReviewStatus] = useState<QuestionReviewStatus>("draft");
+  const [reviewMessage, setReviewMessage] = useState("");
+  const [reviewsByQuestion, setReviewsByQuestion] = useState<
+    Record<string, QuestionAdminReview>
+  >({});
+  const [reviewerNamesById, setReviewerNamesById] = useState<
+    Record<string, string>
+  >({});
   const [showPdfImporter, setShowPdfImporter] = useState(
     () => getPdfImportJobSnapshot().status !== "idle",
   );
@@ -179,6 +323,18 @@ export default function QuestionsTab() {
   const questionImageInput = useRef<HTMLInputElement>(null);
   const questionInputMenuRef = useRef<HTMLDivElement>(null);
   const subjectMenuRef = useRef<HTMLDivElement>(null);
+  const reviewMessageRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const textarea = reviewMessageRef.current;
+    if (!textarea) return;
+    if (!reviewMessage) {
+      textarea.style.height = "2.5rem";
+      return;
+    }
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [editingId, reviewMessage]);
 
   useEffect(() => {
     if (!showQuestionInputMenu && !showSubjectMenu) return;
@@ -208,20 +364,28 @@ export default function QuestionsTab() {
     };
   }, [showQuestionInputMenu, showSubjectMenu]);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (force = false) => {
     setLoading(true);
     setError("");
     try {
-      const [qs, { data: ss, error: subjectError }, answerImageIds] =
-        await Promise.all([
-          fetchAllQuestions(),
-          supabase.from("subjects").select("*").order("name"),
-          fetchAnswerImageQuestionIds(),
-        ]);
-      if (subjectError) throw subjectError;
+      const {
+        questions: qs,
+        subjects: ss,
+        answerImageQuestionIds: answerImageIds,
+        reviews,
+        reviewerNames: cachedReviewerNames,
+      } = await loadAdminQuestionData(force);
+      const reviewerNames = { ...cachedReviewerNames };
+      if (currentAdminProfileId && currentAdminName) {
+        reviewerNames[currentAdminProfileId] = currentAdminName;
+      }
       setQuestions(qs);
-      setSubjects((ss ?? []) as Subject[]);
+      setSubjects(ss);
       setAnswerImageQuestionIds(answerImageIds);
+      setReviewsByQuestion(
+        Object.fromEntries(reviews.map((review) => [review.question_id, review])),
+      );
+      setReviewerNamesById(reviewerNames);
       setChoicesByQuestion({});
     } catch (loadError) {
       setError(
@@ -232,14 +396,14 @@ export default function QuestionsTab() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentAdminName, currentAdminProfileId]);
 
   useEffect(() => {
     load();
   }, [load]);
 
   const filtered = useMemo(() => {
-    return filterAdminQuestions(questions, answerImageQuestionIds, {
+    const matchingQuestions = filterAdminQuestions(questions, answerImageQuestionIds, {
       search: "",
       subjectId: filterSubject,
       questionNumber: filterQuestionNumber,
@@ -247,14 +411,21 @@ export default function QuestionsTab() {
       questionImage: filterQuestionImage,
       answerImage: filterAnswerImage,
     });
+    if (filterReviewStatus === "all") return matchingQuestions;
+    return matchingQuestions.filter(
+      (question) =>
+        reviewsByQuestion[question.id]?.review_status === filterReviewStatus,
+    );
   }, [
     answerImageQuestionIds,
     filterAnswerImage,
     filterExamYear,
     filterQuestionImage,
     filterQuestionNumber,
+    filterReviewStatus,
     filterSubject,
     questions,
+    reviewsByQuestion,
   ]);
   const subjectById = useMemo(
     () => new Map(subjects.map((subject) => [subject.id, subject])),
@@ -265,7 +436,8 @@ export default function QuestionsTab() {
     filterQuestionNumber ||
     filterExamYear ||
     filterQuestionImage !== "all" ||
-    filterAnswerImage !== "all",
+    filterAnswerImage !== "all" ||
+    filterReviewStatus !== "all",
   );
   const listPageCount = Math.max(
     1,
@@ -289,6 +461,9 @@ export default function QuestionsTab() {
       question_number: String(getNextQuestionNumber(defaultSubject)),
     });
     setEditingId("new");
+    setReviewStatus("draft");
+    setReviewMessage("");
+    setShowEditImageCropper(false);
     setError("");
   }
 
@@ -298,6 +473,7 @@ export default function QuestionsTab() {
     setFilterExamYear("");
     setFilterQuestionImage("all");
     setFilterAnswerImage("all");
+    setFilterReviewStatus("all");
     setListPage(1);
   }
 
@@ -338,8 +514,19 @@ export default function QuestionsTab() {
   async function startEdit(q: Question) {
     setError("");
     let loadedChoices: AnswerChoice[];
+    let review: QuestionAdminReview | null;
     try {
-      loadedChoices = await loadChoices(q.id);
+      const [choices, reviewResult] = await Promise.all([
+        loadChoices(q.id),
+        supabase
+          .from("question_admin_reviews")
+          .select("review_status, message")
+          .eq("question_id", q.id)
+          .maybeSingle(),
+      ]);
+      if (reviewResult.error) throw reviewResult.error;
+      loadedChoices = choices;
+      review = reviewResult.data as QuestionAdminReview | null;
     } catch (choiceError) {
       setError(
         choiceError instanceof Error
@@ -370,6 +557,9 @@ export default function QuestionsTab() {
       image_url: q.image_url ?? "",
       choices,
     });
+    setReviewStatus(review?.review_status ?? "draft");
+    setReviewMessage(review?.message ?? "");
+    setShowEditImageCropper(false);
     setEditingId(q.id);
     setError("");
   }
@@ -408,6 +598,9 @@ export default function QuestionsTab() {
       image_url: q.image_url ?? "",
       choices,
     });
+    setReviewStatus("draft");
+    setReviewMessage("");
+    setShowEditImageCropper(false);
     setEditingId("new");
     setError("");
   }
@@ -523,7 +716,19 @@ export default function QuestionsTab() {
         .insert(choicePayloads);
       if (choiceErr) throw choiceErr;
 
+      const { error: reviewError } = await supabase
+        .from("question_admin_reviews")
+        .upsert({
+          question_id: questionId,
+          review_status: reviewStatus,
+          message: reviewMessage.trim(),
+          updated_by: currentAdminId,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "question_id" });
+      if (reviewError) throw reviewError;
+
       setEditingId(null);
+      invalidateQuestionCaches();
       await load();
     } catch (e: unknown) {
       setError(
@@ -550,6 +755,7 @@ export default function QuestionsTab() {
         .delete()
         .eq("id", id);
       if (questionError) throw questionError;
+      invalidateQuestionCaches();
       await load();
     } catch (deleteError) {
       setError(
@@ -893,6 +1099,7 @@ export default function QuestionsTab() {
       setCsvFileNames({ questions: "", choices: "" });
       if (questionCsvInput.current) questionCsvInput.current.value = "";
       if (choiceCsvInput.current) choiceCsvInput.current.value = "";
+      invalidateQuestionCaches();
       await load();
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "";
@@ -956,6 +1163,49 @@ export default function QuestionsTab() {
               {error}
             </div>
           )}
+
+          <div className="mb-6 grid items-start gap-4 md:grid-cols-[12rem_minmax(0,1fr)]">
+            <label className="text-xs font-semibold text-gray-500">
+              {translate(language, "adminPage.reviewStatus")}
+              <select
+                value={reviewStatus}
+                onChange={(event) =>
+                  setReviewStatus(event.target.value as QuestionReviewStatus)
+                }
+                className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-normal text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              >
+                <option value="draft">
+                  {translate(language, "adminPage.reviewDraft")}
+                </option>
+                <option value="editing">
+                  {translate(language, "adminPage.reviewEditing")}
+                </option>
+                <option value="ready_for_review">
+                  {translate(language, "adminPage.reviewReady")}
+                </option>
+                <option value="needs_changes">
+                  {translate(language, "adminPage.reviewNeedsChanges")}
+                </option>
+                <option value="approved">
+                  {translate(language, "adminPage.reviewApproved")}
+                </option>
+              </select>
+            </label>
+            <label className="text-xs font-semibold text-gray-500">
+              {translate(language, "adminPage.adminReviewMessage")}
+              <textarea
+                ref={reviewMessageRef}
+                value={reviewMessage}
+                onChange={(event) => setReviewMessage(event.target.value)}
+                rows={1}
+                placeholder={translate(
+                  language,
+                  "adminPage.adminReviewMessagePlaceholder",
+                )}
+                className="mt-1 h-10 min-h-10 w-full resize-none overflow-hidden rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-normal leading-5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              />
+            </label>
+          </div>
 
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
@@ -1342,10 +1592,10 @@ export default function QuestionsTab() {
                         <ImagePlus className="h-3.5 w-3.5" />
 
                         {uploadingChoiceImageIndex === i
-                          ? "Uploading..."
+                          ? translate(language, "adminPage.imageUploading")
                           : c.image_url
-                            ? "Change image"
-                            : "Add image"}
+                            ? translate(language, "adminPage.replaceChoiceImage")
+                            : translate(language, "adminPage.uploadChoiceImage")}
 
                         <input
                           type="file"
@@ -1373,7 +1623,7 @@ export default function QuestionsTab() {
                           }
                           className="rounded-lg px-3 py-2 text-xs font-semibold text-red-500 transition hover:bg-red-50"
                         >
-                          Remove image
+                          {translate(language, "adminPage.removeChoiceImage")}
                         </button>
                       )}
                     </div>
@@ -1421,36 +1671,35 @@ export default function QuestionsTab() {
         {showEditImageCropper && form.image_url && (
           <ManualImageCropper
             sourceUrl={form.image_url}
-            title="Manual Image Crop"
+            title={translate(language, "adminPage.pdfManualCropTitle", {
+              number: form.question_number || "-",
+            })}
             targets={[
               {
                 id: "question",
-                label: "Question image",
+                label: translate(language, "adminPage.pdfCropQuestionImage"),
               },
-              ...form.choices.map((choice, index) => ({
+              ...form.choices.map((_choice, index) => ({
                 id: `choice:${index}`,
-                label: `Choice ${index + 1}${
-                  choice.choice_text.trim()
-                    ? ` — ${choice.choice_text.trim().slice(0, 30)}`
-                    : ""
-                }`,
+                label: translate(language, "adminPage.pdfCropChoiceImage", {
+                  choice: index + 1,
+                }),
               })),
             ]}
             labels={{
-              instructions:
-                "Drag over the image to select an area. Choose where the crop should be used, then click Add Crop.",
-              target: "Use crop for",
-              addCrop: "Add Crop",
-              crops: "Selected crops",
-              empty: "No crops added yet.",
-              apply: "Apply Crops",
-              cancel: "Cancel",
-              applying: "Applying...",
-              zoomIn: "Zoom in",
-              zoomOut: "Zoom out",
-              resetZoom: "Reset zoom",
-              cropTool: "Crop",
-              moveTool: "Move",
+              instructions: translate(language, "adminPage.pdfCropInstructions"),
+              target: translate(language, "adminPage.pdfCropTarget"),
+              addCrop: translate(language, "adminPage.pdfAddCrop"),
+              crops: translate(language, "adminPage.pdfCrops"),
+              empty: translate(language, "adminPage.pdfNoCrops"),
+              apply: translate(language, "adminPage.pdfApplyCrops"),
+              cancel: translate(language, "adminPage.cancel"),
+              applying: translate(language, "adminPage.pdfApplyingCrops"),
+              zoomIn: translate(language, "adminPage.pdfZoomIn"),
+              zoomOut: translate(language, "adminPage.pdfZoomOut"),
+              resetZoom: translate(language, "adminPage.pdfResetZoom"),
+              cropTool: translate(language, "adminPage.pdfCropTool"),
+              moveTool: translate(language, "adminPage.pdfMoveTool"),
             }}
             onApply={applyEditImageCrops}
             onClose={() => setShowEditImageCropper(false)}
@@ -1544,7 +1793,7 @@ export default function QuestionsTab() {
           )}
         </div>
         <button
-          onClick={load}
+          onClick={() => void load(true)}
           className="p-2 hover:bg-gray-100 rounded-xl transition text-gray-500"
         >
           <RefreshCw className="w-4 h-4" />
@@ -1678,7 +1927,7 @@ export default function QuestionsTab() {
               </button>
             )}
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <label className="text-xs font-semibold text-gray-600">
               {translate(language, "adminPage.filterQuestionNumber")}
               <input
@@ -1751,6 +2000,38 @@ export default function QuestionsTab() {
                 </option>
                 <option value="without">
                   {translate(language, "adminPage.noImage")}
+                </option>
+              </select>
+            </label>
+            <label className="text-xs font-semibold text-gray-600">
+              {translate(language, "adminPage.filterReviewStatus")}
+              <select
+                value={filterReviewStatus}
+                onChange={(event) => {
+                  setFilterReviewStatus(
+                    event.target.value as QuestionReviewStatus | "all",
+                  );
+                  setListPage(1);
+                }}
+                className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-normal text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              >
+                <option value="all">
+                  {translate(language, "adminPage.anyReviewStatus")}
+                </option>
+                <option value="draft">
+                  {translate(language, "adminPage.reviewDraft")}
+                </option>
+                <option value="editing">
+                  {translate(language, "adminPage.reviewEditing")}
+                </option>
+                <option value="ready_for_review">
+                  {translate(language, "adminPage.reviewReady")}
+                </option>
+                <option value="needs_changes">
+                  {translate(language, "adminPage.reviewNeedsChanges")}
+                </option>
+                <option value="approved">
+                  {translate(language, "adminPage.reviewApproved")}
                 </option>
               </select>
             </label>
@@ -2164,7 +2445,10 @@ export default function QuestionsTab() {
         <PdfQuestionImporter
           subjects={subjects}
           onClose={() => setShowPdfImporter(false)}
-          onImported={load}
+          onImported={async () => {
+            invalidateQuestionCaches();
+            await load();
+          }}
         />
       )}
 
@@ -2242,6 +2526,25 @@ export default function QuestionsTab() {
               const choices = choicesByQuestion[q.id] ?? [];
               const choicesLoading = loadingChoicesId === q.id;
               const explanation = getLocalizedExplanation(q, language);
+              const review = reviewsByQuestion[q.id];
+              const listReviewStatus = review?.review_status;
+              const reviewStatusLabel = listReviewStatus
+                ? {
+                    draft: translate(language, "adminPage.reviewDraft"),
+                    editing: translate(language, "adminPage.reviewEditing"),
+                    ready_for_review: translate(language, "adminPage.reviewReady"),
+                    needs_changes: translate(
+                      language,
+                      "adminPage.reviewNeedsChanges",
+                    ),
+                    approved: translate(language, "adminPage.reviewApproved"),
+                  }[listReviewStatus]
+                : "";
+              const savedReviewMessage = review?.message.trim() ?? "";
+              const reviewerName = review?.updated_by
+                ? reviewerNamesById[review.updated_by] ??
+                  translate(language, "adminPage.unknownAdmin")
+                : translate(language, "adminPage.unknownAdmin");
               return (
                 <div key={q.id} className="p-4">
                   <div className="flex items-start gap-3">
@@ -2271,6 +2574,23 @@ export default function QuestionsTab() {
                           </span>
                         )}
                         <DiffBadge d={q.difficulty ?? 3} />
+                        {listReviewStatus && (
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-xs font-semibold ${REVIEW_STATUS_STYLES[listReviewStatus]}`}
+                          >
+                            {reviewStatusLabel}
+                          </span>
+                        )}
+                        {savedReviewMessage && (
+                          <span
+                            title={savedReviewMessage}
+                            aria-label={`${reviewerName}: ${savedReviewMessage}`}
+                            className="flex max-w-48 items-center gap-1 text-xs font-semibold text-emerald-600"
+                          >
+                            <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">{reviewerName}</span>
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm text-gray-800 leading-snug line-clamp-2">
                         {q.question_text}
