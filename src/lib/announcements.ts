@@ -69,8 +69,10 @@ export async function saveAnnouncement(
   input: AnnouncementInput,
   id?: string,
 ): Promise<Announcement> {
-  const { data, error } = await supabase.from('announcements')
-    .upsert(id ? { id, ...input } : input)
+  const query = id
+    ? supabase.from('announcements').update(input).eq('id', id)
+    : supabase.from('announcements').insert(input);
+  const { data, error } = await query
     .select('*')
     .single();
   if (error) throw error;

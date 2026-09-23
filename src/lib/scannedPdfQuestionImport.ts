@@ -24,6 +24,22 @@ export interface QuestionStart {
   warnings: string[];
 }
 
+export interface OcrWordBox {
+  text: string;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+export interface ChoiceImageRegion {
+  label: string;
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
 const ANSWER_LABELS = "アイウエ";
 
 function cleanOcrLine(value: string) {
@@ -310,6 +326,89 @@ function parseTsv(
       topRatio: line.top / imageHeight,
       bottomRatio: line.bottom / imageHeight,
     }));
+}
+
+function parseTsvWords(tsv: string | null | undefined): OcrWordBox[] {
+  if (!tsv) return [];
+  return tsv.split(/\r?\n/).slice(1).flatMap(row => {
+    const cells = row.split("\t");
+    if (cells.length < 12 || cells[0] !== "5") return [];
+    const text = cells.slice(11).join("\t").normalize("NFKC").trim();
+    const left = Number(cells[6]);
+    const top = Number(cells[7]);
+    const width = Number(cells[8]);
+    const height = Number(cells[9]);
+    if (!text || ![left, top, width, height].every(Number.isFinite)) return [];
+    return [{ text, left, top, width, height }];
+  });
+}
+
+/** Locate four printed choice markers without guessing when the geometry is ambiguous. */
+export function detectChoiceImageRegions(
+  words: OcrWordBox[],
+  imageWidth: number,
+  imageHeight: number,
+): ChoiceImageRegion[] {
+  const byLabel = new Map<string, OcrWordBox[]>();
+  for (const word of words) {
+    const normalized = word.text === "工" ? "エ" : word.text;
+    if (!ANSWER_LABELS.includes(normalized)) continue;
+    byLabel.set(normalized, [...(byLabel.get(normalized) ?? []), word]);
+  }
+  if ([...ANSWER_LABELS].some(label => !byLabel.get(label)?.length)) return [];
+
+  let best: { score: number; words: OcrWordBox[]; layout: "rows" | "columns" } | null = null;
+  const candidates = [...ANSWER_LABELS].map(label => byLabel.get(label)!.slice(-6));
+  for (const a of candidates[0]) for (const i of candidates[1])
+    for (const u of candidates[2]) for (const e of candidates[3]) {
+      const selected = [a, i, u, e];
+      const centersX = selected.map(word => word.left + word.width / 2);
+      const centersY = selected.map(word => word.top + word.height / 2);
+      const xSpan = Math.max(...centersX) - Math.min(...centersX);
+      const ySpan = Math.max(...centersY) - Math.min(...centersY);
+      const rows = centersY.every((value, index) => !index || value > centersY[index - 1])
+        && xSpan <= imageWidth * .14 && ySpan >= imageHeight * .08;
+      const columns = centersX.every((value, index) => !index || value > centersX[index - 1])
+        && ySpan <= imageHeight * .08 && xSpan >= imageWidth * .25;
+      if (!rows && !columns) continue;
+      const score = rows ? xSpan + ySpan * .01 : ySpan + xSpan * .01;
+      if (!best || score < best.score) best = { score, words: selected, layout: rows ? "rows" : "columns" };
+    }
+  if (!best) return [];
+
+  const margin = Math.max(8, Math.round(imageWidth * .008));
+  if (best.layout === "rows") {
+    const centers = best.words.map(word => word.top + word.height / 2);
+    const boundaries = centers.slice(1).map((center, index) => Math.round((center + centers[index]) / 2));
+    const top = Math.max(0, best.words[0].top - margin);
+    return [...ANSWER_LABELS].map((label, index) => {
+      const regionTop = index ? boundaries[index - 1] : top;
+      const regionBottom = index < 3 ? boundaries[index] : imageHeight;
+      return { label, left: 0, top: regionTop, width: imageWidth, height: Math.max(1, regionBottom - regionTop) };
+    });
+  }
+  const centers = best.words.map(word => word.left + word.width / 2);
+  const boundaries = centers.slice(1).map((center, index) => Math.round((center + centers[index]) / 2));
+  const top = Math.max(0, Math.min(...best.words.map(word => word.top)) - margin);
+  return [...ANSWER_LABELS].map((label, index) => {
+    const left = index ? boundaries[index - 1] : 0;
+    const right = index < 3 ? boundaries[index] : imageWidth;
+    return { label, left, top, width: Math.max(1, right - left), height: Math.max(1, imageHeight - top) };
+  });
+}
+
+async function extractChoiceImages(canvas: HTMLCanvasElement, tsv: string | null | undefined) {
+  const regions = detectChoiceImageRegions(parseTsvWords(tsv), canvas.width, canvas.height);
+  const result = new Map<string, { imageDataUrl: string; imageSizeBytes: number }>();
+  for (const region of regions) {
+    const cropped = trimWhitespace(cropCanvas(canvas, region.left, region.top, region.width, region.height));
+    const image = await new Promise<Blob | null>(resolve => cropped.toBlob(resolve, "image/webp", .86));
+    const imageDataUrl = image ? await blobToDataUrl(image) : cropped.toDataURL("image/webp", .86);
+    result.set(region.label, { imageDataUrl, imageSizeBytes: image?.size ?? Math.ceil(imageDataUrl.length * .75) });
+    cropped.width = 1;
+    cropped.height = 1;
+  }
+  return result;
 }
 
 function groupAdjacent(values: number[]) {
@@ -903,22 +1002,49 @@ async function ocrAnswerPages(
 }
 
 async function renderQuestionCrop(
-  page: HTMLCanvasElement,
+  document: PDFDocumentProxy,
+  firstPage: HTMLCanvasElement,
   start: QuestionStart,
   next: QuestionStart | undefined,
   worker: Awaited<ReturnType<(typeof import("tesseract.js"))["createWorker"]>>,
 ) {
-  const topRatio = Math.max(0, start.topRatio - 0.025);
-  const bottomRatio =
-    next?.pageNumber === start.pageNumber
-      ? Math.max(topRatio + 0.08, next.topRatio - 0.02)
-      : 0.935;
-  const top = Math.floor(page.height * topRatio);
-  const bottom = Math.min(page.height, Math.ceil(page.height * bottomRatio));
-  const cropped = cropCanvas(page, 0, top, page.width, bottom - top);
-  const trimmed = trimWhitespace(cropped);
+  const lastPageNumber = next?.pageNumber ?? document.numPages;
+  const segments: HTMLCanvasElement[] = [];
+  const temporaryPages: HTMLCanvasElement[] = [];
+  for (let pageNumber = start.pageNumber; pageNumber <= lastPageNumber; pageNumber += 1) {
+    const page = pageNumber === start.pageNumber
+      ? firstPage
+      : await renderPage(document, pageNumber, 2.4);
+    if (page !== firstPage) temporaryPages.push(page);
+    const topRatio = pageNumber === start.pageNumber
+      ? Math.max(0, start.topRatio - .025)
+      : .035;
+    const bottomRatio = next?.pageNumber === pageNumber
+      ? Math.max(topRatio + .08, next.topRatio - .02)
+      : .935;
+    const top = Math.floor(page.height * topRatio);
+    const bottom = Math.min(page.height, Math.ceil(page.height * bottomRatio));
+    if (bottom > top) segments.push(cropCanvas(page, 0, top, page.width, bottom - top));
+  }
+  if (!segments.length) throw new Error(`Unable to crop question ${start.number}.`);
+  const gap = Math.max(8, Math.round(firstPage.width / 100));
+  const combined = createCanvas(
+    Math.max(...segments.map(segment => segment.width)),
+    segments.reduce((sum, segment) => sum + segment.height, 0) + gap * (segments.length - 1),
+  );
+  const combinedContext = combined.getContext("2d");
+  if (!combinedContext) throw new Error("Canvas is unavailable in this browser.");
+  combinedContext.fillStyle = "#fff";
+  combinedContext.fillRect(0, 0, combined.width, combined.height);
+  let y = 0;
+  for (const segment of segments) {
+    combinedContext.drawImage(segment, 0, y);
+    y += segment.height + gap;
+  }
+  const trimmed = trimWhitespace(combined);
   const hasDiagram = hasDiagramLikeLines(trimmed);
-  const ocrResult = await worker.recognize(trimmed);
+  const ocrResult = await worker.recognize(trimmed, {}, { text: true, tsv: true });
+  const choiceImages = await extractChoiceImages(trimmed, ocrResult.data.tsv);
   const blob = await new Promise<Blob | null>((resolve) =>
     trimmed.toBlob(resolve, "image/webp", 0.82),
   );
@@ -931,18 +1057,27 @@ async function renderQuestionCrop(
     ? await blobToDataUrl(blob)
     : trimmed.toDataURL("image/webp", 0.82);
   const imageSizeBytes = blob?.size ?? Math.ceil(imageDataUrl.length * 0.75);
-  cropped.width = 1;
-  cropped.height = 1;
-  if (trimmed !== cropped) {
+  for (const segment of segments) {
+    segment.width = 1;
+    segment.height = 1;
+  }
+  for (const page of temporaryPages) {
+    page.width = 1;
+    page.height = 1;
+  }
+  if (trimmed !== combined) {
     trimmed.width = 1;
     trimmed.height = 1;
   }
+  combined.width = 1;
+  combined.height = 1;
   return {
     imageDataUrl,
     imageSizeBytes,
     ocrText: ocrResult.data.text,
     hasDiagram,
     ocrConfidence: ocrResult.data.confidence,
+    choiceImages,
   };
 }
 
@@ -1054,8 +1189,14 @@ export async function processScannedExamPdfs(
         }
         onProgress?.(`OCR: reading question ${index + 1} of ${starts.length}…`);
         const correctChoice = answerResult.answers.get(start.number) ?? "";
-        const { ocrText, hasDiagram, ocrConfidence, ...image } =
-          await renderQuestionCrop(renderedQuestionPage, start, next, worker);
+        const { ocrText, hasDiagram, ocrConfidence, choiceImages, ...image } =
+          await renderQuestionCrop(
+            questionDocument,
+            renderedQuestionPage,
+            start,
+            next,
+            worker,
+          );
         const parsed = parseScannedQuestionText(ocrText, start.number);
         // Only replace the choice text with ア/イ/ウ/エ labels when the question
         // really needs the picture (diagram, table, or unreadable choices).
@@ -1065,9 +1206,12 @@ export async function processScannedExamPdfs(
           hasDiagram ||
           shouldKeepQuestionImage(parsed.questionText, parsed.choices);
         const keepImage = needsVisual || ocrConfidence < 70;
-        const choices = needsVisual
+        const choices = (needsVisual
           ? ensureDiagramChoiceLabels(parsed.choices)
-          : parsed.choices;
+          : parsed.choices).map(choice => ({
+            ...choice,
+            ...(needsVisual ? choiceImages.get(choice.label) ?? {} : {}),
+          }));
         const warnings = [...start.warnings];
         if (!parsed.questionText)
           warnings.push("Question text was not detected. Enter it below.");
@@ -1081,13 +1225,20 @@ export async function processScannedExamPdfs(
           warnings.push(
             "Low OCR confidence. Please verify the text against the image.",
           );
+        if (needsVisual && choiceImages.size !== 4)
+          warnings.push(
+            "Choice images could not be separated safely. Verify the full question image before importing.",
+          );
         questions.push({
           sourceKey: `${examKey}:Q${start.number}`,
           number: start.number,
           questionText: parsed.questionText,
           ...image,
           keepImage,
-          sourcePages: [start.pageNumber],
+          sourcePages: Array.from(
+            { length: (next?.pageNumber ?? questionDocument.numPages) - start.pageNumber + 1 },
+            (_, pageOffset) => start.pageNumber + pageOffset,
+          ),
           choices,
           correctChoice,
           explanation: "",

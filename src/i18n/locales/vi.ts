@@ -603,6 +603,7 @@ export const vi = {
   "settingsPage.account": "Tài khoản",
 
   "settingsPage.changePassword": "Đổi mật khẩu",
+  "settingsPage.currentPassword": "Mật khẩu hiện tại",
   "settingsPage.chooseTheDisplayLanguage": "Chọn ngôn ngữ hiển thị",
   "settingsPage.class": "Lớp",
   "settingsPage.confirmNewPassword": "Xác nhận mật khẩu mới",
@@ -707,6 +708,7 @@ export const vi = {
   "settingsPage.profileSaved": "Đã lưu hồ sơ",
   "settingsPage.targetSaved": "Đã lưu ngày thi mục tiêu",
   "settingsPage.passwordsDoNotMatch": "Mật khẩu mới không khớp",
+  "settingsPage.currentPasswordVerificationFailed": "Mật khẩu hiện tại không đúng hoặc không thể xác minh",
   "settingsPage.passwordMinimum": "Mật khẩu phải có ít nhất 6 ký tự",
   "settingsPage.passwordChangeFailed": "Đổi mật khẩu thất bại: {error}",
   "settingsPage.passwordChanged": "Đã đổi mật khẩu",
@@ -846,6 +848,8 @@ export const vi = {
   "practiceListPage.flaggedLoadFailed": "Không thể tải câu hỏi đã gắn cờ.",
   "practiceQuestionPage.askAi": "Yêu cầu AI giải thích",
   "practiceQuestionPage.aiThinking": "AI đang đọc câu hỏi...",
+  "practiceQuestionPage.continueInAiChat": "Tiếp tục cuộc trò chuyện này trong AI Chat",
+  "aiChatPage.practiceQuestionContext": "Câu hỏi luyện tập:\n{question}\n\nCác lựa chọn:\n{options}\n\nCâu trả lời của tôi: {selected}\nĐáp án đúng: {correct}",
   "practiceQuestionPage.aiImageFailed":
     "Không thể đọc hình ảnh câu hỏi. Vui lòng tải lại trang và thử lại.",
   "practiceQuestionPage.aiExplanationFailed":
@@ -854,4 +858,33 @@ export const vi = {
   "adminPage.pdfKeepDiagram": "Giữ hình ảnh câu hỏi này",
   "adminPage.pdfKeepDiagramHelp":
     "Bật cho sơ đồ, biểu đồ, bảng, công thức hoặc lựa chọn trả lời bằng hình ảnh. Câu hỏi chỉ có văn bản sẽ không tải ảnh xem trước lên.",
+  "adminPage.pdfManualCrop": "Cắt ảnh câu hỏi thủ công",
+  "adminPage.pdfManualCropTitle": "Cắt ảnh cho câu {number}",
+  "adminPage.pdfCropInstructions":
+    "Kéo trên bản quét để chọn vùng, chọn nơi sử dụng rồi thêm phần cắt. Có thể lặp lại nhiều lần.",
+  "adminPage.pdfCropQuestionImage": "Ảnh câu hỏi",
+  "adminPage.pdfCropChoiceImage": "Ảnh lựa chọn {choice}",
+  "adminPage.pdfCropTarget": "Thêm phần cắt vào",
+  "adminPage.pdfAddCrop": "Thêm vùng đã chọn",
+  "adminPage.pdfCrops": "Các phần đã cắt",
+  "adminPage.pdfNoCrops":
+    "Kéo một hình chữ nhật trên bản xem trước để thêm phần cắt.",
+  "adminPage.pdfApplyCrops": "Áp dụng phần cắt",
+  "adminPage.pdfApplyingCrops": "Đang áp dụng...",
+  "adminPage.pdfZoomIn": "Phóng to",
+  "adminPage.pdfZoomOut": "Thu nhỏ",
+  "adminPage.pdfResetZoom": "Đặt lại thu phóng",
+  "adminPage.pdfCropTool": "Cắt",
+  "adminPage.pdfMoveTool": "Di chuyển",
+  "adminPage.questionSearchOptions": "Tùy chọn tìm kiếm câu hỏi",
+  "adminPage.clearFilters": "Xóa bộ lọc",
+  "adminPage.filterQuestionNumber": "Số câu hỏi",
+  "adminPage.anyQuestionNumber": "Mọi số câu",
+  "adminPage.filterExamYear": "Năm thi",
+  "adminPage.anyExamYear": "Mọi năm",
+  "adminPage.filterQuestionImage": "Ảnh câu hỏi",
+  "adminPage.filterAnswerImage": "Ảnh đáp án",
+  "adminPage.anyImageStatus": "Có hoặc không có ảnh",
+  "adminPage.includesImage": "Có ảnh",
+  "adminPage.noImage": "Không có ảnh",
 } as const;
