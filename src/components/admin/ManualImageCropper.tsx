@@ -287,7 +287,7 @@ export default function ManualImageCropper({
                 onPointerUp={finishSelection}
                 onPointerCancel={finishSelection}
               >
-                <img ref={imageRef} src={sourceUrl} alt="Crop source" draggable={false} className="block h-auto w-full" />
+                <img ref={imageRef} src={sourceUrl} crossOrigin="anonymous" alt="Crop source" draggable={false} className="block h-auto w-full" />
                 {selection && (
                   <div
                     className="pointer-events-none absolute border-2 border-violet-500 bg-violet-400/20 shadow-[0_0_0_9999px_rgba(15,23,42,0.28)]"

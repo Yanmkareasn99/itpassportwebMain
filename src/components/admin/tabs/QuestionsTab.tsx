@@ -5,7 +5,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Copy,
+  Crop,
   Edit2,
+  ImagePlus,
   Plus,
   RefreshCw,
   Save,
@@ -16,6 +18,7 @@ import {
   XCircle,
 } from "lucide-react";
 import PdfQuestionImporter from "../PdfQuestionImporter";
+import ManualImageCropper from "../ManualImageCropper";
 import { translate } from "../../../i18n";
 import { useLanguage } from "../../../contexts/LanguageContext";
 import { getLocalizedExplanation } from "../../../lib/localizedQuestion";
@@ -36,6 +39,11 @@ import {
   filterAdminQuestions,
   type ImagePresenceFilter,
 } from "../../../lib/adminQuestionFilters";
+import {
+  combineCropImages,
+  groupCropsByTarget,
+  type ManualImageCrop,
+} from "../../../lib/manualImageCrop";
 
 const QUESTION_FETCH_PAGE_SIZE = 1000;
 const QUESTION_LIST_PAGE_SIZE = 50;
@@ -143,6 +151,8 @@ export default function QuestionsTab() {
   const [importData, setImportData] = useState<CsvImportData | null>(null);
   const [importing, setImporting] = useState(false);
   const [uploadingQuestionImage, setUploadingQuestionImage] = useState(false);
+  const [uploadingChoiceImageIndex, setUploadingChoiceImageIndex] = useState<number | null>(null);
+  const [showEditImageCropper, setShowEditImageCropper] = useState(false);
   const [showPdfImporter, setShowPdfImporter] = useState(
     () => getPdfImportJobSnapshot().status !== "idle",
   );
@@ -328,6 +338,7 @@ export default function QuestionsTab() {
     const choices: ChoiceForm[] = loadedChoices.map((c) => ({
       id: c.id,
       choice_text: c.choice_text,
+      image_url: c.image_url ?? "",
       is_correct: c.is_correct,
       sort_order: c.sort_order,
     }));
@@ -365,6 +376,7 @@ export default function QuestionsTab() {
     }
     const choices: ChoiceForm[] = loadedChoices.map((c) => ({
       choice_text: c.choice_text,
+      image_url: c.image_url ?? "",
       is_correct: c.is_correct,
       sort_order: c.sort_order,
     }));
@@ -478,6 +490,7 @@ export default function QuestionsTab() {
       const choicePayloads = filledChoices.map((c, i) => ({
         question_id: questionId,
         choice_text: c.choice_text.trim(),
+        image_url: c.image_url.trim() || null,
         is_correct: c.is_correct,
         sort_order: i + 1,
       }));
@@ -523,30 +536,44 @@ export default function QuestionsTab() {
     }
   }
 
-  async function handleQuestionImageUpload(file: File | undefined) {
-    if (!file) return;
+  function validateImageFile(file: File) {
     if (!file.type.startsWith("image/")) {
-      setError(translate(language, "adminPage.imageUploadInvalid"));
-      return;
+      return translate(language, "adminPage.imageUploadInvalid");
     }
     if (file.size > 10 * 1024 * 1024) {
-      setError(translate(language, "adminPage.imageUploadTooLarge"));
+      return translate(language, "adminPage.imageUploadTooLarge");
+    }
+    return "";
+  }
+
+  async function uploadManualImage(image: Blob, target: string) {
+    const extension = image.type === "image/png"
+      ? "png"
+      : image.type === "image/jpeg"
+        ? "jpg"
+        : image.type === "image/gif"
+          ? "gif"
+          : "webp";
+    const path = `manual/${Date.now()}-${crypto.randomUUID()}-${target}.${extension}`;
+    const { error: uploadError } = await supabase.storage
+      .from("question-images")
+      .upload(path, image, { contentType: image.type, upsert: false });
+    if (uploadError) throw uploadError;
+    return supabase.storage.from("question-images").getPublicUrl(path).data.publicUrl;
+  }
+
+  async function handleQuestionImageUpload(file: File | undefined) {
+    if (!file) return;
+    const problem = validateImageFile(file);
+    if (problem) {
+      setError(problem);
       return;
     }
 
     setError("");
     setUploadingQuestionImage(true);
     try {
-      const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const path = `manual/${Date.now()}-${crypto.randomUUID()}.${extension}`;
-      const { error: uploadError } = await supabase.storage
-        .from("question-images")
-        .upload(path, file, { contentType: file.type, upsert: false });
-      if (uploadError) throw uploadError;
-
-      const imageUrl = supabase.storage
-        .from("question-images")
-        .getPublicUrl(path).data.publicUrl;
+      const imageUrl = await uploadManualImage(file, "question");
       setForm((current) => ({ ...current, image_url: imageUrl }));
     } catch (uploadError) {
       setError(
@@ -558,6 +585,51 @@ export default function QuestionsTab() {
       setUploadingQuestionImage(false);
       if (questionImageInput.current) questionImageInput.current.value = "";
     }
+  }
+
+  async function handleChoiceImageUpload(choiceIndex: number, file: File | undefined) {
+    if (!file) return;
+    const problem = validateImageFile(file);
+    if (problem) {
+      setError(problem);
+      return;
+    }
+
+    setError("");
+    setUploadingChoiceImageIndex(choiceIndex);
+    try {
+      const imageUrl = await uploadManualImage(file, `choice-${choiceIndex + 1}`);
+      setChoice(choiceIndex, { image_url: imageUrl });
+    } catch (uploadError) {
+      setError(
+        uploadError instanceof Error
+          ? uploadError.message
+          : translate(language, "adminPage.imageUploadFailed"),
+      );
+    } finally {
+      setUploadingChoiceImageIndex(null);
+    }
+  }
+
+  async function applyEditImageCrops(crops: ManualImageCrop[]) {
+    const groupedCrops = groupCropsByTarget(crops);
+    const uploadedImages = new Map<string, string>();
+
+    for (const [targetId, targetCrops] of groupedCrops) {
+      const combined = await combineCropImages(targetCrops);
+      const response = await fetch(combined.dataUrl);
+      const blob = await response.blob();
+      uploadedImages.set(targetId, await uploadManualImage(blob, targetId.replace(":", "-")));
+    }
+
+    setForm((current) => ({
+      ...current,
+      image_url: uploadedImages.get("question") ?? current.image_url,
+      choices: current.choices.map((choice, choiceIndex) => ({
+        ...choice,
+        image_url: uploadedImages.get(`choice:${choiceIndex}`) ?? choice.image_url,
+      })),
+    }));
   }
 
   async function handleCsvFileChange(
@@ -801,6 +873,7 @@ export default function QuestionsTab() {
         ...f.choices,
         {
           choice_text: "",
+          image_url: "",
           is_correct: false,
           sort_order: f.choices.length + 1,
         },
@@ -976,16 +1049,28 @@ export default function QuestionsTab() {
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <button
-                  type="button"
-                  onClick={() => questionImageInput.current?.click()}
-                  disabled={uploadingQuestionImage}
-                  className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60"
-                >
-                  {uploadingQuestionImage
-                    ? translate(language, "adminPage.imageUploading")
-                    : translate(language, "adminPage.uploadQuestionImage")}
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => questionImageInput.current?.click()}
+                    disabled={uploadingQuestionImage}
+                    className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    {uploadingQuestionImage
+                      ? translate(language, "adminPage.imageUploading")
+                      : translate(language, "adminPage.uploadQuestionImage")}
+                  </button>
+                  {form.image_url && (
+                    <button
+                      type="button"
+                      onClick={() => setShowEditImageCropper(true)}
+                      className="flex items-center gap-1.5 rounded-lg border border-violet-200 bg-white px-3 py-2 text-xs font-semibold text-violet-700 transition hover:bg-violet-50"
+                    >
+                      <Crop className="h-3.5 w-3.5" />
+                      {translate(language, "adminPage.pdfManualCrop")}
+                    </button>
+                  )}
+                </div>
                 <p className="mt-1 text-[11px] text-gray-400">
                   {translate(language, "adminPage.imageUploadHelp")}
                 </p>
