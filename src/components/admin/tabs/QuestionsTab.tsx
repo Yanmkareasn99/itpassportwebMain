@@ -887,6 +887,7 @@ export default function QuestionsTab() {
 
   if (editingId !== null) {
     return (
+      <>
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-bold text-gray-800">
@@ -1237,14 +1238,17 @@ export default function QuestionsTab() {
           </p>
         </div>
 
-        <div className="flex justify-end gap-3">
+                <div className="flex justify-end gap-3">
           <button
+            type="button"
             onClick={() => setEditingId(null)}
             className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl transition"
           >
             {translate(language, "adminPage.cancel")}
           </button>
+
           <button
+            type="button"
             onClick={handleSave}
             disabled={saving}
             className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition disabled:opacity-60"
@@ -1254,12 +1258,53 @@ export default function QuestionsTab() {
             ) : (
               <Save className="w-4 h-4" />
             )}
+
             {translate(language, "adminPage.save")}
           </button>
         </div>
       </div>
-    );
-  }
+
+      {showEditImageCropper && form.image_url && (
+        <ManualImageCropper
+          sourceUrl={form.image_url}
+          title="Manual Image Crop"
+          targets={[
+            {
+              id: "question",
+              label: "Question image",
+            },
+            ...form.choices.map((choice, index) => ({
+              id: `choice:${index}`,
+              label: `Choice ${index + 1}${
+                choice.choice_text.trim()
+                  ? ` — ${choice.choice_text.trim().slice(0, 30)}`
+                  : ""
+              }`,
+            })),
+          ]}
+          labels={{
+            instructions:
+              "Drag over the image to select an area. Choose where the crop should be used, then click Add Crop.",
+            target: "Use crop for",
+            addCrop: "Add Crop",
+            crops: "Selected crops",
+            empty: "No crops added yet.",
+            apply: "Apply Crops",
+            cancel: "Cancel",
+            applying: "Applying...",
+            zoomIn: "Zoom in",
+            zoomOut: "Zoom out",
+            resetZoom: "Reset zoom",
+            cropTool: "Crop",
+            moveTool: "Move",
+          }}
+          onApply={applyEditImageCrops}
+          onClose={() => setShowEditImageCropper(false)}
+        />
+      )}
+    </>
+  );
+}
 
   return (
     <div className="space-y-4">
