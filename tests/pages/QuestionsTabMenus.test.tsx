@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('../../src/lib/supabase', async importOriginal => {
   vi.stubEnv('VITE_USE_SUPABASE', 'false');
@@ -7,11 +7,18 @@ vi.mock('../../src/lib/supabase', async importOriginal => {
 });
 
 import { LanguageProvider } from '../../src/contexts/LanguageContext';
-import QuestionsTab from '../../src/components/admin/tabs/QuestionsTab';
+import QuestionsTab, { invalidateAdminQuestionCache } from '../../src/components/admin/tabs/QuestionsTab';
+import { getLocalRows } from '../../src/lib/localData';
+
+beforeEach(() => {
+  invalidateAdminQuestionCache();
+  localStorage.removeItem('manabi-local-data');
+});
 
 it('closes both admin question menus on outside clicks and Escape', async () => {
   localStorage.setItem('manabi_language', 'en');
   render(<LanguageProvider><QuestionsTab /></LanguageProvider>);
+  await screen.findByText(/\d+ items/);
 
   const addQuestion = screen.getByRole('button', { name: 'Add question' });
   fireEvent.click(addQuestion);
@@ -27,9 +34,11 @@ it('closes both admin question menus on outside clicks and Escape', async () => 
   expect(screen.queryByRole('listbox')).toBeNull();
 });
 
-it('expands and collapses the question search options', () => {
+it('expands and collapses the question search options', async () => {
   localStorage.setItem('manabi_language', 'en');
   render(<LanguageProvider><QuestionsTab /></LanguageProvider>);
+
+  await screen.findByText(/\d+ items/);
 
   const searchOptions = screen.getByRole('button', { name: 'Question search options' });
   expect(searchOptions.getAttribute('aria-expanded')).toBe('false');
@@ -41,8 +50,82 @@ it('expands and collapses the question search options', () => {
   expect(screen.getByLabelText('Exam year')).toBeTruthy();
   expect(screen.getByLabelText('Question image')).toBeTruthy();
   expect(screen.getByLabelText('Answer image')).toBeTruthy();
+  expect(screen.getByLabelText('Question review status')).toBeTruthy();
 
   fireEvent.click(searchOptions);
   expect(searchOptions.getAttribute('aria-expanded')).toBe('false');
   expect(screen.queryByLabelText('Question number')).toBeNull();
+});
+
+vi.mock('../../src/contexts/AuthContext', () => ({
+  useAuth: () => ({
+    user: { id: 'admin-1' },
+    profile: { id: 'admin-1', name: 'Admin User' },
+    isAdmin: true,
+  }),
+}));
+
+it('shows admin review status, shared message, and choice image controls in the question editor', async () => {
+  localStorage.setItem('manabi_language', 'en');
+  render(<LanguageProvider><QuestionsTab /></LanguageProvider>);
+
+  await screen.findByText(/\d+ items/);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Add question' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: /Add question/ }));
+
+  expect(screen.getByLabelText('Review status')).toBeTruthy();
+  const reviewMessage = screen.getByLabelText('Message for other admins');
+  expect(reviewMessage.style.height).toBe('2.5rem');
+  expect(screen.getAllByText('Add image')).toHaveLength(4);
+});
+
+it('shows only saved review and message indicators before expanding a question', async () => {
+  localStorage.setItem('manabi_language', 'en');
+  const question = getLocalRows('questions')[0] as { id: string };
+  localStorage.setItem('manabi-local-data', JSON.stringify({
+    question_admin_reviews: [{
+      question_id: question.id,
+      review_status: 'ready_for_review',
+      message: 'Check the answer wording',
+      updated_by: 'admin-1',
+      updated_at: new Date().toISOString(),
+    }],
+  }));
+
+  render(<LanguageProvider><QuestionsTab /></LanguageProvider>);
+
+  expect(await screen.findByText('Ready for review')).toBeTruthy();
+  const messageAuthor = screen.getByText('Admin User');
+  expect(messageAuthor.parentElement?.className).toContain('text-emerald-600');
+  expect(messageAuthor.parentElement?.getAttribute('aria-label')).toBe(
+    'Admin User: Check the answer wording',
+  );
+  expect(screen.queryByText('No admin message')).toBeNull();
+  expect(screen.queryByText('Draft')).toBeNull();
+});
+
+it('filters questions by their review status', async () => {
+  localStorage.setItem('manabi_language', 'en');
+  const question = getLocalRows('questions')[0] as { id: string };
+  localStorage.setItem('manabi-local-data', JSON.stringify({
+    question_admin_reviews: [{
+      question_id: question.id,
+      review_status: 'ready_for_review',
+      message: '',
+      updated_by: 'admin-1',
+      updated_at: new Date().toISOString(),
+    }],
+  }));
+
+  render(<LanguageProvider><QuestionsTab /></LanguageProvider>);
+  fireEvent.click(screen.getByRole('button', { name: 'Question search options' }));
+  const statusFilter = await screen.findByLabelText('Question review status');
+  fireEvent.change(statusFilter, { target: { value: 'ready_for_review' } });
+
+  await waitFor(() => expect(screen.getAllByText('Ready for review')).toHaveLength(2));
+  expect(screen.getAllByText('Draft')).toHaveLength(1);
+
+  fireEvent.change(statusFilter, { target: { value: 'draft' } });
+  await waitFor(() => expect(screen.getByText('0 items')).toBeTruthy());
 });

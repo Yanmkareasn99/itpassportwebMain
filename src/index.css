@@ -297,6 +297,68 @@ html.dark .profile-avatar-gradient {
   padding-right: 24px;
 }
 
+.home-dashboard-shell {
+  container-type: inline-size;
+}
+
+.home-dashboard-layout {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 1.5rem;
+}
+
+.home-dashboard-sidebar {
+  width: 100%;
+  max-width: 28rem;
+  margin-inline: auto;
+  flex-shrink: 0;
+}
+
+@container (min-width: 62rem) {
+  .home-dashboard-layout {
+    flex-direction: row;
+  }
+
+  .home-dashboard-sidebar {
+    width: 18rem;
+    max-width: none;
+    margin-inline: 0;
+  }
+}
+
+.practice-filter-panel {
+  container-type: inline-size;
+}
+
+.practice-filter-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.practice-filter-controls {
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  align-items: center;
+  justify-content: safe center;
+  gap: 0.5rem;
+  overflow-x: auto;
+}
+
+@container (min-width: 48rem) {
+  .practice-filter-layout {
+    flex-direction: row;
+  }
+
+  .practice-filter-controls {
+    width: auto;
+    overflow-x: visible;
+  }
+}
+
 @media (max-width: 767px) {
   .app-shell {
     padding-left: 16px;

@@ -757,25 +757,17 @@ export default function PracticeListPage({
           ]),
         ];
 
-        const [availableExamDates, ...countResults] = await Promise.all([
+        const [availableExamDates, allQuestions] = await Promise.all([
           loadExamDates(),
-          ...subjectIds.map((subjectId) =>
-            supabase
-              .from("questions")
-              .select("id", { count: "exact", head: true })
-              .eq("subject_id", subjectId),
-          ),
+          fetchPracticeQuestions(null, "all", "all"),
         ]);
 
-        const counts: Record<string, number> = {};
-        countResults.forEach((result, index) => {
-          if (result.error) {
-            throw new Error(
-              `Unable to count questions for ${subjectIds[index]}: ${result.error.message}`,
-            );
-          }
-          counts[subjectIds[index]] = result.count ?? 0;
-        });
+        const counts = Object.fromEntries(
+          subjectIds.map((subjectId) => [subjectId, 0]),
+        ) as Record<string, number>;
+        for (const question of allQuestions) {
+          counts[question.subject_id] = (counts[question.subject_id] ?? 0) + 1;
+        }
 
         if (cancelled) return;
 
@@ -1060,117 +1052,101 @@ export default function PracticeListPage({
           />
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
-    
-    {/* Filter title */}
-    <span className="text-sm font-semibold text-gray-600 shrink-0">
-      {translate(currentLanguage, "practiceListPage.filterBy")}
-    </span>
+        <div className="practice-filter-panel rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="practice-filter-layout">
+            <div className="practice-filter-controls">
+              <span className="shrink-0 text-sm font-semibold text-gray-600">
+                {translate(currentLanguage, "practiceListPage.filterBy")}
+              </span>
 
-    {/* Filters */}
-    <div className="grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto">
-      <MultiSelectDropdown
-        label={translate(currentLanguage, "practiceListPage.examDate")}
-        allLabel={translate(currentLanguage, "practiceListPage.all")}
-        selectedValues={selectedExamDates}
-        onChange={(values) => {
-          setSelectedExamDates(values);
-          setError("");
-        }}
-        options={[
-          ...examDates.map((date) => ({
-            value: date,
-            label: date === UNCATEGORIZED_EXAM_DATE
-              ? translate(currentLanguage, "ui.uncategorized")
-              : formatExamPeriodKey(date, currentLanguage),
-          })),
-        ]}
-      />
+              <MultiSelectDropdown
+                label={translate(currentLanguage, "practiceListPage.examDate")}
+                allLabel={translate(currentLanguage, "practiceListPage.all")}
+                selectedValues={selectedExamDates}
+                onChange={(values) => {
+                  setSelectedExamDates(values);
+                  setError("");
+                }}
+                options={examDates.map((date) => ({
+                  value: date,
+                  label:
+                    date === UNCATEGORIZED_EXAM_DATE
+                      ? translate(currentLanguage, "ui.uncategorized")
+                      : formatExamPeriodKey(date, currentLanguage),
+                }))}
+              />
 
-      <SelectDropdown
-        label={translate(
-          currentLanguage,
-          "practiceListPage.learningMode",
-        )}
-        value={modeFilter}
-        onChange={(v) => {
-          setModeFilter(v as ModeFilter);
-          setError("");
-        }}
-        options={[
-          {
-            value: "all",
-            label: translate(currentLanguage, "practiceListPage.all"),
-          },
-          {
-            value: "new",
-            label: translate(currentLanguage, "practiceListPage.new"),
-          },
-          {
-            value: "review",
-            label: translate(currentLanguage, "practiceListPage.review"),
-          },
-        ]}
-      />
-    </div>
+              <SelectDropdown
+                label={translate(
+                  currentLanguage,
+                  "practiceListPage.learningMode",
+                )}
+                value={modeFilter}
+                onChange={(value) => {
+                  setModeFilter(value as ModeFilter);
+                  setError("");
+                }}
+                options={[
+                  {
+                    value: "all",
+                    label: translate(currentLanguage, "practiceListPage.all"),
+                  },
+                  {
+                    value: "new",
+                    label: translate(currentLanguage, "practiceListPage.new"),
+                  },
+                  {
+                    value: "review",
+                    label: translate(
+                      currentLanguage,
+                      "practiceListPage.review",
+                    ),
+                  },
+                ]}
+              />
+            </div>
 
-    {/* Result + button */}
-    <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto">
-      <p
-        role="status"
-        aria-live="polite"
-        className="min-w-0 flex-1 truncate text-xs sm:text-sm font-medium text-gray-600"
-      >
-        {!currentResult
-          ? translate(
-              currentLanguage,
-              "practiceListPage.countingMatches",
-            )
-          : currentResult.error
-            ? translateMessage(language, currentResult.error)
-            : translate(
+            <button
+              onClick={() => void startFilteredPractice()}
+              disabled={
+                !!starting ||
+                !currentResult ||
+                !!currentResult.error ||
+                matchingQuestions.length === 0
+              }
+              className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Play className="h-3.5 w-3.5 shrink-0" />
+              {translate(
                 currentLanguage,
-                "practiceListPage.matchingQuestions",
-                {
-                  count: matchingQuestions.length.toLocaleString(),
-                },
+                "practiceListPage.practiceFiltered",
               )}
-      </p>
+              {currentResult &&
+                !currentResult.error &&
+                ` (${matchingQuestions.length.toLocaleString()})`}
+            </button>
+          </div>
 
-      <button
-        onClick={() => void startFilteredPractice()}
-        disabled={
-          !!starting ||
-          !currentResult ||
-          !!currentResult.error ||
-          matchingQuestions.length === 0
-        }
-        className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-xs sm:px-4 sm:text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        <Play className="h-3.5 w-3.5 shrink-0" />
-
-        <span className="hidden sm:inline">
-          {translate(
-            currentLanguage,
-            "practiceListPage.practiceFiltered",
+          <span role="status" aria-live="polite" className="sr-only">
+            {!currentResult
+              ? translate(
+                  currentLanguage,
+                  "practiceListPage.countingMatches",
+                )
+              : currentResult.error
+                ? translateMessage(language, currentResult.error)
+                : translate(
+                    currentLanguage,
+                    "practiceListPage.matchingQuestions",
+                    { count: matchingQuestions.length.toLocaleString() },
+                  )}
+          </span>
+          {currentResult?.error && (
+            <p role="alert" className="mt-3 text-center text-sm text-red-600">
+              {translateMessage(language, currentResult.error)}
+            </p>
           )}
-        </span>
-
-        <span className="sm:hidden">
-          {translate(
-            currentLanguage,
-            "practiceListPage.practice",
-          )}
-        </span>
-
-        {currentResult &&
-          !currentResult.error &&
-          ` (${matchingQuestions.length.toLocaleString()})`}
-      </button>
-    </div>
-  </div>
-</div>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <div className="min-w-0 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
