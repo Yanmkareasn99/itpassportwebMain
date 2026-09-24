@@ -68,6 +68,10 @@ it('filters by more than one checked subject', async () => {
   })).toBeTruthy();
   expect(await screen.findByText(`${expectedCount} items`)).toBeTruthy();
 
+  fireEvent.click(firstSubject);
+  expect((firstSubject as HTMLInputElement).checked).toBe(false);
+  expect((secondSubject as HTMLInputElement).checked).toBe(true);
+
   fireEvent.click(allSubjects);
   expect((allSubjects as HTMLInputElement).checked).toBe(true);
   expect(await screen.findByText(`${questions.length} items`)).toBeTruthy();
