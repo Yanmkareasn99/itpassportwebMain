@@ -73,4 +73,48 @@ describe('admin question filters', () => {
       subjectIds: ['subject-1', 'subject-3'],
     }).map(item => item.id)).toEqual(['strategy', 'management']);
   });
+
+  it('matches text and number searches and detects embedded answer images', () => {
+    expect(filterAdminQuestions(questions, new Set(), {
+      ...baseFilters,
+      search: 'question 2',
+    }).map(item => item.id)).toEqual(['q2']);
+
+    expect(filterAdminQuestions(questions, new Set(), {
+      ...baseFilters,
+      search: '12',
+    }).map(item => item.id)).toEqual(['q3']);
+
+    const questionsWithEmbeddedChoices = [
+      question({
+        id: 'with-answer-image',
+        question_number: 20,
+        answer_choices: [{
+          id: 'choice-with-image',
+          question_id: 'with-answer-image',
+          choice_text: '',
+          image_url: 'answer.webp',
+          is_correct: true,
+          sort_order: 1,
+        }],
+      }),
+      question({
+        id: 'without-answer-image',
+        question_number: 21,
+        answer_choices: [{
+          id: 'choice-without-image',
+          question_id: 'without-answer-image',
+          choice_text: 'Text answer',
+          image_url: null,
+          is_correct: true,
+          sort_order: 1,
+        }],
+      }),
+    ];
+
+    expect(filterAdminQuestions(questionsWithEmbeddedChoices, new Set(), {
+      ...baseFilters,
+      answerImage: 'with',
+    }).map(item => item.id)).toEqual(['with-answer-image']);
+  });
 });
