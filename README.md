@@ -12,7 +12,7 @@
 
 [![LIVE](https://img.shields.io/badge/▲_LIVE-learnwithmanabi.com-0099ff?style=for-the-badge)](https://learnwithmanabi.com)
 ![Status](https://img.shields.io/badge/✓_STATUS-ACTIVE-22c55e?style=for-the-badge)
-[![Tests](https://img.shields.io/github/actions/workflow/status/Yanmkareasn99/itpassportwebMain/ci.yml?branch=main&style=for-the-badge&label=TESTS)](https://github.com/Yanmkareasn99/itpassportwebMain/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/Yanmkareasn99/cd3f69bea4aeb7db8f0c17494c21e9e8/raw/manabi-tests.json&style=for-the-badge)](https://github.com/Yanmkareasn99/itpassportwebMain/actions)
 [![Coverage](https://img.shields.io/codecov/c/github/Yanmkareasn99/itpassportwebMain?branch=main&style=for-the-badge&label=COVERAGE)](https://codecov.io/gh/Yanmkareasn99/itpassportwebMain)
 ![Questions](https://img.shields.io/badge/QUESTIONS-4000+-8b5cf6?style=for-the-badge)
 ![License](https://img.shields.io/github/license/Yanmkareasn99/itpassportwebMain?style=for-the-badge)

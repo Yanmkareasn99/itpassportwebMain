@@ -7,6 +7,7 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+
     permissions:
       contents: read
 
@@ -29,10 +30,36 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Test with coverage
-        run: npm run test:coverage
+      - name: Run tests with coverage
+        id: tests
+        continue-on-error: true
+        run: npm run test:ci
+
+      - name: Generate tests badge
+        if: always()
+        run: node scripts/generate-test-badge.mjs
+
+      - name: Read badge JSON
+        id: badge
+        if: always()
+        shell: bash
+        run: |
+          echo "message=$(node -p "JSON.parse(require('fs').readFileSync('test-badge.json', 'utf8')).message")" >> "$GITHUB_OUTPUT"
+          echo "color=$(node -p "JSON.parse(require('fs').readFileSync('test-badge.json', 'utf8')).color")" >> "$GITHUB_OUTPUT"
+
+      - name: Publish test badge
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: schneegans/dynamic-badges-action@v1.7.0
+        with:
+          auth: ${{ secrets.GIST_SECRET }}
+          gistID: cd3f69bea4aeb7db8f0c17494c21e9e8
+          filename: manabi-tests.json
+          label: TESTS
+          message: ${{ steps.badge.outputs.message }}
+          color: ${{ steps.badge.outputs.color }}
 
       - name: Upload coverage to Codecov
+        if: always() && hashFiles('coverage/lcov.info') != ''
         uses: codecov/codecov-action@v5
         with:
           files: ./coverage/lcov.info
@@ -41,3 +68,7 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Fail CI if tests failed
+        if: steps.tests.outcome == 'failure'
+        run: exit 1
