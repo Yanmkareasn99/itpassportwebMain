@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   resetPassword: vi.fn(),
   updatePassword: vi.fn(),
   clearPasswordRecovery: vi.fn(),
+  abandonPasswordRecovery: vi.fn(),
   passwordRecoveryState: 'idle' as 'idle' | 'pending' | 'valid' | 'invalid',
   user: null as { id: string } | null,
   loading: false,
@@ -31,6 +32,7 @@ beforeEach(() => {
   mocks.signUp.mockResolvedValue(false);
   mocks.resetPassword.mockResolvedValue(undefined);
   mocks.updatePassword.mockResolvedValue(undefined);
+  mocks.abandonPasswordRecovery.mockResolvedValue(undefined);
   mocks.passwordRecoveryState = 'idle';
   mocks.user = null;
 });
@@ -74,6 +76,24 @@ it('updates the password only after a valid recovery event', async () => {
 
   await waitFor(() => expect(mocks.updatePassword).toHaveBeenCalledWith('new-secret'));
   expect(mocks.clearPasswordRecovery).toHaveBeenCalledTimes(1);
+});
+
+it('signs out the recovery session before returning to sign in', async () => {
+  mocks.passwordRecoveryState = 'valid';
+  render(
+    <MemoryRouter initialEntries={['/login?recovery=1#type=recovery']}>
+      <Routes>
+        <Route path="/login" element={<><LoginPage /><LocationPath /></>} />
+      </Routes>
+    </MemoryRouter>,
+  );
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Back to sign in' }));
+
+  await waitFor(() => expect(mocks.abandonPasswordRecovery).toHaveBeenCalledTimes(1));
+  expect(await screen.findByText('/login')).toBeTruthy();
+  expect(mocks.updatePassword).not.toHaveBeenCalled();
+  expect(mocks.clearPasswordRecovery).not.toHaveBeenCalled();
 });
 
 it('does not trust a recovery query parameter by itself', () => {

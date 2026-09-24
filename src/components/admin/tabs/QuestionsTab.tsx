@@ -290,6 +290,7 @@ export default function QuestionsTab() {
   >({});
   const [loadingChoicesId, setLoadingChoicesId] = useState<string | null>(null);
   const [listPage, setListPage] = useState(1);
+  const [pageNumberInput, setPageNumberInput] = useState("1");
   const [error, setError] = useState("");
   const [importData, setImportData] = useState<CsvImportData | null>(null);
   const [importing, setImporting] = useState(false);
@@ -452,6 +453,28 @@ export default function QuestionsTab() {
       ),
     [currentListPage, filtered],
   );
+
+  useEffect(() => {
+    setPageNumberInput(String(currentListPage));
+  }, [currentListPage]);
+
+  function goToListPage() {
+    if (!pageNumberInput.trim()) {
+      setPageNumberInput(String(currentListPage));
+      return;
+    }
+    const requestedPage = Number(pageNumberInput);
+    if (!Number.isFinite(requestedPage)) {
+      setPageNumberInput(String(currentListPage));
+      return;
+    }
+    const targetPage = Math.min(
+      listPageCount,
+      Math.max(1, Math.trunc(requestedPage)),
+    );
+    setListPage(targetPage);
+    setPageNumberInput(String(targetPage));
+  }
 
   function startNew() {
     const defaultSubject = subjects[0]?.id ?? "";
@@ -2691,12 +2714,42 @@ export default function QuestionsTab() {
               <ChevronLeft className="h-4 w-4" />
               {translate(language, "adminPage.previousPage")}
             </button>
-            <span className="text-xs font-medium text-gray-400">
-              {translate(language, "adminPage.pageOf", {
-                current: currentListPage,
-                total: listPageCount,
-              })}
-            </span>
+            <form
+              aria-label={translate(language, "adminPage.goToPage")}
+              className="flex items-center gap-2"
+              noValidate
+              onSubmit={(event) => {
+                event.preventDefault();
+                goToListPage();
+              }}
+            >
+              <label
+                htmlFor="admin-question-page-number"
+                className="text-xs font-medium text-gray-500"
+              >
+                {translate(language, "adminPage.pageNumber")}
+              </label>
+              <input
+                id="admin-question-page-number"
+                type="number"
+                min={1}
+                max={listPageCount}
+                step={1}
+                inputMode="numeric"
+                value={pageNumberInput}
+                onChange={(event) => setPageNumberInput(event.target.value)}
+                className="w-16 rounded-lg border border-gray-200 px-2 py-1.5 text-center text-sm text-gray-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              />
+              <span className="text-xs font-medium text-gray-400">
+                / {listPageCount}
+              </span>
+              <button
+                type="submit"
+                className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+              >
+                {translate(language, "adminPage.goToPage")}
+              </button>
+            </form>
             <button
               type="button"
               onClick={() =>

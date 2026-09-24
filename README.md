@@ -12,7 +12,9 @@ The previous website addresses, `manabi-app.jp` and `www.manabi-app.jp`, redirec
 
 ![Home dashboard](docs/screenshots/manabi.home.png)
 
-![Practice question flow](docs/screenshots/manabi.practice.png)
+![Practice selection](docs/screenshots/manabi.practice.png)
+
+![Practice question session](docs/screenshots/manabi.practice-session.png)
 
 ![Mock exam](docs/screenshots/manabi.mockexam.png)
 
@@ -23,6 +25,8 @@ The previous website addresses, `manabi-app.jp` and `www.manabi-app.jp`, redirec
 ![AI chat assistant](docs/screenshots/manabi.aichat.png)
 
 ![Settings](docs/screenshots/manabi.settings.png)
+
+![Profile settings](docs/screenshots/manabi.profile.png)
 
 ![Admin dashboard](docs/screenshots/manabi.admin.png)
 
