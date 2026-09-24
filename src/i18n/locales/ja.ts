@@ -890,6 +890,7 @@ export const ja = {
   "adminPage.filterAnswerImage": "解答画像",
   "adminPage.filterReviewStatus": "問題のレビュー状況",
   "adminPage.anyReviewStatus": "すべてのレビュー状況",
+  "adminPage.noReviewStatus": "レビュー状況なし",
   "adminPage.anyImageStatus": "画像あり・なし",
   "adminPage.includesImage": "画像あり",
   "adminPage.noImage": "画像なし",

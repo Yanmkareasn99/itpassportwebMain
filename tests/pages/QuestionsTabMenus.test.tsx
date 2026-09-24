@@ -34,6 +34,45 @@ it('closes both admin question menus on outside clicks and Escape', async () => 
   expect(screen.queryByRole('listbox')).toBeNull();
 });
 
+it('filters by more than one checked subject', async () => {
+  localStorage.setItem('manabi_language', 'en');
+  const subjects = getLocalRows('subjects') as Array<{ id: string; name: string }>;
+  const questions = getLocalRows('questions') as Array<{ subject_id: string }>;
+  const selectedSubjects = subjects
+    .filter(subject => questions.some(question => question.subject_id === subject.id))
+    .slice(0, 2);
+  const expectedCount = questions.filter(question =>
+    selectedSubjects.some(subject => subject.id === question.subject_id)).length;
+
+  render(<LanguageProvider><QuestionsTab /></LanguageProvider>);
+  await screen.findByText(`${questions.length} items`);
+  fireEvent.click(screen.getByRole('button', { name: 'All subjects' }));
+  const subjectList = screen.getByRole('listbox');
+  const allSubjects = within(subjectList).getByRole('checkbox', { name: 'All subjects' });
+  const firstSubject = within(subjectList).getByRole('checkbox', {
+    name: selectedSubjects[0].name,
+  });
+  const secondSubject = within(subjectList).getByRole('checkbox', {
+    name: selectedSubjects[1].name,
+  });
+
+  fireEvent.click(firstSubject);
+  fireEvent.click(secondSubject);
+
+  expect(screen.getByRole('listbox')).toBeTruthy();
+  expect((firstSubject as HTMLInputElement).checked).toBe(true);
+  expect((secondSubject as HTMLInputElement).checked).toBe(true);
+  expect((allSubjects as HTMLInputElement).checked).toBe(false);
+  expect(screen.getByRole('button', {
+    name: `${selectedSubjects[0].name}, ${selectedSubjects[1].name}`,
+  })).toBeTruthy();
+  expect(await screen.findByText(`${expectedCount} items`)).toBeTruthy();
+
+  fireEvent.click(allSubjects);
+  expect((allSubjects as HTMLInputElement).checked).toBe(true);
+  expect(await screen.findByText(`${questions.length} items`)).toBeTruthy();
+});
+
 it('expands and collapses the question search options', async () => {
   localStorage.setItem('manabi_language', 'en');
   render(<LanguageProvider><QuestionsTab /></LanguageProvider>);
@@ -160,7 +199,8 @@ it('shows only saved review and message indicators before expanding a question',
 
 it('filters questions by their review status', async () => {
   localStorage.setItem('manabi_language', 'en');
-  const question = getLocalRows('questions')[0] as { id: string };
+  const questions = getLocalRows('questions') as Array<{ id: string }>;
+  const question = questions[0];
   localStorage.setItem('manabi-local-data', JSON.stringify({
     question_admin_reviews: [{
       question_id: question.id,
@@ -179,6 +219,78 @@ it('filters questions by their review status', async () => {
   await waitFor(() => expect(screen.getAllByText('Ready for review')).toHaveLength(2));
   expect(screen.getAllByText('Draft')).toHaveLength(1);
 
+  fireEvent.change(statusFilter, { target: { value: 'none' } });
+  await waitFor(() => expect(screen.getByText(`${questions.length - 1} items`)).toBeTruthy());
+
   fireEvent.change(statusFilter, { target: { value: 'draft' } });
   await waitFor(() => expect(screen.getByText('0 items')).toBeTruthy());
+});
+
+it('updates an edited question locally without reloading the full question list', async () => {
+  localStorage.setItem('manabi_language', 'en');
+  const question = getLocalRows('questions')[0] as {
+    id: string;
+    answer_choices?: Array<Record<string, unknown>>;
+  };
+  localStorage.setItem('manabi-local-data', JSON.stringify({
+    answer_choices: question.answer_choices ?? [],
+  }));
+
+  const localData = await import('../../src/lib/localData');
+  const getLocalRowsSpy = vi.spyOn(localData, 'getLocalRows');
+  render(<LanguageProvider><QuestionsTab /></LanguageProvider>);
+  await screen.findByText(/\d+ items/);
+
+  fireEvent.click(screen.getAllByTitle('Edit question')[0]);
+  await screen.findByRole('heading', { name: 'Edit question' });
+  const questionText = screen.getByPlaceholderText('Enter the question text...');
+  const callsBeforeSave = getLocalRowsSpy.mock.calls
+    .filter(([table]) => table === 'questions').length;
+
+  fireEvent.change(questionText, { target: { value: 'Locally updated question text' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+  expect(await screen.findByText('Locally updated question text')).toBeTruthy();
+  const callsAfterSave = getLocalRowsSpy.mock.calls
+    .filter(([table]) => table === 'questions').length;
+  expect(callsAfterSave - callsBeforeSave).toBe(1);
+
+  getLocalRowsSpy.mockRestore();
+});
+
+it('refreshes stale question data when the tab becomes active again', async () => {
+  localStorage.setItem('manabi_language', 'en');
+  const initialTime = new Date('2026-09-24T00:00:00Z').getTime();
+  const dateNowSpy = vi.spyOn(Date, 'now').mockReturnValue(initialTime);
+  const localData = await import('../../src/lib/localData');
+  const getLocalRowsSpy = vi.spyOn(localData, 'getLocalRows');
+  const view = render(
+    <LanguageProvider><QuestionsTab active /></LanguageProvider>,
+  );
+  await screen.findByText(/\d+ items/);
+  const initialQuestionReads = getLocalRowsSpy.mock.calls
+    .filter(([table]) => table === 'questions').length;
+
+  view.rerender(
+    <LanguageProvider><QuestionsTab active={false} /></LanguageProvider>,
+  );
+  view.rerender(
+    <LanguageProvider><QuestionsTab active /></LanguageProvider>,
+  );
+  expect(getLocalRowsSpy.mock.calls
+    .filter(([table]) => table === 'questions')).toHaveLength(initialQuestionReads);
+
+  dateNowSpy.mockReturnValue(initialTime + 5 * 60 * 1000 + 1);
+  view.rerender(
+    <LanguageProvider><QuestionsTab active={false} /></LanguageProvider>,
+  );
+  view.rerender(
+    <LanguageProvider><QuestionsTab active /></LanguageProvider>,
+  );
+
+  await waitFor(() => expect(getLocalRowsSpy.mock.calls
+    .filter(([table]) => table === 'questions')).toHaveLength(initialQuestionReads + 1));
+
+  getLocalRowsSpy.mockRestore();
+  dateNowSpy.mockRestore();
 });

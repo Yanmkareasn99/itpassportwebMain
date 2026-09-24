@@ -71,6 +71,7 @@ interface AdminQuestionData {
 
 let adminQuestionDataCache: {
   data: AdminQuestionData;
+  loadedAt: number;
   expiresAt: number;
 } | null = null;
 let adminQuestionDataRequest: Promise<AdminQuestionData> | null = null;
@@ -217,9 +218,11 @@ async function loadAdminQuestionData(force = false): Promise<AdminQuestionData> 
       reviewerNames,
     };
     if (generation === adminQuestionDataGeneration) {
+      const loadedAt = Date.now();
       adminQuestionDataCache = {
         data,
-        expiresAt: Date.now() + ADMIN_QUESTION_CACHE_TTL_MS,
+        loadedAt,
+        expiresAt: loadedAt + ADMIN_QUESTION_CACHE_TTL_MS,
       };
     }
     return data;
@@ -259,7 +262,11 @@ function DiffBadge({ d }: { d: number }) {
     </span>
   );
 }
-export default function QuestionsTab() {
+interface QuestionsTabProps {
+  active?: boolean;
+}
+
+export default function QuestionsTab({ active = true }: QuestionsTabProps) {
   const { language } = useLanguage();
   const { user, profile } = useAuth();
   const currentAdminId = user?.id ?? null;
@@ -268,7 +275,7 @@ export default function QuestionsTab() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterSubject, setFilterSubject] = useState("all");
+  const [filterSubjectIds, setFilterSubjectIds] = useState<string[]>([]);
   const [filterQuestionNumber, setFilterQuestionNumber] = useState("");
   const [filterExamYear, setFilterExamYear] = useState("");
   const [filterQuestionImage, setFilterQuestionImage] =
@@ -276,7 +283,7 @@ export default function QuestionsTab() {
   const [filterAnswerImage, setFilterAnswerImage] =
     useState<ImagePresenceFilter>("all");
   const [filterReviewStatus, setFilterReviewStatus] = useState<
-    QuestionReviewStatus | "all"
+    QuestionReviewStatus | "all" | "none"
   >("all");
   const [answerImageQuestionIds, setAnswerImageQuestionIds] = useState<
     Set<string>
@@ -325,6 +332,8 @@ export default function QuestionsTab() {
   const questionInputMenuRef = useRef<HTMLDivElement>(null);
   const subjectMenuRef = useRef<HTMLDivElement>(null);
   const reviewMessageRef = useRef<HTMLTextAreaElement>(null);
+  const lastLoadedAtRef = useRef(0);
+  const wasActiveRef = useRef(active);
 
   useEffect(() => {
     const textarea = reviewMessageRef.current;
@@ -376,6 +385,7 @@ export default function QuestionsTab() {
         reviews,
         reviewerNames: cachedReviewerNames,
       } = await loadAdminQuestionData(force);
+      lastLoadedAtRef.current = adminQuestionDataCache?.loadedAt ?? Date.now();
       const reviewerNames = { ...cachedReviewerNames };
       if (currentAdminProfileId && currentAdminName) {
         reviewerNames[currentAdminProfileId] = currentAdminName;
@@ -403,16 +413,32 @@ export default function QuestionsTab() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    const becameActive = active && !wasActiveRef.current;
+    wasActiveRef.current = active;
+    if (
+      becameActive &&
+      Date.now() - lastLoadedAtRef.current >= ADMIN_QUESTION_CACHE_TTL_MS
+    ) {
+      void load(true);
+    }
+  }, [active, load]);
+
   const filtered = useMemo(() => {
     const matchingQuestions = filterAdminQuestions(questions, answerImageQuestionIds, {
       search: "",
-      subjectId: filterSubject,
+      subjectIds: filterSubjectIds,
       questionNumber: filterQuestionNumber,
       examYear: filterExamYear,
       questionImage: filterQuestionImage,
       answerImage: filterAnswerImage,
     });
     if (filterReviewStatus === "all") return matchingQuestions;
+    if (filterReviewStatus === "none") {
+      return matchingQuestions.filter(
+        (question) => !reviewsByQuestion[question.id],
+      );
+    }
     return matchingQuestions.filter(
       (question) =>
         reviewsByQuestion[question.id]?.review_status === filterReviewStatus,
@@ -424,7 +450,7 @@ export default function QuestionsTab() {
     filterQuestionImage,
     filterQuestionNumber,
     filterReviewStatus,
-    filterSubject,
+    filterSubjectIds,
     questions,
     reviewsByQuestion,
   ]);
@@ -432,8 +458,11 @@ export default function QuestionsTab() {
     () => new Map(subjects.map((subject) => [subject.id, subject])),
     [subjects],
   );
+  const selectedSubjectNames = filterSubjectIds
+    .map((subjectId) => subjectById.get(subjectId)?.name)
+    .filter((name): name is string => Boolean(name));
   const hasActiveQuestionFilters = Boolean(
-    filterSubject !== "all" ||
+    filterSubjectIds.length > 0 ||
     filterQuestionNumber ||
     filterExamYear ||
     filterQuestionImage !== "all" ||
@@ -491,7 +520,7 @@ export default function QuestionsTab() {
   }
 
   function clearQuestionFilters() {
-    setFilterSubject("all");
+    setFilterSubjectIds([]);
     setFilterQuestionNumber("");
     setFilterExamYear("");
     setFilterQuestionImage("all");
@@ -705,6 +734,7 @@ export default function QuestionsTab() {
       };
 
       let questionId = editingId !== "new" ? editingId! : "";
+      let savedQuestion: Question;
 
       if (editingId === "new") {
         const { data, error: err } = await supabase
@@ -714,12 +744,16 @@ export default function QuestionsTab() {
           .single();
         if (err) throw err;
         questionId = data.id;
+        savedQuestion = data as Question;
       } else {
-        const { error: err } = await supabase
+        const { data, error: err } = await supabase
           .from("questions")
           .update(qPayload)
-          .eq("id", questionId);
+          .eq("id", questionId)
+          .select()
+          .single();
         if (err) throw err;
+        savedQuestion = data as Question;
         const { error: deleteChoiceError } = await supabase
           .from("answer_choices")
           .delete()
@@ -739,20 +773,56 @@ export default function QuestionsTab() {
         .insert(choicePayloads);
       if (choiceErr) throw choiceErr;
 
+      const reviewUpdatedAt = new Date().toISOString();
+      const savedReview: QuestionAdminReview = {
+        question_id: questionId,
+        review_status: reviewStatus,
+        message: reviewMessage.trim(),
+        updated_by: currentAdminId,
+        updated_at: reviewUpdatedAt,
+      };
       const { error: reviewError } = await supabase
         .from("question_admin_reviews")
         .upsert({
-          question_id: questionId,
-          review_status: reviewStatus,
-          message: reviewMessage.trim(),
-          updated_by: currentAdminId,
-          updated_at: new Date().toISOString(),
+          ...savedReview,
         }, { onConflict: "question_id" });
       if (reviewError) throw reviewError;
 
       setEditingId(null);
+      setExpandedId(null);
       invalidateQuestionCaches();
-      await load();
+      setQuestions((current) => {
+        const withoutSaved = current.filter((question) => question.id !== questionId);
+        return [...withoutSaved, savedQuestion].sort(
+          (left, right) =>
+            left.question_number - right.question_number ||
+            left.id.localeCompare(right.id),
+        );
+      });
+      setReviewsByQuestion((current) => ({
+        ...current,
+        [questionId]: savedReview,
+      }));
+      if (currentAdminId && currentAdminName) {
+        setReviewerNamesById((current) => ({
+          ...current,
+          [currentAdminId]: currentAdminName,
+        }));
+      }
+      setAnswerImageQuestionIds((current) => {
+        const next = new Set(current);
+        if (choicePayloads.some((choice) => Boolean(choice.image_url))) {
+          next.add(questionId);
+        } else {
+          next.delete(questionId);
+        }
+        return next;
+      });
+      setChoicesByQuestion((current) => {
+        const next = { ...current };
+        delete next[questionId];
+        return next;
+      });
     } catch (e: unknown) {
       setError(
         e instanceof Error
@@ -779,7 +849,23 @@ export default function QuestionsTab() {
         .eq("id", id);
       if (questionError) throw questionError;
       invalidateQuestionCaches();
-      await load();
+      setQuestions((current) => current.filter((question) => question.id !== id));
+      setReviewsByQuestion((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
+      setAnswerImageQuestionIds((current) => {
+        const next = new Set(current);
+        next.delete(id);
+        return next;
+      });
+      setChoicesByQuestion((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
+      setExpandedId((current) => current === id ? null : current);
     } catch (deleteError) {
       setError(
         deleteError instanceof Error
@@ -1768,10 +1854,9 @@ export default function QuestionsTab() {
             className="flex w-full items-center justify-between gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-left text-sm text-gray-700 transition hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300"
           >
             <span className="truncate">
-              {filterSubject === "all"
+              {selectedSubjectNames.length === 0
                 ? translate(language, "adminPage.allSubjects")
-                : (subjects.find((subject) => subject.id === filterSubject)
-                    ?.name ?? translate(language, "adminPage.allSubjects"))}
+                : selectedSubjectNames.join(", ")}
             </span>
             <ChevronDown
               className={`
@@ -1787,6 +1872,7 @@ export default function QuestionsTab() {
             <div
               id="question-subject-menu"
               role="listbox"
+              aria-multiselectable="true"
               aria-label={translate(language, "adminPage.allSubjects")}
               className="absolute left-0 top-full z-30 mt-2 max-h-72 w-64 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl border border-gray-200 bg-white p-2 shadow-lg"
             >
@@ -1796,22 +1882,38 @@ export default function QuestionsTab() {
                   name: translate(language, "adminPage.allSubjects"),
                 },
                 ...subjects,
-              ].map((subject) => (
-                <button
-                  key={subject.id}
-                  type="button"
-                  role="option"
-                  aria-selected={filterSubject === subject.id}
-                  onClick={() => {
-                    setFilterSubject(subject.id);
-                    setListPage(1);
-                    setShowSubjectMenu(false);
-                  }}
-                  className={`w-full rounded-xl px-3 py-2.5 text-left text-sm transition hover:bg-blue-50 hover:text-blue-700 ${filterSubject === subject.id ? "bg-blue-50 font-semibold text-blue-700" : "text-gray-700"}`}
-                >
-                  {subject.name}
-                </button>
-              ))}
+              ].map((subject) => {
+                const selected = subject.id === "all"
+                  ? filterSubjectIds.length === 0
+                  : filterSubjectIds.includes(subject.id);
+                return (
+                  <label
+                    key={subject.id}
+                    role="option"
+                    aria-selected={selected}
+                    className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition hover:bg-blue-50 hover:text-blue-700 ${selected ? "bg-blue-50 font-semibold text-blue-700" : "text-gray-700"}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      onChange={() => {
+                        if (subject.id === "all") {
+                          setFilterSubjectIds([]);
+                        } else {
+                          setFilterSubjectIds((current) =>
+                            current.includes(subject.id)
+                              ? current.filter((id) => id !== subject.id)
+                              : [...current, subject.id],
+                          );
+                        }
+                        setListPage(1);
+                      }}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span>{subject.name}</span>
+                  </label>
+                );
+              })}
             </div>
           )}
         </div>
@@ -2032,7 +2134,7 @@ export default function QuestionsTab() {
                 value={filterReviewStatus}
                 onChange={(event) => {
                   setFilterReviewStatus(
-                    event.target.value as QuestionReviewStatus | "all",
+                    event.target.value as QuestionReviewStatus | "all" | "none",
                   );
                   setListPage(1);
                 }}
@@ -2040,6 +2142,9 @@ export default function QuestionsTab() {
               >
                 <option value="all">
                   {translate(language, "adminPage.anyReviewStatus")}
+                </option>
+                <option value="none">
+                  {translate(language, "adminPage.noReviewStatus")}
                 </option>
                 <option value="draft">
                   {translate(language, "adminPage.reviewDraft")}

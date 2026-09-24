@@ -74,7 +74,7 @@ export default function AdminPage({ currentPage, onNavigate }: AdminPageProps) {
             </div>
 
             <div className={tab === 'questions' ? '' : 'hidden'}>
-              {mountedTabs.has('questions') && <QuestionsTab />}
+              {mountedTabs.has('questions') && <QuestionsTab active={tab === 'questions'} />}
             </div>
             <div className={tab === 'subjects' ? '' : 'hidden'}>
               {mountedTabs.has('subjects') && <SubjectsTab />}

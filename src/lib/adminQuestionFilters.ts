@@ -4,7 +4,7 @@ export type ImagePresenceFilter = 'all' | 'with' | 'without';
 
 export interface AdminQuestionFilterOptions {
   search: string;
-  subjectId: string;
+  subjectIds: readonly string[];
   questionNumber: string;
   examYear: string;
   questionImage: ImagePresenceFilter;
@@ -34,7 +34,7 @@ export function filterAdminQuestions(
       || question.question_text.toLocaleLowerCase().includes(normalizedSearch)
       || String(question.question_number).includes(normalizedSearch);
 
-    return (filters.subjectId === 'all' || question.subject_id === filters.subjectId)
+    return (filters.subjectIds.length === 0 || filters.subjectIds.includes(question.subject_id))
       && (questionNumber === null || question.question_number === questionNumber)
       && (examYear === null || question.exam_year === examYear)
       && matchesImagePresence(hasQuestionImage, filters.questionImage)

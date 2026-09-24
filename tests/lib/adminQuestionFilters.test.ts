@@ -19,7 +19,7 @@ function question(overrides: Partial<Question> & Pick<Question, 'id' | 'question
 
 const baseFilters: AdminQuestionFilterOptions = {
   search: '',
-  subjectId: 'all',
+  subjectIds: [],
   questionNumber: '',
   examYear: '',
   questionImage: 'all',
@@ -59,5 +59,18 @@ describe('admin question filters', () => {
       questionImage: 'without',
       answerImage: 'without',
     }).map(item => item.id)).toEqual(['q3']);
+  });
+
+  it('matches questions from every selected subject', () => {
+    const mixedSubjects = [
+      question({ id: 'strategy', question_number: 1, subject_id: 'subject-1' }),
+      question({ id: 'technology', question_number: 2, subject_id: 'subject-2' }),
+      question({ id: 'management', question_number: 3, subject_id: 'subject-3' }),
+    ];
+
+    expect(filterAdminQuestions(mixedSubjects, new Set(), {
+      ...baseFilters,
+      subjectIds: ['subject-1', 'subject-3'],
+    }).map(item => item.id)).toEqual(['strategy', 'management']);
   });
 });
