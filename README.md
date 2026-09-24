@@ -12,8 +12,8 @@
 
 [![LIVE](https://img.shields.io/badge/▲_LIVE-learnwithmanabi.com-0099ff?style=for-the-badge)](https://learnwithmanabi.com)
 ![Status](https://img.shields.io/badge/✓_STATUS-ACTIVE-22c55e?style=for-the-badge)
-![Tests](https://img.shields.io/badge/✓_TESTS-PASSING-22c55e?style=for-the-badge)
-![Questions](https://img.shields.io/badge/QUESTIONS-2000+-8b5cf6?style=for-the-badge)
+![Tests](https://img.shields.io/badge/✓_TESTS-203 PASSING-22c55e?style=for-the-badge)
+![Questions](https://img.shields.io/badge/QUESTIONS-4000+-8b5cf6?style=for-the-badge)
 
 <br>
 
