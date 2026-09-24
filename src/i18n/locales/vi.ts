@@ -889,6 +889,7 @@ export const vi = {
   "adminPage.filterAnswerImage": "Ảnh đáp án",
   "adminPage.filterReviewStatus": "Trạng thái duyệt câu hỏi",
   "adminPage.anyReviewStatus": "Mọi trạng thái duyệt",
+  "adminPage.noReviewStatus": "Không có trạng thái duyệt",
   "adminPage.anyImageStatus": "Có hoặc không có ảnh",
   "adminPage.includesImage": "Có ảnh",
   "adminPage.noImage": "Không có ảnh",
