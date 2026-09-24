@@ -49,7 +49,7 @@ jobs:
 
       - name: Publish test badge
         if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: schneegans/dynamic-badges-action@v1.7.0
+        uses: schneegans/dynamic-badges-action@v1.9.0
         with:
           auth: ${{ secrets.GIST_SECRET }}
           gistID: cd3f69bea4aeb7db8f0c17494c21e9e8
