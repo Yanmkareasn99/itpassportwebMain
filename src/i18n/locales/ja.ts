@@ -252,6 +252,8 @@ export const ja = {
   "adminPage.duplicateQuestionExists":
     "この問題は既に登録されているため、取込みを中止しました。",
   "adminPage.pageOf": "{total}ページ中 {current}ページ",
+  "adminPage.pageNumber": "ページ",
+  "adminPage.goToPage": "移動",
   "adminPage.previousPage": "前へ",
   "adminPage.nextPage": "次へ",
   "adminPage.csvImportFormat":
@@ -436,6 +438,7 @@ export const ja = {
   "homePage.viewMaterials": "教材を見る",
   "loginPage.alreadyHaveAnAccount": "すでにアカウントをお持ちの方",
   "loginPage.backToSignIn": "ログインに戻る",
+  "loginPage.cancelRecoveryFailed": "パスワードの再設定を終了できませんでした。もう一度お試しください。",
   "loginPage.brand": "マナビ",
   "loginPage.confirmNewPassword": "新しいパスワード（確認）",
   "loginPage.confirmationEmailSentConfirmYourEmailThenSign":

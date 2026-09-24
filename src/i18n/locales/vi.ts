@@ -251,6 +251,8 @@ export const vi = {
   "adminPage.duplicateQuestionExists":
     "Đã dừng nhập vì câu hỏi này đã tồn tại.",
   "adminPage.pageOf": "Trang {current}/{total}",
+  "adminPage.pageNumber": "Trang",
+  "adminPage.goToPage": "Đi",
   "adminPage.previousPage": "Trước",
   "adminPage.nextPage": "Tiếp",
   "adminPage.csvImportFormat":
@@ -433,6 +435,7 @@ export const vi = {
   "homePage.viewMaterials": "Xem tài liệu",
   "loginPage.alreadyHaveAnAccount": "Đã có tài khoản?",
   "loginPage.backToSignIn": "Quay lại đăng nhập",
+  "loginPage.cancelRecoveryFailed": "Không thể thoát khỏi đặt lại mật khẩu. Vui lòng thử lại.",
   "loginPage.brand": "Manabi",
   "loginPage.confirmNewPassword": "Xác nhận mật khẩu mới",
   "loginPage.confirmationEmailSentConfirmYourEmailThenSign":

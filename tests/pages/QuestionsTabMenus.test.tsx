@@ -57,6 +57,59 @@ it('expands and collapses the question search options', async () => {
   expect(screen.queryByLabelText('Question number')).toBeNull();
 });
 
+it('goes directly to a typed question-list page and clamps out-of-range pages', async () => {
+  localStorage.setItem('manabi_language', 'en');
+  const originalQuestions = getLocalRows('questions') as Array<Record<string, unknown>>;
+  const questions = Array.from({ length: 120 }, (_, index) => {
+    const source = originalQuestions[index % originalQuestions.length];
+    return {
+      ...source,
+      id: `pagination-question-${index + 1}`,
+      question_number: index + 1,
+      question_text: `Pagination question ${index + 1}`,
+    };
+  });
+  const localData = await import('../../src/lib/localData');
+  const originalGetLocalRows = localData.getLocalRows;
+  const getLocalRowsSpy = vi.spyOn(localData, 'getLocalRows').mockImplementation((table: string) =>
+    table === 'questions' ? questions : originalGetLocalRows(table));
+
+  render(<LanguageProvider><QuestionsTab /></LanguageProvider>);
+  await screen.findByText('120 items');
+
+  const pageInput = screen.getByRole('spinbutton', { name: 'Page' });
+  fireEvent.change(pageInput, { target: { value: '3' } });
+  fireEvent.submit(screen.getByRole('form', { name: 'Go' }));
+  expect(await screen.findByText('Pagination question 101')).toBeTruthy();
+  expect((pageInput as HTMLInputElement).value).toBe('3');
+
+  fireEvent.change(pageInput, { target: { value: '99' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Go' }));
+  await waitFor(() => expect((pageInput as HTMLInputElement).value).toBe('3'));
+  expect((screen.getByRole('button', { name: 'Next' }) as HTMLButtonElement).disabled).toBe(true);
+
+  fireEvent.change(pageInput, { target: { value: '' } });
+  fireEvent.submit(screen.getByRole('form', { name: 'Go' }));
+  await waitFor(() => expect((pageInput as HTMLInputElement).value).toBe('3'));
+  expect(screen.getByText('Pagination question 101')).toBeTruthy();
+
+  fireEvent.change(pageInput, { target: { value: '0' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Go' }));
+  expect(await screen.findByText('Pagination question 1')).toBeTruthy();
+  expect((pageInput as HTMLInputElement).value).toBe('1');
+  expect((screen.getByRole('button', { name: 'Previous' }) as HTMLButtonElement).disabled).toBe(true);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+  expect(await screen.findByText('Pagination question 51')).toBeTruthy();
+  await waitFor(() => expect((pageInput as HTMLInputElement).value).toBe('2'));
+
+  fireEvent.click(screen.getByRole('button', { name: 'Previous' }));
+  expect(await screen.findByText('Pagination question 1')).toBeTruthy();
+  await waitFor(() => expect((pageInput as HTMLInputElement).value).toBe('1'));
+
+  getLocalRowsSpy.mockRestore();
+});
+
 vi.mock('../../src/contexts/AuthContext', () => ({
   useAuth: () => ({
     user: { id: 'admin-1' },

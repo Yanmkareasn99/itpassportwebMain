@@ -261,6 +261,8 @@ export const en = {
   "adminPage.duplicateQuestionExists":
     "Import stopped because this question already exists.",
   "adminPage.pageOf": "Page {current} of {total}",
+  "adminPage.pageNumber": "Page",
+  "adminPage.goToPage": "Go",
   "adminPage.previousPage": "Previous",
   "adminPage.nextPage": "Next",
   "adminPage.csvImportFormat":
@@ -445,6 +447,7 @@ export const en = {
   "homePage.viewMaterials": "View materials",
   "loginPage.alreadyHaveAnAccount": "Already have an account?",
   "loginPage.backToSignIn": "Back to sign in",
+  "loginPage.cancelRecoveryFailed": "Unable to leave password reset. Please try again.",
   "loginPage.brand": "Manabi",
   "loginPage.confirmNewPassword": "Confirm new password",
   "loginPage.confirmationEmailSentConfirmYourEmailThenSign":

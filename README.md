@@ -1,10 +1,38 @@
-# Manabi IT Passport
+<div align="center">
 
-Manabi IT Passport is a React and Supabase study app for the Japanese IT Passport exam. It includes practice questions, mock exams, multilingual explanations, admin content tools, and an AI study assistant with local fallback answers.
+# マナビ | Manabi
+
+### IT Passport Learning Platform
+
+**A multilingual learning web app for the IT Passport（ITパスポート）exam**
+
+*Practice questions + Battle Mode + AI-powered study tools — 日本語 / English / Tiếng Việt*
+
+<br>
+
+[![LIVE](https://img.shields.io/badge/▲_LIVE-learnwithmanabi.com-0099ff?style=for-the-badge)](https://learnwithmanabi.com)
+![Status](https://img.shields.io/badge/✓_STATUS-ACTIVE-22c55e?style=for-the-badge)
+![Tests](https://img.shields.io/badge/✓_TESTS-PASSING-22c55e?style=for-the-badge)
+![Questions](https://img.shields.io/badge/QUESTIONS-2000+-8b5cf6?style=for-the-badge)
+
+<br>
+
+![React](https://img.shields.io/badge/React-19-61DAFB?style=flat&logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat&logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-6-646CFF?style=flat&logo=vite&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-06B6D4?style=flat&logo=tailwindcss&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-Database-3FCF8E?style=flat&logo=supabase&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-Deploy-000000?style=flat&logo=vercel&logoColor=white)
+
+<br>
+
+**🇯🇵 日本語** ・ **🇬🇧 English** ・ **🇻🇳 Tiếng Việt**
+
+</div>
+
+Manabi is a React and Supabase study app for the Japanese IT Passport exam. It includes practice questions, mock exams, PvP battle mode, multilingual explanations, admin content tools, and an AI study assistant with local fallback answers.
 
 Website: [https://learnwithmanabi.com](https://learnwithmanabi.com)
-
-The previous website addresses, `manabi-app.jp` and `www.manabi-app.jp`, redirect to the new domain. Shared material files still use `files.manabi-app.jp`; keep that subdomain and the old domain registration active.
 
 ## Screenshots
 
@@ -12,7 +40,7 @@ The previous website addresses, `manabi-app.jp` and `www.manabi-app.jp`, redirec
 
 ![Home dashboard](docs/screenshots/manabi.home.png)
 
-![Practice question flow](docs/screenshots/manabi.practice.png)
+![Practice question flow](docs/screenshots/manabi.practice-session.png)
 
 ![Mock exam](docs/screenshots/manabi.mockexam.png)
 
@@ -23,6 +51,8 @@ The previous website addresses, `manabi-app.jp` and `www.manabi-app.jp`, redirec
 ![AI chat assistant](docs/screenshots/manabi.aichat.png)
 
 ![Settings](docs/screenshots/manabi.settings.png)
+
+![Profile](docs/screenshots/manabi.profile.png)
 
 ![Admin dashboard](docs/screenshots/manabi.admin.png)
 
@@ -78,11 +108,12 @@ tests/
 
 Routing is handled in `src/App.tsx`. Signed-in pages are wrapped by `ProtectedRoute`; `/admin` is additionally wrapped by `AdminRoute`. The existing page components still receive `currentPage` and `onNavigate` so navigation UI remains simple while browser back/forward works.
 
-Admin code is split into five tabs:
+Admin code is split into six tabs:
 
 - `QuestionsTab`
 - `SubjectsTab`
 - `UsersTab`
+- `AnnouncementsTab`
 - `MockExamTab`
 - `StatsTab`
 
@@ -216,7 +247,3 @@ Supabase calls should throw or surface errors instead of ignoring them. New shar
 - `src/lib/dataService.ts`
 - `src/hooks/useData.ts`
 - `src/components/ui/LoadingError.tsx`
-
-## Package Management
-
-This repository uses npm. `pnpm-lock.yaml` and `pnpm-workspace.yaml` were removed to avoid mixed package-manager state.
