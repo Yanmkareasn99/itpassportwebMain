@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage",
+    "test:coverage": "vitest run --coverage --coverage.reporter=text --coverage.reporter=lcov",
     "export:dashboard-sql": "node scripts/export_dashboard_sql.mjs",
     "export:questions:csv": "node scripts/export_questions_csv.mjs",
     "import:questions": "node scripts/import_questions.mjs",
