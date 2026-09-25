@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { AlertTriangle, BookOpen, ChevronDown, Download, ExternalLink, FileText, Image, Link, PlayCircle, RefreshCw, Trash2, Upload, X } from 'lucide-react';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
@@ -279,8 +280,8 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
           </section>
         </>}
       </div>
-      {pendingDelete && <div
-        className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm"
+      {pendingDelete && createPortal(<div
+        className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/30 p-4 backdrop-blur-[2px]"
         onMouseDown={event => {
           if (event.target === event.currentTarget && !deletingId) setPendingDelete(null);
         }}
@@ -352,7 +353,7 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
             </button>
           </div>
         </div>
-      </div>}
+      </div>, document.body)}
     </Layout>
   );
 }
