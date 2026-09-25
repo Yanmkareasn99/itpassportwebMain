@@ -66,7 +66,14 @@ it('renders the delete confirmation backdrop at the document root', async () => 
     external_url: null,
     created_at: '2026-09-25T00:00:00.000Z',
   };
-  vi.mocked(listMaterials).mockResolvedValueOnce([material]);
+  const largeMaterial: Material = {
+    ...material,
+    id: 'material-2',
+    title: 'Large reference',
+    file_name: 'reference.pdf',
+    file_size: 2 * 1024 * 1024,
+  };
+  vi.mocked(listMaterials).mockResolvedValueOnce([material, largeMaterial]);
 
   render(
     <LanguageProvider>
@@ -74,9 +81,32 @@ it('renders the delete confirmation backdrop at the document root', async () => 
     </LanguageProvider>,
   );
 
-  fireEvent.click(await screen.findByRole('button', { name: 'Delete' }));
+  fireEvent.click((await screen.findAllByRole('button', { name: 'Delete' }))[0]);
 
   const dialog = screen.getByRole('dialog', { name: 'Delete material?' });
-  expect(dialog.parentElement?.parentElement).toBe(document.body);
-  expect(dialog.parentElement?.className).toContain('bg-slate-950/30');
+  const backdrop = dialog.parentElement!;
+  expect(backdrop.parentElement).toBe(document.body);
+  expect(backdrop.className).toContain('bg-slate-950/30');
+
+  fireEvent.mouseDown(dialog);
+  expect(screen.getByRole('dialog', { name: 'Delete material?' })).toBeTruthy();
+
+  fireEvent.mouseDown(backdrop);
+  expect(screen.queryByRole('dialog', { name: 'Delete material?' })).toBeNull();
+
+  fireEvent.click(screen.getAllByRole('button', { name: 'Delete' })[0]);
+  const reopenedDialog = screen.getByRole('dialog');
+  const dialogButtons = Array.from(reopenedDialog.querySelectorAll<HTMLButtonElement>('button'));
+  const firstButton = dialogButtons[0];
+  const lastButton = dialogButtons[dialogButtons.length - 1];
+
+  firstButton.focus();
+  fireEvent.keyDown(reopenedDialog, { key: 'Tab', shiftKey: true });
+  expect(document.activeElement).toBe(lastButton);
+
+  fireEvent.keyDown(reopenedDialog, { key: 'Tab' });
+  expect(document.activeElement).toBe(firstButton);
+
+  fireEvent.keyDown(reopenedDialog, { key: 'Escape' });
+  expect(screen.queryByRole('dialog', { name: 'Delete material?' })).toBeNull();
 });
