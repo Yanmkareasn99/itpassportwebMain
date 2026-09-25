@@ -15,6 +15,7 @@ vi.mock('../../src/lib/materials', async importOriginal => {
     ...original,
     listMaterials: vi.fn().mockResolvedValue([]),
     uploadMaterial: vi.fn(),
+    shareMaterialLink: vi.fn(),
     deleteMaterial: vi.fn(),
   };
 });
@@ -32,7 +33,7 @@ it('shows the material upload form only after opening its dropdown', async () =>
 
   await screen.findByText('No materials have been uploaded yet.');
 
-  const toggle = screen.getByRole('button', { name: 'Upload material' });
+  const toggle = screen.getByRole('button', { name: 'Share material' });
   expect(toggle.getAttribute('aria-expanded')).toBe('false');
   expect(screen.queryByLabelText('Title')).toBeNull();
 
@@ -40,6 +41,10 @@ it('shows the material upload form only after opening its dropdown', async () =>
   expect(toggle.getAttribute('aria-expanded')).toBe('true');
   expect(screen.getByLabelText('Title')).toBeTruthy();
   expect(screen.getByLabelText('File')).toBeTruthy();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Share link' }));
+  expect(screen.queryByLabelText('File')).toBeNull();
+  expect(screen.getByLabelText('HTTPS link')).toBeTruthy();
 
   fireEvent.click(toggle);
   expect(toggle.getAttribute('aria-expanded')).toBe('false');

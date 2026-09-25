@@ -405,7 +405,7 @@ const MATERIAL_EXTENSIONS: Record&lt;string, readonly string[]&gt; = {
   ],
 };
 &nbsp;
-const materialFilesUrl = (import.meta.env.VITE_MATERIAL_FILES_URL || 'https://files.manabi-app.jp').replace(/\/$/, '');
+const materialFilesUrl = (import.meta.env.VITE_MATERIAL_FILES_URL || 'https://files.learnwithmanabi.com').replace(/\/$/, '');
 &nbsp;
 export interface Material {
   id: string;
@@ -495,7 +495,7 @@ export async function deleteMaterial(materialId: string): Promise&lt;void&gt; {
 &nbsp;
 export async function materialUrl(material: Material, download = false): Promise&lt;string&gt; {
   requireSharedStorage();
-  // New files live on files.manabi-app.jp. UUID-prefixed paths are legacy
+  // New files live on files.learnwithmanabi.com. UUID-prefixed paths are legacy
   // objects that still need a Supabase signed URL.
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\//i.test(material.storage_path)) {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -541,4 +541,3 @@ export async function materialUrl(material: Material, download = false): Promise
         <script src="../../block-navigation.js"></script>
     </body>
 </html>
-    
