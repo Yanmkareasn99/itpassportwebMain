@@ -307,6 +307,17 @@ html.dark .profile-avatar-gradient {
   gap: 1.5rem;
 }
 
+.home-dashboard-main {
+  flex: 1 1 0%;
+  min-width: 0;
+  container: home-dashboard-main / inline-size;
+}
+
+.home-feature-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .home-dashboard-sidebar {
   width: 100%;
   max-width: 28rem;
@@ -314,15 +325,26 @@ html.dark .profile-avatar-gradient {
   flex-shrink: 0;
 }
 
-@container (min-width: 62rem) {
+@container (min-width: 40rem) {
   .home-dashboard-layout {
     flex-direction: row;
+    align-items: flex-start;
   }
 
   .home-dashboard-sidebar {
     width: 18rem;
     max-width: none;
     margin-inline: 0;
+  }
+}
+
+@container home-dashboard-main (min-width: 36rem) {
+  .home-feature-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .home-feature-card--wide {
+    grid-column: span 2 / span 2;
   }
 }
 

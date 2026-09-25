@@ -66,7 +66,7 @@ Website: [https://learnwithmanabi.com](https://learnwithmanabi.com)
 - AI chat and per-question explanations through a Supabase Edge Function.
 - Local AI fallback explanations when Supabase or Gemini is unavailable.
 - Japanese, English, and Vietnamese localization.
-- Shared materials: signed-in users can upload PDFs, images, and Office documents (up to 20 MB) to `files.manabi-app.jp`, then view or download files uploaded by others.
+- Shared materials: signed-in users can upload PDFs, images, and Office documents (up to 20 MB) to `files.learnwithmanabi.com`, or share HTTPS links from Google Drive and other providers as a fallback.
 - Admin tools for questions, subjects, users, mock-exam settings, stats, CSV import, and searchable/scanned PDF question import with OCR fallback.
 - Real browser URLs with route guards for signed-in and admin-only pages.
 - Standardized CSV, scoring, auth, rate-limit, error, and data helper modules.
@@ -137,7 +137,7 @@ VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 VITE_USE_SUPABASE=true
 VITE_ALLOWED_ORIGINS=https://learnwithmanabi.com
-VITE_MATERIAL_FILES_URL=https://files.manabi-app.jp
+VITE_MATERIAL_FILES_URL=https://files.learnwithmanabi.com
 ```
 
 The separately deployed file server must provide `${VITE_MATERIAL_FILES_URL}/api/upload.php`, `${VITE_MATERIAL_FILES_URL}/api/download.php`, and `${VITE_MATERIAL_FILES_URL}/api/delete.php`. Upload `file-server/api/delete.php` beside the other API scripts; it allows uploaders to delete their own materials and administrators to delete any material.
@@ -162,7 +162,7 @@ Apply every migration in `supabase/migrations` in filename order. With the Supab
 supabase db push
 ```
 
-The migrations create the Manabi schema, authorization policies, password-recovery-compatible profiles, admin helpers, AI chat storage, practice-session persistence, points, battle RPCs, question import support, and shared-material metadata. Apply `20260914000000_add_shared_materials.sql` and `20260915000000_move_material_files_to_file_server.sql` before using the Materials tab. Material binaries are uploaded to `files.manabi-app.jp`; local demo mode cannot share files between users.
+The migrations create the Manabi schema, authorization policies, password-recovery-compatible profiles, admin helpers, AI chat storage, practice-session persistence, points, battle RPCs, question import support, and shared-material metadata. Apply `20260914000000_add_shared_materials.sql`, `20260915000000_move_material_files_to_file_server.sql`, and `20260925000000_add_material_links.sql` before using the Materials tab. Material binaries are uploaded to `files.learnwithmanabi.com`; HTTPS links are stored directly in Supabase so link sharing remains available if the file server is down. Local demo mode cannot share materials between users.
 
 In Supabase Authentication → URL Configuration, set the Site URL to `https://learnwithmanabi.com`. Add `https://learnwithmanabi.com` and `https://learnwithmanabi.com/login?recovery=1` to the redirect allow list for Google sign-in and password resets. The file server's CORS configuration must also allow `https://learnwithmanabi.com`; its API loads this configuration through `api/common.php` on the file server.
 
@@ -180,7 +180,7 @@ AI_RATE_LIMIT_MAX_REQUESTS=60
 ```
 
 `ALLOWED_ORIGIN` is exact-match only. Multiple production origins can be comma-separated.
-If `VITE_ALLOWED_ORIGINS` is configured in Vercel or `ALLOWED_ORIGIN` is configured in Supabase, update those allowed website origins to include `https://learnwithmanabi.com`. Keep `VITE_MATERIAL_FILES_URL=https://files.manabi-app.jp`. Changing repository defaults does not override deployed environment settings. Redeploy the frontend after changing Vite environment variables, and deploy the `ai-chat` Edge Function to publish changes to its default allowed origins.
+If `VITE_ALLOWED_ORIGINS` is configured in Vercel or `ALLOWED_ORIGIN` is configured in Supabase, update those allowed website origins to include `https://learnwithmanabi.com`. Keep `VITE_MATERIAL_FILES_URL=https://files.learnwithmanabi.com`. Changing repository defaults does not override deployed environment settings. Redeploy the frontend after changing Vite environment variables, and deploy the `ai-chat` Edge Function to publish changes to its default allowed origins.
 
 ## Tests
 

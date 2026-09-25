@@ -34,17 +34,18 @@ const MATERIAL_EXTENSIONS: Record<string, readonly string[]> = {
   ],
 };
 
-const materialFilesUrl = (import.meta.env.VITE_MATERIAL_FILES_URL || 'https://files.manabi-app.jp').replace(/\/$/, '');
+const materialFilesUrl = (import.meta.env.VITE_MATERIAL_FILES_URL || 'https://files.learnwithmanabi.com').replace(/\/$/, '');
 
 export interface Material {
   id: string;
   uploader_id: string | null;
   title: string;
   description: string | null;
-  file_name: string;
-  mime_type: string;
-  file_size: number;
-  storage_path: string;
+  file_name: string | null;
+  mime_type: string | null;
+  file_size: number | null;
+  storage_path: string | null;
+  external_url: string | null;
   created_at: string;
 }
 
@@ -53,6 +54,7 @@ function requireSharedStorage() {
 }
 
 export type MaterialFileProblem = 'invalidType' | 'emptyFile' | 'fileTooLarge';
+export type MaterialLinkProblem = 'invalidLink' | 'insecureLink' | 'linkTooLong';
 
 const fileProblemMessages: Record<MaterialFileProblem, string> = {
   invalidType: 'Choose a PDF, PNG, JPEG, DOCX, PPTX, or XLSX file.',
@@ -68,6 +70,20 @@ export function validateMaterialFile(file: File): MaterialFileProblem | null {
   }
   if (file.size === 0) return 'emptyFile';
   if (file.size > MATERIAL_MAX_BYTES) return 'fileTooLarge';
+  return null;
+}
+
+export function validateMaterialLink(value: string): MaterialLinkProblem | null {
+  const cleanUrl = value.trim();
+  if (cleanUrl.length > 2048) return 'linkTooLong';
+  let parsed: URL;
+  try {
+    parsed = new URL(cleanUrl);
+  } catch {
+    return 'invalidLink';
+  }
+  if (parsed.protocol !== 'https:') return 'insecureLink';
+  if (!parsed.hostname || parsed.username || parsed.password) return 'invalidLink';
   return null;
 }
 
@@ -105,8 +121,37 @@ export async function uploadMaterial(file: File, title: string, description: str
   if (!response.ok) throw new Error(result?.error || 'The material could not be uploaded.');
 }
 
-export async function deleteMaterial(materialId: string): Promise<void> {
+export async function shareMaterialLink(url: string, title: string, description: string): Promise<void> {
   requireSharedStorage();
+  const cleanUrl = url.trim();
+  const linkProblem = validateMaterialLink(cleanUrl);
+  if (linkProblem) throw new Error('Enter a valid HTTPS link of up to 2,048 characters.');
+  const cleanTitle = title.trim();
+  const cleanDescription = description.trim();
+  if (!cleanTitle || cleanTitle.length > 120) throw new Error('Enter a title of up to 120 characters.');
+  if (cleanDescription.length > 500) throw new Error('Description must be 500 characters or shorter.');
+
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+  if (!session?.user?.id) throw new Error('Sign in again before sharing a material.');
+
+  const { error } = await supabase.from('materials').insert({
+    uploader_id: session.user.id,
+    title: cleanTitle,
+    description: cleanDescription || null,
+    external_url: cleanUrl,
+  });
+  if (error) throw error;
+}
+
+export async function deleteMaterial(material: Material | string): Promise<void> {
+  requireSharedStorage();
+  if (typeof material !== 'string' && material.external_url) {
+    const { error } = await supabase.from('materials').delete().eq('id', material.id);
+    if (error) throw error;
+    return;
+  }
+  const materialId = typeof material === 'string' ? material : material.id;
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   if (sessionError) throw sessionError;
   if (!session?.access_token) throw new Error('Sign in again before deleting a material.');
@@ -124,7 +169,9 @@ export async function deleteMaterial(materialId: string): Promise<void> {
 
 export async function materialUrl(material: Material, download = false): Promise<string> {
   requireSharedStorage();
-  // New files live on files.manabi-app.jp. UUID-prefixed paths are legacy
+  if (material.external_url) return material.external_url;
+  if (!material.storage_path) throw new Error('This material does not have a file or link.');
+  // New files live on files.learnwithmanabi.com. UUID-prefixed paths are legacy
   // objects that still need a Supabase signed URL.
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\//i.test(material.storage_path)) {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -145,7 +192,7 @@ export async function materialUrl(material: Material, download = false): Promise
   const { data, error } = await supabase.storage.from('materials').createSignedUrl(
     material.storage_path,
     60,
-    download ? { download: material.file_name } : undefined,
+    download && material.file_name ? { download: material.file_name } : undefined,
   );
   if (error) throw error;
   if (!data?.signedUrl) throw new Error('Unable to open this material.');

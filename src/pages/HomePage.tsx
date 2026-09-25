@@ -262,13 +262,13 @@ export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
       <div className="app-shell home-dashboard-shell space-y-5">
         <AnnouncementBanner />
         <div className="home-dashboard-layout">
-          <div className="flex-1 space-y-5">
-            <div className="motion-stagger grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 xl:gap-6">
+          <div className="home-dashboard-main space-y-5">
+            <div className="home-feature-grid motion-stagger gap-4 sm:gap-5 xl:gap-6">
               {features.map(({ page, icon: Icon, title, description, cardClass, iconBg, iconColor, arrowBg }) => (
                 <button
                   type="button"
                   key={page}
-                  className={`motion-lift ${page === 'materials' ? 'md:col-span-2' : ''} ${cardClass} w-full rounded-2xl p-4 sm:p-5 xl:p-6 flex items-center justify-between gap-4 xl:gap-5 text-left transition-all hover:shadow-md`}
+                  className={`motion-lift ${page === 'materials' ? 'home-feature-card--wide' : ''} ${cardClass} w-full rounded-2xl p-4 sm:p-5 xl:p-6 flex items-center justify-between gap-4 xl:gap-5 text-left transition-all hover:shadow-md`}
                   onClick={() => onNavigate(page)}
                 >
                   <div className="flex items-center gap-4 xl:gap-5 min-w-0">

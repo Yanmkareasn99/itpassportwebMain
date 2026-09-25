@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { AlertTriangle, BookOpen, ChevronDown, Download, FileText, Image, PlayCircle, RefreshCw, Trash2, Upload, X } from 'lucide-react';
+import { AlertTriangle, BookOpen, ChevronDown, Download, ExternalLink, FileText, Image, Link, PlayCircle, RefreshCw, Trash2, Upload, X } from 'lucide-react';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { languageLocales, translate } from '../i18n';
-import { deleteMaterial, listMaterials, materialUrl, uploadMaterial, validateMaterialFile, type Material } from '../lib/materials';
+import { deleteMaterial, listMaterials, materialUrl, shareMaterialLink, uploadMaterial, validateMaterialFile, validateMaterialLink, type Material } from '../lib/materials';
 import { isSupabaseEnabled } from '../lib/supabase';
 import { Page } from '../types';
 
@@ -15,6 +15,14 @@ interface MaterialsPageProps {
 
 function fileSize(bytes: number) {
   return bytes < 1024 * 1024 ? `${Math.ceil(bytes / 1024)} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function linkHost(value: string) {
+  try {
+    return new URL(value).hostname;
+  } catch {
+    return value;
+  }
 }
 
 export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPageProps) {
@@ -29,6 +37,8 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
   const cancelDeleteRef = useRef<HTMLButtonElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [shareMode, setShareMode] = useState<'file' | 'link'>('file');
+  const [externalUrl, setExternalUrl] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [showUploadForm, setShowUploadForm] = useState(false);
@@ -102,6 +112,30 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
     }
   }
 
+  async function handleLinkShare(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!user || busy) return;
+    setError('');
+    setMessage('');
+    const problem = validateMaterialLink(externalUrl);
+    if (problem) { setError(t(`materialsPage.${problem}`)); return; }
+    if (!title.trim()) { setError(t('materialsPage.titleRequired')); return; }
+    setBusy(true);
+    try {
+      await shareMaterialLink(externalUrl, title, description);
+      setExternalUrl('');
+      setTitle('');
+      setDescription('');
+      await refresh();
+      setMessage(t('materialsPage.linkShared'));
+      setShowUploadForm(false);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t('materialsPage.linkShareFailed'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function openMaterial(material: Material, download: boolean) {
     setError('');
     const preview = download ? null : window.open('', '_blank');
@@ -111,7 +145,7 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
       if (download) {
         const link = document.createElement('a');
         link.href = url;
-        link.download = material.file_name;
+        link.download = material.file_name || '';
         document.body.appendChild(link);
         link.click();
         link.remove();
@@ -135,7 +169,7 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
     setMessage('');
     setDeletingId(material.id);
     try {
-      await deleteMaterial(material.id);
+      await deleteMaterial(material);
       setMaterials(current => current.filter(item => item.id !== material.id));
       setMessage(t('materialsPage.deleted'));
     } catch (cause) {
@@ -170,32 +204,39 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
             >
               <span className="flex items-center gap-2 font-bold text-gray-800 dark:text-slate-100">
                 <Upload className="h-5 w-5" />
-                {t('materialsPage.upload')}
+                {t('materialsPage.shareMaterial')}
               </span>
               <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform ${showUploadForm ? 'rotate-180' : ''}`} />
             </button>
             {showUploadForm && (
-              <form id="material-upload-form" onSubmit={handleUpload} className="space-y-4 border-t border-gray-100 px-5 pb-5 pt-4 dark:border-slate-700">
-                <p className="text-sm text-gray-500 dark:text-slate-300">{t('materialsPage.fileHelp')}</p>
+              <form id="material-upload-form" onSubmit={shareMode === 'file' ? handleUpload : handleLinkShare} className="space-y-4 border-t border-gray-100 px-5 pb-5 pt-4 dark:border-slate-700">
+                <div className="grid grid-cols-2 gap-2 rounded-xl bg-gray-100 p-1 dark:bg-slate-800" role="group" aria-label={t('materialsPage.shareType')}>
+                  <button type="button" onClick={() => setShareMode('file')} aria-pressed={shareMode === 'file'} className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold ${shareMode === 'file' ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-700 dark:text-blue-300' : 'text-gray-600 dark:text-slate-300'}`}><Upload className="h-4 w-4" />{t('materialsPage.uploadFile')}</button>
+                  <button type="button" onClick={() => setShareMode('link')} aria-pressed={shareMode === 'link'} className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold ${shareMode === 'link' ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-700 dark:text-blue-300' : 'text-gray-600 dark:text-slate-300'}`}><Link className="h-4 w-4" />{t('materialsPage.shareLink')}</button>
+                </div>
+                <p className="text-sm text-gray-500 dark:text-slate-300">{t(shareMode === 'file' ? 'materialsPage.fileHelp' : 'materialsPage.linkHelp')}</p>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <label className="space-y-2 text-sm font-medium text-gray-700 dark:text-slate-200">
                     <span>{t('materialsPage.title')}</span>
                     <input required maxLength={120} value={title} onChange={event => setTitle(event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-gray-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
                   </label>
-                  <label className="space-y-2 text-sm font-medium text-gray-700 dark:text-slate-200">
+                  {shareMode === 'file' ? <label key="file" className="space-y-2 text-sm font-medium text-gray-700 dark:text-slate-200">
                     <span>{t('materialsPage.file')}</span>
-                    <input id="material-file" required type="file" accept=".pdf,.png,.jpg,.jpeg,.docx,.pptx,.xlsx" onChange={event => {
+                    <input id="material-file" required={shareMode === 'file'} type="file" accept=".pdf,.png,.jpg,.jpeg,.docx,.pptx,.xlsx" onChange={event => {
                       const selected = event.target.files?.[0] ?? null;
                       setFile(selected);
                       if (selected && !title) setTitle(selected.name.replace(/\.[^.]+$/, ''));
                     }} className="block w-full text-sm text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:text-blue-700 dark:text-slate-300" />
-                  </label>
+                  </label> : <label key="link" className="space-y-2 text-sm font-medium text-gray-700 dark:text-slate-200">
+                    <span>{t('materialsPage.link')}</span>
+                    <input required={shareMode === 'link'} type="url" inputMode="url" maxLength={2048} placeholder="https://drive.google.com/..." value={externalUrl} onChange={event => setExternalUrl(event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-gray-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
+                  </label>}
                 </div>
                 <label className="block space-y-2 text-sm font-medium text-gray-700 dark:text-slate-200">
                   <span>{t('materialsPage.description')}</span>
                   <textarea maxLength={500} rows={2} value={description} onChange={event => setDescription(event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-gray-900 dark:border-slate-600 dark:bg-slate-800 dark:text-white" />
                 </label>
-                <button type="submit" disabled={busy || !file} className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{busy ? t('materialsPage.uploading') : t('materialsPage.upload')}</button>
+                <button type="submit" disabled={busy || (shareMode === 'file' ? !file : !externalUrl.trim())} className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">{busy ? t(shareMode === 'file' ? 'materialsPage.uploading' : 'materialsPage.sharing') : t(shareMode === 'file' ? 'materialsPage.upload' : 'materialsPage.shareLink')}</button>
               </form>
             )}
           </section>
@@ -212,16 +253,17 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
               <p className="rounded-xl border border-dashed border-gray-200 dark:border-slate-700 p-6 text-sm text-gray-500 dark:text-slate-300">{t('materialsPage.empty')}</p>
             ) : <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {materials.map(material => {
-                const Icon = material.mime_type.startsWith('image/') ? Image : material.mime_type.startsWith('video/') ? PlayCircle : FileText;
+                const isExternal = Boolean(material.external_url);
+                const Icon = isExternal ? ExternalLink : material.mime_type?.startsWith('image/') ? Image : material.mime_type?.startsWith('video/') ? PlayCircle : FileText;
                 return <article key={material.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm p-5 flex flex-col min-h-[220px]">
                   <div className="w-11 h-11 rounded-xl border bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700 flex items-center justify-center mb-4"><Icon className="w-5 h-5" /></div>
                   <h4 className="font-bold text-gray-800 dark:text-slate-100 mb-2 break-words">{material.title}</h4>
                   {material.description && <p className="text-sm text-gray-500 dark:text-slate-300 leading-6 flex-1 break-words">{material.description}</p>}
-                  <p className="text-xs text-gray-400 dark:text-slate-400 mt-4 break-all">{material.file_name} · {fileSize(material.file_size)}</p>
+                  <p className="text-xs text-gray-400 dark:text-slate-400 mt-4 break-all">{isExternal ? linkHost(material.external_url!) : `${material.file_name} · ${fileSize(material.file_size!)}`}</p>
                   <p className="text-xs text-gray-400 dark:text-slate-400 mt-1">{new Date(material.created_at).toLocaleDateString(languageLocales[language])}</p>
                   <div className="grid grid-cols-2 gap-2 mt-4">
-                    <button onClick={() => openMaterial(material, false)} className="px-3 py-2 rounded-xl border border-transparent bg-gray-100 dark:border-slate-600 dark:bg-slate-800 text-gray-700 dark:text-slate-200 text-xs font-semibold hover:bg-gray-200 dark:hover:bg-slate-700">{t('materialsPage.open')}</button>
-                    <button onClick={() => openMaterial(material, true)} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 flex items-center justify-center gap-1"><Download className="w-3.5 h-3.5" />{t('materialsPage.download')}</button>
+                    <button onClick={() => openMaterial(material, false)} className={`${isExternal ? 'col-span-2 bg-blue-600 text-white hover:bg-blue-700' : 'border border-transparent bg-gray-100 text-gray-700 hover:bg-gray-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700'} px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1`}>{isExternal && <ExternalLink className="h-3.5 w-3.5" />}{t(isExternal ? 'materialsPage.openLink' : 'materialsPage.open')}</button>
+                    {!isExternal && <button onClick={() => openMaterial(material, true)} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 flex items-center justify-center gap-1"><Download className="w-3.5 h-3.5" />{t('materialsPage.download')}</button>}
                     {(user?.id === material.uploader_id || isAdmin) && <button
                       onClick={() => setPendingDelete(material)}
                       disabled={deletingId !== null}
@@ -287,7 +329,7 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
           </div>
           <div className="mt-5 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800">
             <p className="break-words text-sm font-semibold text-gray-800 dark:text-slate-100">{pendingDelete.title}</p>
-            <p className="mt-1 break-all text-xs text-gray-500 dark:text-slate-400">{pendingDelete.file_name}</p>
+            <p className="mt-1 break-all text-xs text-gray-500 dark:text-slate-400">{pendingDelete.external_url || pendingDelete.file_name}</p>
           </div>
           <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button

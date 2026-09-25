@@ -4,6 +4,9 @@ const mocks = vi.hoisted(() => ({
   signedUrl: vi.fn(),
   order: vi.fn(),
   getSession: vi.fn(),
+  insert: vi.fn(),
+  remove: vi.fn(),
+  eq: vi.fn(),
 }));
 
 vi.mock('../../src/lib/supabase', () => ({
@@ -13,21 +16,29 @@ vi.mock('../../src/lib/supabase', () => ({
     storage: { from: () => ({ createSignedUrl: mocks.signedUrl }) },
     from: () => ({
       select: () => ({ order: mocks.order }),
+      insert: mocks.insert,
+      delete: mocks.remove,
     }),
   },
 }));
 
-import { deleteMaterial, MATERIAL_MAX_BYTES, listMaterials, materialUrl, uploadMaterial, validateMaterialFile, type Material } from '../../src/lib/materials';
+import { deleteMaterial, MATERIAL_MAX_BYTES, listMaterials, materialUrl, shareMaterialLink, uploadMaterial, validateMaterialFile, validateMaterialLink, type Material } from '../../src/lib/materials';
 
 const pdf = () => new File(['%PDF-1.7'], 'guide.pdf', { type: 'application/pdf' });
 
 describe('shared materials', () => {
   beforeEach(() => {
-    mocks.getSession.mockResolvedValue({ data: { session: { access_token: 'access-token' } }, error: null });
+    mocks.getSession.mockResolvedValue({ data: { session: { access_token: 'access-token', user: { id: 'user-id' } } }, error: null });
     mocks.order.mockResolvedValue({ data: [], error: null });
+    mocks.insert.mockResolvedValue({ error: null });
+    mocks.eq.mockResolvedValue({ error: null });
+    mocks.remove.mockReturnValue({ eq: mocks.eq });
     mocks.signedUrl.mockResolvedValue({ data: { signedUrl: 'https://example.test/guide' }, error: null });
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ material: {} }) }));
-    vi.stubGlobal('URL', { ...URL, createObjectURL: vi.fn(() => 'blob:material-file') });
+    class TestUrl extends URL {
+      static createObjectURL = vi.fn(() => 'blob:material-file');
+    }
+    vi.stubGlobal('URL', TestUrl);
   });
 
   afterEach(() => {
@@ -51,7 +62,7 @@ describe('shared materials', () => {
     const file = pdf();
     await uploadMaterial(file, ' Guide ', ' For beginners ');
 
-    expect(fetch).toHaveBeenCalledWith('https://files.manabi-app.jp/api/upload.php', expect.objectContaining({
+    expect(fetch).toHaveBeenCalledWith('https://files.learnwithmanabi.com/api/upload.php', expect.objectContaining({
       method: 'POST',
       headers: { Authorization: 'Bearer access-token' },
       body: expect.any(FormData),
@@ -68,6 +79,36 @@ describe('shared materials', () => {
       json: async () => ({ error: 'Only material managers can upload files.' }),
     } as Response);
     await expect(uploadMaterial(pdf(), 'Guide', '')).rejects.toThrow('Only material managers can upload files.');
+  });
+
+  it('validates and shares HTTPS material links directly through Supabase', async () => {
+    expect(validateMaterialLink('not a link')).toBe('invalidLink');
+    expect(validateMaterialLink('http://example.com/file')).toBe('insecureLink');
+    expect(validateMaterialLink('https://drive.google.com/file/d/123')).toBeNull();
+
+    await shareMaterialLink(' https://drive.google.com/file/d/123 ', ' Drive guide ', ' Backup copy ');
+
+    expect(mocks.insert).toHaveBeenCalledWith({
+      uploader_id: 'user-id',
+      title: 'Drive guide',
+      description: 'Backup copy',
+      external_url: 'https://drive.google.com/file/d/123',
+    });
+  });
+
+  it('opens and deletes external links without calling the file server', async () => {
+    const material = {
+      id: 'link-id',
+      external_url: 'https://drive.google.com/file/d/123',
+      storage_path: null,
+    } as Material;
+
+    expect(await materialUrl(material)).toBe(material.external_url);
+    await deleteMaterial(material);
+
+    expect(mocks.remove).toHaveBeenCalledOnce();
+    expect(mocks.eq).toHaveBeenCalledWith('id', 'link-id');
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it('lists shared records and signs a download with its original name', async () => {
@@ -88,7 +129,7 @@ describe('shared materials', () => {
 
     expect(await materialUrl(material)).toBe('blob:material-file');
     expect(fetch).toHaveBeenCalledWith(
-      'https://files.manabi-app.jp/api/download.php?id=material-id',
+      'https://files.learnwithmanabi.com/api/download.php?id=material-id',
       { headers: { Authorization: 'Bearer access-token' } },
     );
     expect(URL.createObjectURL).toHaveBeenCalledWith(fileBlob);
@@ -99,7 +140,7 @@ describe('shared materials', () => {
     await deleteMaterial('material-id');
 
     expect(fetch).toHaveBeenCalledWith(
-      'https://files.manabi-app.jp/api/delete.php?id=material-id',
+      'https://files.learnwithmanabi.com/api/delete.php?id=material-id',
       {
         method: 'DELETE',
         headers: { Authorization: 'Bearer access-token' },
