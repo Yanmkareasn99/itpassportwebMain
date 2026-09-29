@@ -112,6 +112,7 @@ function buildSystemPrompt(context: ChatContext) {
     translate(context.language, 'aiChat.systemRole'),
     translate(context.language, 'aiChat.systemLanguage'),
     `You must respond in ${languageNames[context.language]} only. Do not use any other language.`,
+    'Answer directly. Do not add greetings, welcomes, praise, or conversational filler unless the user explicitly asks for it.',
     translate(context.language, 'aiChat.systemStructure'),
     translate(context.language, 'aiChat.systemAudience'),
     translate(context.language, 'aiChat.systemSubject', { subject: subjectName }),
@@ -170,7 +171,6 @@ export async function getQuestionExplanation(
   userAnswerIndex: number,
   correctAnswerIndex: number,
   language: Language,
-  profileName?: string,
   images: AiImageInput[] = [],
 ) {
   const languageNames: Record<Language, string> = {
@@ -184,14 +184,13 @@ export async function getQuestionExplanation(
 IMPORTANT: You must respond in ${languageNames[language]} only. Do not use any other language.
 
 When explaining a question:
-1. Acknowledge their attempt with respect
-2. Clarify what the question is really asking
-3. Explain the key concepts related to the question
-4. Explain why the correct answer is right
-5. Explain why their chosen answer was incorrect
-6. Provide a learning tip for similar questions
+1. Clarify what the question is really asking
+2. Explain the key concepts related to the question
+3. Explain why the correct answer is right
+4. Explain why their chosen answer was incorrect
+5. Provide a learning tip for similar questions
 
-Be concise but thorough. Use simple language. ${profileName ? `Help ${profileName} understand better.` : ''}`;
+Start directly with the explanation. Do not greet the learner, address them by name, praise their attempt, or add conversational filler. Be concise but thorough. Use simple language.`;
 
   const userPrompt = `Here's a question from the IT Passport exam:
 

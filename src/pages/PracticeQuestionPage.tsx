@@ -1,6 +1,6 @@
 import { translateMessage, translate } from '../i18n';
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { ChevronLeft, ChevronRight, CheckCircle, XCircle, Flag, ArrowLeft, Sparkles, Loader } from 'lucide-react';import Layout from '../components/Layout';
+import { ChevronLeft, ChevronRight, CheckCircle, XCircle, Flag, ArrowLeft, Sparkles, Loader, MessageCircle } from 'lucide-react';import Layout from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -9,10 +9,11 @@ import { practiceErrorMessage, type PracticeAnswer } from '../lib/practice';
 import { awardLocalAnswerPoints } from '../lib/points';
 import { Question, AnswerChoice, Page } from '../types';
 import { AnswerChoiceContent, QuestionImage } from '../components/QuestionMedia';
-import { formatExamDate } from '../lib/examDate';
+import { formatExamPeriod } from '../lib/examDate';
 import { getAnswerChoiceImageUrl, getQuestionImageUrl } from '../lib/questionImages';
 import { createAnswerChoiceOrders, getRandomizeAnswerChoicesPreference } from '../lib/questionRandomization';
 import { loadQuestionFlags, QUESTION_FLAG_LEVELS, setQuestionFlag, type QuestionFlagLevel } from '../lib/questionFlags';
+import { queueAiChatHandoff } from '../lib/aiChatHandoff';
 
 
 interface PracticeQuestionPageProps {
@@ -174,7 +175,7 @@ export default function PracticeQuestionPage({
   initialAnswers = [],
   initiallyFinished = false,
 }: PracticeQuestionPageProps) {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const { language } = useLanguage();
   const initialIndex = Math.max(
     0,
@@ -196,6 +197,7 @@ export default function PracticeQuestionPage({
   const [questionMapPage, setQuestionMapPage] = useState(0);
   const [isLoadingAI, setIsLoadingAI] = useState(false);
   const [aiExplanation, setAiExplanation] = useState<string | null>(null);
+  const [canContinueAIConversation, setCanContinueAIConversation] = useState(false);
   const savingRef = useRef(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -260,6 +262,7 @@ export default function PracticeQuestionPage({
     clearFlag: translate(language, 'practiceQuestionPage.clearFlag'),
     askAi: translate(language, 'practiceQuestionPage.askAi'),
     aiThinking: translate(language, 'practiceQuestionPage.aiThinking'),
+    continueInAiChat: translate(language, 'practiceQuestionPage.continueInAiChat'),
   };
 
   useEffect(() => {
@@ -299,6 +302,7 @@ export default function PracticeQuestionPage({
       setSelectedChoiceId(choiceId);
       setAnswered(true);
       setAiExplanation(null);
+      setCanContinueAIConversation(false);
       setAnswers((prev) => [
         ...prev.filter((item) => item.questionId !== question.id),
         { questionId: question.id, choiceId, isCorrect: correct },
@@ -319,6 +323,7 @@ export default function PracticeQuestionPage({
 
   async function handleAIExplanation() {
     setIsLoadingAI(true);
+    setCanContinueAIConversation(false);
     try {
       const selectedIndex = choices.findIndex(c => c.id === selectedChoiceId);
       const correctIndex = choices.findIndex(c => c.is_correct);
@@ -343,17 +348,35 @@ export default function PracticeQuestionPage({
         selectedIndex,
         correctIndex,
         language,
-        profile?.name,
         images,
       );
 
       setAiExplanation(reply);
+      setCanContinueAIConversation(true);
     } catch (err) {
       console.error('AI explanation error:', err);
       setAiExplanation(translate(language, 'practiceQuestionPage.aiExplanationFailed'));
     } finally {
       setIsLoadingAI(false);
     }
+  }
+
+  function continueAIConversation() {
+    if (!aiExplanation || !canContinueAIConversation) return;
+    const selectedIndex = choices.findIndex(choice => choice.id === selectedChoiceId);
+    const correctIndex = choices.findIndex(choice => choice.is_correct);
+    const optionList = choices
+      .map((choice, index) => `${String.fromCharCode(65 + index)}) ${choice.choice_text}`)
+      .join('\n');
+    const userMessage = translate(language, 'aiChatPage.practiceQuestionContext', {
+      question: question.question_text,
+      options: optionList,
+      selected: String.fromCharCode(65 + selectedIndex),
+      correct: String.fromCharCode(65 + correctIndex),
+    });
+
+    queueAiChatHandoff(userMessage, translateMessage(language, aiExplanation));
+    onNavigate('ai-chat');
   }
 
   async function handleQuestionFlag(level: QuestionFlagLevel) {
@@ -385,6 +408,7 @@ export default function PracticeQuestionPage({
     setSelectedChoiceId(priorAnswer?.choiceId ?? null);
     setAnswered(Boolean(priorAnswer));
     setAiExplanation(null);
+    setCanContinueAIConversation(false);
   }
 
   async function handleNext() {
@@ -530,7 +554,7 @@ export default function PracticeQuestionPage({
                     const active = questionFlags[question.id] === level;
                     const colors = {
                       green: active ? 'bg-emerald-500 text-white border-emerald-500' : 'text-emerald-600 border-emerald-200 hover:bg-emerald-50',
-                      orange: active ? 'bg-orange-500 text-white border-orange-500' : 'text-orange-600 border-orange-200 hover:bg-orange-50',
+                      orange: active ? 'bg-amber-500 text-white border-amber-500' : 'text-amber-600 border-amber-200 hover:bg-amber-50',
                       red: active ? 'bg-red-500 text-white border-red-500' : 'text-red-600 border-red-200 hover:bg-red-50',
                     } as const;
                     const levelLabel = translate(language, `practiceQuestionPage.flag${level[0].toUpperCase()}${level.slice(1)}` as 'practiceQuestionPage.flagGreen' | 'practiceQuestionPage.flagOrange' | 'practiceQuestionPage.flagRed');
@@ -571,8 +595,8 @@ export default function PracticeQuestionPage({
                 </span>
                 <span className="text-xs font-semibold text-violet-600 bg-violet-50 px-2.5 py-1 rounded-full">
                   {translate(language, "ui.examDate")}:{" "}
-                  {question.exam_date
-                    ? formatExamDate(question.exam_date, language)
+                  {question.exam_year
+                    ? formatExamPeriod(question.exam_year, question.exam_month, language)
                     : translate(language, "ui.uncategorized")}
                 </span>
                 <span className="text-xs text-gray-400">
@@ -650,6 +674,16 @@ export default function PracticeQuestionPage({
                       {aiExplanation &&
                         translateMessage(language, aiExplanation)}
                     </p>
+                    {canContinueAIConversation && (
+                      <button
+                        type="button"
+                        onClick={continueAIConversation}
+                        className="mt-4 flex items-center gap-2 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-purple-700"
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                        {label.continueInAiChat}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -821,7 +855,7 @@ export default function PracticeQuestionPage({
                         {questionIndex + 1}
                         {mappedFlag && (
                           <span className={`absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full ${
-                            mappedFlag === 'green' ? 'bg-emerald-500' : mappedFlag === 'orange' ? 'bg-orange-500' : 'bg-red-500'
+                            mappedFlag === 'green' ? 'bg-emerald-500' : mappedFlag === 'orange' ? 'bg-amber-500' : 'bg-red-500'
                           }`} />
                         )}
                       </button>

@@ -26,7 +26,8 @@ const questions = [1, 2].map((id) => ({
   id: `q${id}`,
   question_text: `Question text ${id}`,
   question_type: "multiple_choice",
-  exam_date: id === 1 ? "2026-09-15" : null,
+  exam_year: id === 1 ? 2009 : null,
+  exam_month: id === 1 ? 10 : null,
   answer_choices: [
     { id: `a${id}`, is_correct: true, choice_text: "A", sort_order: 0 },
   ],
@@ -48,11 +49,11 @@ it("continues at the next unanswered question after reloading, with no new sessi
     />,
   );
   expect(screen.getByText("Question text 2")).toBeTruthy();
-  expect(screen.getByText("Exam date: Uncategorized")).toBeTruthy();
+  expect(screen.getByText("Exam period: Uncategorized")).toBeTruthy();
   expect(mocks.from).not.toHaveBeenCalled();
 });
 
-it("shows the source exam date while answering a dated question", () => {
+it("shows the source exam year and month while answering a dated question", () => {
   render(
     <PracticeQuestionPage
       currentPage="practice-question"
@@ -61,7 +62,7 @@ it("shows the source exam date while answering a dated question", () => {
       questions={questions}
     />,
   );
-  expect(screen.getByText("Exam date: Sep 15, 2026")).toBeTruthy();
+  expect(screen.getByText("Exam period: Oct 2009")).toBeTruthy();
 });
 
 it("keeps an answer retryable after a database failure and prevents duplicate clicks while saving", async () => {

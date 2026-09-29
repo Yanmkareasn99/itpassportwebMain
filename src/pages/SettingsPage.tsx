@@ -15,6 +15,7 @@ import {
   Moon,
   Shuffle,
   Trash2,
+  Bug,
 } from 'lucide-react';
 import Layout from '../components/Layout';
 import { supabase } from '../lib/supabase';
@@ -72,6 +73,7 @@ interface SettingsPageProps {
 }
 
 type SettingsView = 'home' | 'profile' | 'language' | 'target' | 'password' | 'deleteAccount' | 'help';
+const REPORT_ISSUE_URL = 'https://github.com/Yanmkareasn99/itpassportwebMain/issues/new';
 
 export default function SettingsPage({ currentPage, onNavigate }: SettingsPageProps) {
   const { user, profile, refreshProfile, deleteAccount } = useAuth();
@@ -100,6 +102,7 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
   const [targetSaving, setTargetSaving] = useState(false);
   const [targetMsg, setTargetMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordSaving, setPasswordSaving] = useState(false);
@@ -194,6 +197,10 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
   async function changePassword(e: React.FormEvent) {
     e.preventDefault();
     setPasswordMsg(null);
+    if (!user?.email || !currentPassword) {
+      setPasswordMsg({ type: 'err', text: translate(language, 'settingsPage.currentPasswordVerificationFailed') });
+      return;
+    }
     if (newPassword !== confirmPassword) {
       setPasswordMsg({ type: 'err', text: translate(language, 'settingsPage.passwordsDoNotMatch') });
       return;
@@ -203,11 +210,21 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
       return;
     }
     setPasswordSaving(true);
+    const { error: verificationError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: currentPassword,
+    });
+    if (verificationError) {
+      setPasswordMsg({ type: 'err', text: translate(language, 'settingsPage.currentPasswordVerificationFailed') });
+      setPasswordSaving(false);
+      return;
+    }
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) {
       setPasswordMsg({ type: 'err', text: translate(language, 'settingsPage.passwordChangeFailed', { error: error.message }) });
     } else {
       setPasswordMsg({ type: 'ok', text: translate(language, 'settingsPage.passwordChanged') });
+      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     }
@@ -279,20 +296,18 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
     label,
     value,
     onClick,
+    href,
   }: {
     icon: React.ReactNode;
     iconBg: string;
     iconColor: string;
     label: string;
     value?: string;
-    onClick: () => void;
+    onClick?: () => void;
+    href?: string;
   }) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        className={`no-press-animation flex w-full items-center gap-4 rounded-2xl px-3 py-3.5 text-left transition ${darkMode ? 'hover:bg-slate-800' : 'hover:bg-gray-50'}`}
-      >
+    const className = `no-press-animation flex w-full items-center gap-4 rounded-2xl px-3 py-3.5 text-left transition ${darkMode ? 'hover:bg-slate-800' : 'hover:bg-gray-50'}`;
+    const content = <>
         <div
           className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full shadow-inner shadow-white/60"
           style={{ backgroundColor: iconBg, color: iconColor }}
@@ -306,8 +321,10 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
             <ChevronRight className={`w-5 h-5 shrink-0 ${darkMode ? 'text-slate-500' : 'text-gray-300'}`} />
           </div>
         </div>
-      </button>
-    );
+      </>;
+    return href
+      ? <a href={href} className={className}>{content}</a>
+      : <button type="button" onClick={onClick} className={className}>{content}</button>;
   }
 
   const languageOptions: { code: Language; label: string; helper: string }[] = [
@@ -413,6 +430,13 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
                   iconColor="#db2777"
                   label={translate(language, 'settingsPage.help')}
                   onClick={() => setView('help')}
+                />
+                <SettingRow
+                  icon={<Bug className="w-5 h-5" />}
+                  iconBg="#fee2e2"
+                  iconColor="#dc2626"
+                  label={translate(language, 'settingsPage.reportIssue')}
+                  href={REPORT_ISSUE_URL}
                 />
               </div>
             </div>
@@ -542,29 +566,21 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
               <p className={`mb-2 px-1 text-[17px] font-semibold ${darkMode ? 'text-slate-100' : 'text-gray-800'}`}>
                 {translate(language, 'settingsPage.account')}
               </p>
-              <SettingRow
-                icon={<Lock className="w-5 h-5" />}
-                iconBg="#fef3c7"
-                iconColor="#d97706"
-                label={translate(language, 'settingsPage.changePassword')}
-                onClick={() => setView('password')}
-              />
-
-              <div className={`mt-5 rounded-2xl border p-4 ${darkMode ? 'border-red-900/60 bg-red-950/20' : 'border-red-100 bg-red-50/60'}`}>
-                <p className={`text-sm font-semibold ${darkMode ? 'text-red-300' : 'text-red-700'}`}>
-                  {translate(language, 'settingsPage.deleteAccount')}
-                </p>
-                <p className={`mt-1 text-xs leading-5 ${darkMode ? 'text-red-300/70' : 'text-red-600/80'}`}>
-                  {translate(language, 'settingsPage.deleteAccountWarningBody')}
-                </p>
-                <button
-                  type="button"
+              <div className="space-y-1">
+                <SettingRow
+                  icon={<Lock className="w-5 h-5" />}
+                  iconBg="#fef3c7"
+                  iconColor="#d97706"
+                  label={translate(language, 'settingsPage.changePassword')}
+                  onClick={() => setView('password')}
+                />
+                <SettingRow
+                  icon={<Trash2 className="w-5 h-5" />}
+                  iconBg="#fee2e2"
+                  iconColor="#dc2626"
+                  label={translate(language, 'settingsPage.deleteAccount')}
                   onClick={() => setView('deleteAccount')}
-                  className="mt-3 flex items-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-100 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-950/70"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  {translate(language, 'settingsPage.deleteAccount')}
-                </button>
+                />
               </div>
             </div>
           </div>
@@ -659,12 +675,25 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
             <DetailHeader title={translate(language, 'settingsPage.changePassword')} />
             <form onSubmit={changePassword} className="space-y-4">
               <div>
+                <label className={`block text-xs font-semibold mb-1.5 ${panelSubtleClass}`}>{translate(language, 'settingsPage.currentPassword')}</label>
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={e => setCurrentPassword(e.target.value)}
+                  placeholder="••••••••"
+                  autoComplete="current-password"
+                  className={inputClass}
+                  required
+                />
+              </div>
+              <div>
                 <label className={`block text-xs font-semibold mb-1.5 ${panelSubtleClass}`}>{translate(language, 'settingsPage.newPassword')}</label>
                 <input
                   type="password"
                   value={newPassword}
                   onChange={e => setNewPassword(e.target.value)}
                   placeholder="••••••••"
+                  autoComplete="new-password"
                   className={inputClass}
                   required
                   minLength={6}
@@ -677,6 +706,7 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
                   value={confirmPassword}
                   onChange={e => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
+                  autoComplete="new-password"
                   className={inputClass}
                   required
                   minLength={6}

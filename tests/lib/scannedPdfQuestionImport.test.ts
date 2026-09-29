@@ -8,6 +8,7 @@ import {
   parseAnswerGridRow,
   parseScannedQuestionText,
   selectAnswerTableLines,
+  detectChoiceImageRegions,
 } from '../../src/lib/scannedPdfQuestionImport';
 import { ensureDiagramChoiceLabels, shouldKeepQuestionImage } from '../../src/lib/pdfQuestionImages';
 
@@ -327,6 +328,41 @@ describe('scanned PDF answer reconciliation', () => {
 });
 
 describe('scanned question text extraction', () => {
+  it('separates vertically stacked image choices by printed marker geometry', () => {
+    const regions = detectChoiceImageRegions([
+      { text: 'ア', left: 20, top: 200, width: 20, height: 20 },
+      { text: 'イ', left: 22, top: 300, width: 20, height: 20 },
+      { text: 'ウ', left: 19, top: 400, width: 20, height: 20 },
+      { text: 'エ', left: 21, top: 500, width: 20, height: 20 },
+    ], 900, 700);
+
+    expect(regions.map(region => region.label)).toEqual([...'アイウエ']);
+    expect(regions[0]).toMatchObject({ left: 0, top: 192, width: 900 });
+    expect(regions[3].top).toBeGreaterThan(regions[2].top);
+  });
+
+  it('separates horizontally arranged diagram choices into columns', () => {
+    const regions = detectChoiceImageRegions([
+      { text: 'ア', left: 80, top: 200, width: 20, height: 20 },
+      { text: 'イ', left: 280, top: 202, width: 20, height: 20 },
+      { text: 'ウ', left: 480, top: 199, width: 20, height: 20 },
+      { text: '工', left: 680, top: 201, width: 20, height: 20 },
+    ], 800, 600);
+
+    expect(regions).toHaveLength(4);
+    expect(regions[0].width).toBeLessThan(regions[3].left);
+    expect(regions.every(region => region.top < 200)).toBe(true);
+  });
+
+  it('refuses ambiguous marker geometry instead of producing wrong images', () => {
+    expect(detectChoiceImageRegions([
+      { text: 'ア', left: 10, top: 10, width: 10, height: 10 },
+      { text: 'イ', left: 300, top: 80, width: 10, height: 10 },
+      { text: 'ウ', left: 50, top: 150, width: 10, height: 10 },
+      { text: 'エ', left: 500, top: 240, width: 10, height: 10 },
+    ], 800, 600)).toEqual([]);
+  });
+
   it('separates OCR question text and choices, including two choices on one line', () => {
     const parsed = parseScannedQuestionText(`問88 M社で計画している特売コーナでは，利益を最大化する必要がある。
 表2 候補商品の数量と利益

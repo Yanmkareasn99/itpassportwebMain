@@ -26,6 +26,8 @@ export default function Sidebar({
 }: SidebarProps) {
   const { isAdmin } = useAuth();
   const { language } = useLanguage();
+  const adminActive = currentPage === "admin";
+  const settingsActive = currentPage === "settings" || currentPage === "profile";
 
   const navItems = [
     {
@@ -118,21 +120,33 @@ export default function Sidebar({
         {isAdmin && (
           <button
             onClick={() => onNavigate("admin")}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-amber-50 dark:hover:bg-slate-800"
+            aria-current={adminActive ? "page" : undefined}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${
+              adminActive
+                ? "bg-blue-50 text-blue-600 dark:bg-slate-700 dark:text-blue-300"
+                : "text-gray-600 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-800"
+            }`}
           >
             <ShieldCheck size={20} />
-            <span>{translate(language, 'adminPage.admin')}</span>
+            <span className="flex-1 text-left">{translate(language, 'adminPage.admin')}</span>
+            {adminActive && <div className="w-2 h-2 rounded-full bg-blue-600" />}
           </button>
         )}
 
         <button
           onClick={() => onNavigate("settings")}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800"
+          aria-current={settingsActive ? "page" : undefined}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${
+            settingsActive
+              ? "bg-blue-50 text-blue-600 dark:bg-slate-700 dark:text-blue-300"
+              : "text-gray-600 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-800"
+          }`}
         >
           <Settings size={20} />
-          <span>
+          <span className="flex-1 text-left">
             {translate(language, 'sidebar.settings')}
           </span>
+          {settingsActive && <div className="w-2 h-2 rounded-full bg-blue-600" />}
         </button>
 
       </div>

@@ -1,6 +1,7 @@
 export interface ChoiceForm {
   id?: string;
   choice_text: string;
+  image_url: string;
   is_correct: boolean;
   sort_order: number;
 }
@@ -13,7 +14,8 @@ export interface QuestionForm {
   explanation: string;
   explanation_en: string;
   explanation_vi: string;
-  exam_date: string;
+  exam_year: string;
+  exam_month: string;
   difficulty: number;
   points: number;
   image_url: string;
@@ -39,15 +41,16 @@ export const emptyQuestionForm = (): QuestionForm => ({
   explanation: '',
   explanation_en: '',
   explanation_vi: '',
-  exam_date: '',
+  exam_year: '',
+  exam_month: '',
   difficulty: 3,
   points: 1,
   image_url: '',
   choices: [
-    { choice_text: '', is_correct: false, sort_order: 1 },
-    { choice_text: '', is_correct: false, sort_order: 2 },
-    { choice_text: '', is_correct: false, sort_order: 3 },
-    { choice_text: '', is_correct: false, sort_order: 4 },
+    { choice_text: '', image_url: '', is_correct: false, sort_order: 1 },
+    { choice_text: '', image_url: '', is_correct: false, sort_order: 2 },
+    { choice_text: '', image_url: '', is_correct: false, sort_order: 3 },
+    { choice_text: '', image_url: '', is_correct: false, sort_order: 4 },
   ],
 });
 

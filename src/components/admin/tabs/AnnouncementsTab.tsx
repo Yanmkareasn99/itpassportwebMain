@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Megaphone, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { ChevronDown, Megaphone, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { languageLocales, translate } from '../../../i18n';
 import {
@@ -55,6 +55,7 @@ export default function AnnouncementsTab() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
+  const [showForm, setShowForm] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -74,6 +75,11 @@ export default function AnnouncementsTab() {
     setForm(emptyForm());
     setEditingId(undefined);
     setSaved(false);
+  }
+
+  function toggleForm() {
+    resetForm();
+    setShowForm(current => !current);
   }
 
   async function submit(event: React.FormEvent) {
@@ -101,6 +107,7 @@ export default function AnnouncementsTab() {
       }, editingId);
       resetForm();
       setSaved(true);
+      setShowForm(false);
       await load();
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : translate(language, 'adminPage.announcementSaveFailed'));
@@ -114,7 +121,10 @@ export default function AnnouncementsTab() {
     setError('');
     try {
       await deleteAnnouncement(announcement.id);
-      if (editingId === announcement.id) resetForm();
+      if (editingId === announcement.id) {
+        resetForm();
+        setShowForm(false);
+      }
       await load();
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : translate(language, 'adminPage.announcementDeleteFailed'));
@@ -129,26 +139,35 @@ export default function AnnouncementsTab() {
 
   return (
     <div className="space-y-5">
-      <form onSubmit={submit} className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-        <div className="mb-5 flex items-start justify-between gap-3">
-          <div>
-            <h2 className="flex items-center gap-2 text-lg font-bold text-gray-800">
+      <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+        <button
+          type="button"
+          onClick={toggleForm}
+          aria-expanded={showForm}
+          aria-controls="announcement-form"
+          className="flex w-full items-center justify-between gap-3 px-6 py-4 text-left transition hover:bg-gray-50"
+        >
+          <span className="flex items-center gap-2 text-lg font-bold text-gray-800">
               <Megaphone className="h-5 w-5 text-blue-600" />
               {editingId ? translate(language, 'adminPage.editAnnouncement') : translate(language, 'adminPage.newAnnouncement')}
-            </h2>
-            <p className="mt-1 text-sm text-gray-500">{translate(language, 'adminPage.announcementHelp')}</p>
-          </div>
-          {editingId && (
-            <button type="button" onClick={resetForm} className="text-sm font-semibold text-gray-500 hover:text-gray-700">
-              {translate(language, 'adminPage.cancel')}
-            </button>
-          )}
-        </div>
+          </span>
+          <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform ${showForm ? 'rotate-180' : ''}`} />
+        </button>
 
-        {error && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-600">{error}</p>}
-        {saved && <p role="status" className="mb-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700">{translate(language, 'adminPage.announcementSaved')}</p>}
+        {error && <p role="alert" className="mx-6 mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-600">{error}</p>}
+        {saved && <p role="status" className="mx-6 mb-4 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700">{translate(language, 'adminPage.announcementSaved')}</p>}
 
-        <fieldset disabled={saving} className="space-y-5 disabled:opacity-60">
+        {showForm && (
+          <form id="announcement-form" onSubmit={submit} className="border-t border-gray-100 px-6 pb-6 pt-5">
+            <div className="mb-5 flex items-start justify-between gap-3">
+              <p className="text-sm text-gray-500">{translate(language, 'adminPage.announcementHelp')}</p>
+              {editingId && (
+                <button type="button" onClick={() => { resetForm(); setShowForm(false); }} className="shrink-0 text-sm font-semibold text-gray-500 hover:text-gray-700">
+                  {translate(language, 'adminPage.cancel')}
+                </button>
+              )}
+            </div>
+            <fieldset disabled={saving} className="space-y-5 disabled:opacity-60">
           <div className="grid gap-4 lg:grid-cols-3">
             {languageFields.map(([code, label]) => (
               <div key={code} className="space-y-3 rounded-xl border border-gray-100 bg-gray-50 p-4">
@@ -216,8 +235,10 @@ export default function AnnouncementsTab() {
               {saving ? translate(language, 'ui.saving') : translate(language, 'adminPage.save')}
             </button>
           </div>
-        </fieldset>
-      </form>
+            </fieldset>
+          </form>
+        )}
+      </section>
 
       <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
@@ -249,7 +270,7 @@ export default function AnnouncementsTab() {
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-1">
-                  <button type="button" onClick={() => { setEditingId(item.id); setForm(toForm(item)); setSaved(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                  <button type="button" onClick={() => { setEditingId(item.id); setForm(toForm(item)); setSaved(false); setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                     aria-label={translate(language, 'adminPage.editAnnouncement')} className="rounded-lg p-2 text-gray-400 hover:bg-blue-50 hover:text-blue-600">
                     <Pencil className="h-4 w-4" />
                   </button>

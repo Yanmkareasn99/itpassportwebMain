@@ -1,10 +1,40 @@
-# Manabi IT Passport
+<div align="center">
 
-Manabi IT Passport is a React and Supabase study app for the Japanese IT Passport exam. It includes practice questions, mock exams, multilingual explanations, admin content tools, and an AI study assistant with local fallback answers.
+# マナビ | Manabi
+
+### IT Passport Learning Platform
+
+**A multilingual learning web app for the IT Passport（ITパスポート）exam**
+
+*Practice questions + Battle Mode + AI-powered study tools — 日本語 / English / Tiếng Việt*
+
+<br>
+
+[![LIVE](https://img.shields.io/badge/▲_LIVE-learnwithmanabi.com-0099ff?style=for-the-badge)](https://learnwithmanabi.com)
+![Status](https://img.shields.io/badge/✓_STATUS-ACTIVE-22c55e?style=for-the-badge)
+[![Tests](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/Yanmkareasn99/cd3f69bea4aeb7db8f0c17494c21e9e8/raw/manabi-tests.json&style=for-the-badge)](https://github.com/Yanmkareasn99/itpassportwebMain/actions)
+[![Coverage](https://img.shields.io/codecov/c/github/Yanmkareasn99/itpassportwebMain?branch=main&style=for-the-badge&label=COVERAGE)](https://codecov.io/gh/Yanmkareasn99/itpassportwebMain)
+![Questions](https://img.shields.io/badge/QUESTIONS-4000+-8b5cf6?style=for-the-badge)
+![License](https://img.shields.io/github/license/Yanmkareasn99/itpassportwebMain?style=for-the-badge)
+
+<br>
+
+![React](https://img.shields.io/badge/React-19-61DAFB?style=flat&logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat&logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-6-646CFF?style=flat&logo=vite&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-06B6D4?style=flat&logo=tailwindcss&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-Database-3FCF8E?style=flat&logo=supabase&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-Deploy-000000?style=flat&logo=vercel&logoColor=white)
+
+<br>
+
+**🇯🇵 日本語** ・ **🇬🇧 English** ・ **🇻🇳 Tiếng Việt**
+
+</div>
+
+Manabi is a React and Supabase study app for the Japanese IT Passport exam. It includes practice questions, mock exams, PvP battle mode, multilingual explanations, admin content tools, and an AI study assistant with local fallback answers.
 
 Website: [https://learnwithmanabi.com](https://learnwithmanabi.com)
-
-The previous website addresses, `manabi-app.jp` and `www.manabi-app.jp`, redirect to the new domain. Shared material files still use `files.manabi-app.jp`; keep that subdomain and the old domain registration active.
 
 ## Screenshots
 
@@ -12,7 +42,7 @@ The previous website addresses, `manabi-app.jp` and `www.manabi-app.jp`, redirec
 
 ![Home dashboard](docs/screenshots/manabi.home.png)
 
-![Practice question flow](docs/screenshots/manabi.practice.png)
+![Practice question flow](docs/screenshots/manabi.practice-session.png)
 
 ![Mock exam](docs/screenshots/manabi.mockexam.png)
 
@@ -24,6 +54,8 @@ The previous website addresses, `manabi-app.jp` and `www.manabi-app.jp`, redirec
 
 ![Settings](docs/screenshots/manabi.settings.png)
 
+![Profile](docs/screenshots/manabi.profile.png)
+
 ![Admin dashboard](docs/screenshots/manabi.admin.png)
 
 ## Features
@@ -34,7 +66,7 @@ The previous website addresses, `manabi-app.jp` and `www.manabi-app.jp`, redirec
 - AI chat and per-question explanations through a Supabase Edge Function.
 - Local AI fallback explanations when Supabase or Gemini is unavailable.
 - Japanese, English, and Vietnamese localization.
-- Shared materials: signed-in users can upload PDFs, images, and Office documents (up to 20 MB) to `files.manabi-app.jp`, then view or download files uploaded by others.
+- Shared materials: signed-in users can upload PDFs, images, and Office documents (up to 20 MB) to `files.learnwithmanabi.com`, or share HTTPS links from Google Drive and other providers as a fallback.
 - Admin tools for questions, subjects, users, mock-exam settings, stats, CSV import, and searchable/scanned PDF question import with OCR fallback.
 - Real browser URLs with route guards for signed-in and admin-only pages.
 - Standardized CSV, scoring, auth, rate-limit, error, and data helper modules.
@@ -78,11 +110,12 @@ tests/
 
 Routing is handled in `src/App.tsx`. Signed-in pages are wrapped by `ProtectedRoute`; `/admin` is additionally wrapped by `AdminRoute`. The existing page components still receive `currentPage` and `onNavigate` so navigation UI remains simple while browser back/forward works.
 
-Admin code is split into five tabs:
+Admin code is split into six tabs:
 
 - `QuestionsTab`
 - `SubjectsTab`
 - `UsersTab`
+- `AnnouncementsTab`
 - `MockExamTab`
 - `StatsTab`
 
@@ -104,7 +137,7 @@ VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 VITE_USE_SUPABASE=true
 VITE_ALLOWED_ORIGINS=https://learnwithmanabi.com
-VITE_MATERIAL_FILES_URL=https://files.manabi-app.jp
+VITE_MATERIAL_FILES_URL=https://files.learnwithmanabi.com
 ```
 
 The separately deployed file server must provide `${VITE_MATERIAL_FILES_URL}/api/upload.php`, `${VITE_MATERIAL_FILES_URL}/api/download.php`, and `${VITE_MATERIAL_FILES_URL}/api/delete.php`. Upload `file-server/api/delete.php` beside the other API scripts; it allows uploaders to delete their own materials and administrators to delete any material.
@@ -129,7 +162,7 @@ Apply every migration in `supabase/migrations` in filename order. With the Supab
 supabase db push
 ```
 
-The migrations create the Manabi schema, authorization policies, password-recovery-compatible profiles, admin helpers, AI chat storage, practice-session persistence, points, battle RPCs, question import support, and shared-material metadata. Apply `20260914000000_add_shared_materials.sql` and `20260915000000_move_material_files_to_file_server.sql` before using the Materials tab. Material binaries are uploaded to `files.manabi-app.jp`; local demo mode cannot share files between users.
+The migrations create the Manabi schema, authorization policies, password-recovery-compatible profiles, admin helpers, AI chat storage, practice-session persistence, points, battle RPCs, question import support, and shared-material metadata. Apply `20260914000000_add_shared_materials.sql`, `20260915000000_move_material_files_to_file_server.sql`, and `20260925000000_add_material_links.sql` before using the Materials tab. Material binaries are uploaded to `files.learnwithmanabi.com`; HTTPS links are stored directly in Supabase so link sharing remains available if the file server is down. Local demo mode cannot share materials between users.
 
 In Supabase Authentication → URL Configuration, set the Site URL to `https://learnwithmanabi.com`. Add `https://learnwithmanabi.com` and `https://learnwithmanabi.com/login?recovery=1` to the redirect allow list for Google sign-in and password resets. The file server's CORS configuration must also allow `https://learnwithmanabi.com`; its API loads this configuration through `api/common.php` on the file server.
 
@@ -147,7 +180,7 @@ AI_RATE_LIMIT_MAX_REQUESTS=60
 ```
 
 `ALLOWED_ORIGIN` is exact-match only. Multiple production origins can be comma-separated.
-If `VITE_ALLOWED_ORIGINS` is configured in Vercel or `ALLOWED_ORIGIN` is configured in Supabase, update those allowed website origins to include `https://learnwithmanabi.com`. Keep `VITE_MATERIAL_FILES_URL=https://files.manabi-app.jp`. Changing repository defaults does not override deployed environment settings. Redeploy the frontend after changing Vite environment variables, and deploy the `ai-chat` Edge Function to publish changes to its default allowed origins.
+If `VITE_ALLOWED_ORIGINS` is configured in Vercel or `ALLOWED_ORIGIN` is configured in Supabase, update those allowed website origins to include `https://learnwithmanabi.com`. Keep `VITE_MATERIAL_FILES_URL=https://files.learnwithmanabi.com`. Changing repository defaults does not override deployed environment settings. Redeploy the frontend after changing Vite environment variables, and deploy the `ai-chat` Edge Function to publish changes to its default allowed origins.
 
 ## Tests
 
@@ -216,7 +249,3 @@ Supabase calls should throw or surface errors instead of ignoring them. New shar
 - `src/lib/dataService.ts`
 - `src/hooks/useData.ts`
 - `src/components/ui/LoadingError.tsx`
-
-## Package Management
-
-This repository uses npm. `pnpm-lock.yaml` and `pnpm-workspace.yaml` were removed to avoid mixed package-manager state.

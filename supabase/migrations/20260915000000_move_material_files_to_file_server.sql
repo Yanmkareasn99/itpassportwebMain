@@ -1,4 +1,4 @@
--- Material binaries are now stored by files.manabi-app.jp. The API writes
+-- Material binaries are now stored by files.learnwithmanabi.com. The API writes
 -- year/month/random-name paths and records the MIME type detected by PHP.
 ALTER TABLE public.materials
   DROP CONSTRAINT IF EXISTS materials_owner_path;

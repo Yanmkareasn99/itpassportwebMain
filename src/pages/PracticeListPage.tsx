@@ -28,7 +28,7 @@ import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { useLanguage } from "../contexts/LanguageContext";
 import { Question, Page } from "../types";
-import { formatExamDate, UNCATEGORIZED_EXAM_DATE } from "../lib/examDate";
+import { formatExamPeriodKey, UNCATEGORIZED_EXAM_DATE } from "../lib/examDate";
 import { orderPracticeQuestions } from "../lib/questionRandomization";
 
 import { IT_PASSPORT_SUBJECT_IDS } from '../lib/questionSubject';
@@ -233,7 +233,7 @@ function ReviewCard({
   );
 }
 
-function FlaggedQuestionsCard({
+export function FlaggedQuestionsCard({
   counts,
   onStart,
   loading,
@@ -244,46 +244,247 @@ function FlaggedQuestionsCard({
   loading: boolean;
   language: LanguageCode;
 }) {
-  const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+  const [expanded, setExpanded] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const total = Object.values(counts).reduce(
+    (sum, count) => sum + count,
+    0,
+  );
+
   const styles = {
-    green: 'bg-emerald-500 hover:bg-emerald-600',
-    orange: 'bg-orange-500 hover:bg-orange-600',
-    red: 'bg-red-500 hover:bg-red-600',
+    green:
+      "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300",
+    orange:
+      "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300",
+    red:
+      "border-red-200 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300",
   } as const;
+
+  useEffect(() => {
+    if (!expanded) return;
+
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!cardRef.current?.contains(event.target as Node)) {
+        setExpanded(false);
+      }
+    };
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setExpanded(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [expanded]);
+
   return (
-    <div className="w-full min-w-0 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left shadow-sm dark:border-slate-600/80 dark:bg-slate-900/40 sm:p-5 xl:p-6">
+    <div
+      ref={cardRef}
+      className={`
+        relative
+        w-full
+        min-w-0
+        rounded-2xl
+        border
+        border-slate-200
+        bg-slate-50
+        p-4
+        text-left
+        shadow-sm
+        transition-all
+
+        hover:-translate-y-0.5
+        hover:border-slate-300
+        hover:shadow-lg
+
+        dark:border-slate-600/80
+        dark:bg-slate-900/40
+        dark:hover:border-slate-500
+        dark:hover:bg-slate-900/60
+
+        sm:p-5
+        xl:p-6
+
+        ${expanded ? "z-20" : ""}
+      `}
+    >
+      {/* Full-card clickable button */}
       <button
         type="button"
-        onClick={() => onStart()}
-        disabled={loading || total === 0}
-        className="flex w-full items-center gap-2.5 text-left disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-600 text-white">
-          <Flag className="h-4 w-4 fill-current" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-base font-bold text-slate-700 dark:text-slate-200">
-            {translate(language, 'practiceListPage.flaggedQuestions')}
+        onClick={() => setExpanded((open) => !open)}
+        disabled={loading}
+        aria-expanded={expanded}
+        aria-controls="flagged-question-actions"
+        aria-label={translate(
+          language,
+          "practiceListPage.flaggedQuestions",
+        )}
+        className="
+          absolute
+          inset-0
+          z-0
+          rounded-2xl
+          bg-transparent
+          hover:bg-transparent
+          focus:bg-transparent
+          focus:outline-none
+          focus-visible:ring-2
+          focus-visible:ring-blue-500
+          focus-visible:ring-offset-2
+          disabled:cursor-not-allowed
+        "
+      />
+
+      {/* Visible card content */}
+      <div className="pointer-events-none relative z-10">
+        <div className="mb-3 flex min-w-0 items-center gap-2.5">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-600 text-white">
+            <Flag className="h-4 w-4 fill-current" />
           </span>
-          <span className="text-xs text-gray-500 dark:text-slate-300">
-            {translate(language, 'practiceListPage.flaggedCount', { count: total })}
+
+          <span className="min-w-0 flex-1 truncate text-base font-bold text-slate-700 dark:text-slate-200">
+            {translate(
+              language,
+              "practiceListPage.flaggedQuestions",
+            )}
           </span>
+
+          <ChevronDown
+            className={`
+              h-4
+              w-4
+              shrink-0
+              text-slate-500
+              transition-transform
+              ${expanded ? "rotate-180" : ""}
+            `}
+          />
+        </div>
+
+        <span className="block text-xs text-gray-500 dark:text-slate-300">
+          {translate(
+            language,
+            "practiceListPage.flaggedCount",
+            { count: total },
+          )}
         </span>
-      </button>
-      <div className="mt-3 grid grid-cols-3 gap-1.5">
-        {QUESTION_FLAG_LEVELS.map(level => (
-          <button
-            key={level}
-            type="button"
-            onClick={() => onStart(level)}
-            disabled={loading || counts[level] === 0}
-            aria-label={translate(language, `practiceQuestionPage.flag${level[0].toUpperCase()}${level.slice(1)}` as 'practiceQuestionPage.flagGreen' | 'practiceQuestionPage.flagOrange' | 'practiceQuestionPage.flagRed')}
-            className={`rounded-lg px-2 py-1.5 text-xs font-bold text-white transition disabled:cursor-not-allowed disabled:opacity-30 ${styles[level]}`}
-          >
-            {counts[level]}
-          </button>
-        ))}
       </div>
+
+      {expanded && (
+        <div
+          id="flagged-question-actions"
+          className="
+            absolute
+            left-0
+            top-full
+            z-30
+            mt-2
+            w-full
+            space-y-2
+            rounded-2xl
+            border
+            border-slate-200
+            bg-white
+            p-3
+            shadow-xl
+            dark:border-slate-600
+            dark:bg-slate-900
+          "
+        >
+          <button
+            type="button"
+            onClick={() => {
+              setExpanded(false);
+              onStart();
+            }}
+            disabled={loading || total === 0}
+            className="
+              flex
+              w-full
+              items-center
+              justify-center
+              gap-2
+              rounded-lg
+              bg-slate-700
+              px-3
+              py-2
+              text-sm
+              font-semibold
+              text-white
+              transition-colors
+              hover:bg-slate-800
+              disabled:cursor-not-allowed
+              disabled:opacity-50
+              dark:bg-slate-600
+              dark:hover:bg-slate-500
+            "
+          >
+            <Play className="h-3.5 w-3.5" />
+
+            {translate(
+              language,
+              "practiceListPage.practiceAllFlags",
+            )}{" "}
+            ({total})
+          </button>
+
+          <div className="grid grid-cols-3 gap-1.5">
+            {QUESTION_FLAG_LEVELS.map((level) => {
+              const label = translate(
+                language,
+                `practiceQuestionPage.flag${
+                  level[0].toUpperCase() + level.slice(1)
+                }` as
+                  | "practiceQuestionPage.flagGreen"
+                  | "practiceQuestionPage.flagOrange"
+                  | "practiceQuestionPage.flagRed",
+              );
+
+              return (
+                <button
+                  key={level}
+                  type="button"
+                  onClick={() => {
+                    setExpanded(false);
+                    onStart(level);
+                  }}
+                  disabled={loading || counts[level] === 0}
+                  aria-label={`${label}: ${counts[level]}`}
+                  className={`
+                    min-w-0
+                    rounded-lg
+                    border
+                    px-1.5
+                    py-2
+                    text-xs
+                    font-semibold
+                    transition-colors
+                    disabled:cursor-not-allowed
+                    disabled:opacity-50
+                    ${styles[level]}
+                  `}
+                >
+                  <span className="block truncate">
+                    {label}
+                  </span>
+
+                  <span className="block text-base font-bold">
+                    {counts[level]}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -556,25 +757,17 @@ export default function PracticeListPage({
           ]),
         ];
 
-        const [availableExamDates, ...countResults] = await Promise.all([
+        const [availableExamDates, allQuestions] = await Promise.all([
           loadExamDates(),
-          ...subjectIds.map((subjectId) =>
-            supabase
-              .from("questions")
-              .select("id", { count: "exact", head: true })
-              .eq("subject_id", subjectId),
-          ),
+          fetchPracticeQuestions(null, "all", "all"),
         ]);
 
-        const counts: Record<string, number> = {};
-        countResults.forEach((result, index) => {
-          if (result.error) {
-            throw new Error(
-              `Unable to count questions for ${subjectIds[index]}: ${result.error.message}`,
-            );
-          }
-          counts[subjectIds[index]] = result.count ?? 0;
-        });
+        const counts = Object.fromEntries(
+          subjectIds.map((subjectId) => [subjectId, 0]),
+        ) as Record<string, number>;
+        for (const question of allQuestions) {
+          counts[question.subject_id] = (counts[question.subject_id] ?? 0) + 1;
+        }
 
         if (cancelled) return;
 
@@ -834,7 +1027,7 @@ export default function PracticeListPage({
           </div>
         )}
 
-        <div className="motion-stagger grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <div className="motion-stagger grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
           {categories.map((cat) => (
             <CategoryCard
               key={cat.id}
@@ -859,119 +1052,101 @@ export default function PracticeListPage({
           />
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap">
-    
-    {/* Filter title */}
-    <span className="text-sm font-semibold text-gray-600 shrink-0">
-      {translate(currentLanguage, "practiceListPage.filterBy")}
-    </span>
+        <div className="practice-filter-panel rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="practice-filter-layout">
+            <div className="practice-filter-controls">
+              <span className="shrink-0 text-sm font-semibold text-gray-600">
+                {translate(currentLanguage, "practiceListPage.filterBy")}
+              </span>
 
-    {/* Filters */}
-    <div className="grid grid-cols-2 gap-2 w-full sm:flex sm:w-auto">
-      <MultiSelectDropdown
-        label={translate(currentLanguage, "practiceListPage.examDate")}
-        allLabel={translate(currentLanguage, "practiceListPage.all")}
-        selectedValues={selectedExamDates}
-        onChange={(values) => {
-          setSelectedExamDates(values);
-          setError("");
-        }}
-        options={[
-          {
-            value: UNCATEGORIZED_EXAM_DATE,
-            label: translate(currentLanguage, "ui.uncategorized"),
-          },
-          ...examDates.map((date) => ({
-            value: date,
-            label: formatExamDate(date, currentLanguage),
-          })),
-        ]}
-      />
+              <MultiSelectDropdown
+                label={translate(currentLanguage, "practiceListPage.examDate")}
+                allLabel={translate(currentLanguage, "practiceListPage.all")}
+                selectedValues={selectedExamDates}
+                onChange={(values) => {
+                  setSelectedExamDates(values);
+                  setError("");
+                }}
+                options={examDates.map((date) => ({
+                  value: date,
+                  label:
+                    date === UNCATEGORIZED_EXAM_DATE
+                      ? translate(currentLanguage, "ui.uncategorized")
+                      : formatExamPeriodKey(date, currentLanguage),
+                }))}
+              />
 
-      <SelectDropdown
-        label={translate(
-          currentLanguage,
-          "practiceListPage.learningMode",
-        )}
-        value={modeFilter}
-        onChange={(v) => {
-          setModeFilter(v as ModeFilter);
-          setError("");
-        }}
-        options={[
-          {
-            value: "all",
-            label: translate(currentLanguage, "practiceListPage.all"),
-          },
-          {
-            value: "new",
-            label: translate(currentLanguage, "practiceListPage.new"),
-          },
-          {
-            value: "review",
-            label: translate(currentLanguage, "practiceListPage.review"),
-          },
-        ]}
-      />
-    </div>
+              <SelectDropdown
+                label={translate(
+                  currentLanguage,
+                  "practiceListPage.learningMode",
+                )}
+                value={modeFilter}
+                onChange={(value) => {
+                  setModeFilter(value as ModeFilter);
+                  setError("");
+                }}
+                options={[
+                  {
+                    value: "all",
+                    label: translate(currentLanguage, "practiceListPage.all"),
+                  },
+                  {
+                    value: "new",
+                    label: translate(currentLanguage, "practiceListPage.new"),
+                  },
+                  {
+                    value: "review",
+                    label: translate(
+                      currentLanguage,
+                      "practiceListPage.review",
+                    ),
+                  },
+                ]}
+              />
+            </div>
 
-    {/* Result + button */}
-    <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto">
-      <p
-        role="status"
-        aria-live="polite"
-        className="min-w-0 flex-1 truncate text-xs sm:text-sm font-medium text-gray-600"
-      >
-        {!currentResult
-          ? translate(
-              currentLanguage,
-              "practiceListPage.countingMatches",
-            )
-          : currentResult.error
-            ? translateMessage(language, currentResult.error)
-            : translate(
+            <button
+              onClick={() => void startFilteredPractice()}
+              disabled={
+                !!starting ||
+                !currentResult ||
+                !!currentResult.error ||
+                matchingQuestions.length === 0
+              }
+              className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Play className="h-3.5 w-3.5 shrink-0" />
+              {translate(
                 currentLanguage,
-                "practiceListPage.matchingQuestions",
-                {
-                  count: matchingQuestions.length.toLocaleString(),
-                },
+                "practiceListPage.practiceFiltered",
               )}
-      </p>
+              {currentResult &&
+                !currentResult.error &&
+                ` (${matchingQuestions.length.toLocaleString()})`}
+            </button>
+          </div>
 
-      <button
-        onClick={() => void startFilteredPractice()}
-        disabled={
-          !!starting ||
-          !currentResult ||
-          !!currentResult.error ||
-          matchingQuestions.length === 0
-        }
-        className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-xs sm:px-4 sm:text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        <Play className="h-3.5 w-3.5 shrink-0" />
-
-        <span className="hidden sm:inline">
-          {translate(
-            currentLanguage,
-            "practiceListPage.practiceFiltered",
+          <span role="status" aria-live="polite" className="sr-only">
+            {!currentResult
+              ? translate(
+                  currentLanguage,
+                  "practiceListPage.countingMatches",
+                )
+              : currentResult.error
+                ? translateMessage(language, currentResult.error)
+                : translate(
+                    currentLanguage,
+                    "practiceListPage.matchingQuestions",
+                    { count: matchingQuestions.length.toLocaleString() },
+                  )}
+          </span>
+          {currentResult?.error && (
+            <p role="alert" className="mt-3 text-center text-sm text-red-600">
+              {translateMessage(language, currentResult.error)}
+            </p>
           )}
-        </span>
-
-        <span className="sm:hidden">
-          {translate(
-            currentLanguage,
-            "practiceListPage.practice",
-          )}
-        </span>
-
-        {currentResult &&
-          !currentResult.error &&
-          ` (${matchingQuestions.length.toLocaleString()})`}
-      </button>
-    </div>
-  </div>
-</div>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <div className="min-w-0 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">

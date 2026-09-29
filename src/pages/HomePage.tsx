@@ -259,16 +259,16 @@ export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
 
   return (
     <Layout currentPage={currentPage} onNavigate={onNavigate} title={`${profile?.name ?? guest}${greeting}`}>
-      <div className="app-shell space-y-5">
+      <div className="app-shell home-dashboard-shell space-y-5">
         <AnnouncementBanner />
-        <div className="flex flex-col-reverse lg:flex-row gap-6">
-          <div className="flex-1 space-y-5">
-            <div className="motion-stagger grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 xl:gap-6">
+        <div className="home-dashboard-layout">
+          <div className="home-dashboard-main space-y-5">
+            <div className="home-feature-grid motion-stagger gap-4 sm:gap-5 xl:gap-6">
               {features.map(({ page, icon: Icon, title, description, cardClass, iconBg, iconColor, arrowBg }) => (
                 <button
                   type="button"
                   key={page}
-                  className={`motion-lift ${page === 'materials' ? 'md:col-span-2' : ''} ${cardClass} w-full rounded-2xl p-4 sm:p-5 xl:p-6 flex items-center justify-between gap-4 xl:gap-5 text-left transition-all hover:shadow-md`}
+                  className={`motion-lift ${page === 'materials' ? 'home-feature-card--wide' : ''} ${cardClass} w-full rounded-2xl p-4 sm:p-5 xl:p-6 flex items-center justify-between gap-4 xl:gap-5 text-left transition-all hover:shadow-md`}
                   onClick={() => onNavigate(page)}
                 >
                   <div className="flex items-center gap-4 xl:gap-5 min-w-0">
@@ -334,7 +334,7 @@ export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
             </div>
           </div>
 
-          <div className="motion-stagger w-full lg:w-72 space-y-5 shrink-0">
+          <div className="home-dashboard-sidebar motion-stagger space-y-5">
             <CalendarWidget daysLeft={daysLeft} language={language} sessions={practiceSessions} examTargetDate={examTargetDate} />
             {progressError && <p role="alert" className="text-sm text-red-600">{translateMessage(language, progressError)}</p>}
             <StatsCard sessions={practiceSessions} examSessions={examSessions} language={language} />

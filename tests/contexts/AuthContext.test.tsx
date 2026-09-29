@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   onAuthStateChange: vi.fn(),
   signUp: vi.fn(),
   updateUser: vi.fn(),
+  signOut: vi.fn(),
   authCallback: null as ((event: AuthChangeEvent, session: Session | null) => void) | null,
 }));
 
@@ -20,6 +21,7 @@ vi.mock('../../src/lib/supabase', () => ({
       onAuthStateChange: mocks.onAuthStateChange,
       signUp: mocks.signUp,
       updateUser: mocks.updateUser,
+      signOut: mocks.signOut,
     },
     from: () => {
       const query = {
@@ -43,6 +45,9 @@ function Probe() {
       <span data-testid="recovery-state">{auth.passwordRecoveryState}</span>
       <button type="button" onClick={() => void auth.updatePassword('new-secret').catch(() => undefined)}>
         Update
+      </button>
+      <button type="button" onClick={() => void auth.abandonPasswordRecovery().catch(() => undefined)}>
+        Cancel recovery
       </button>
     </div>
   );
@@ -86,6 +91,7 @@ describe('AuthProvider password recovery lifecycle', () => {
     mocks.getSession.mockResolvedValue({ data: { session: null }, error: null });
     mocks.signUp.mockResolvedValue({ data: { user: null, session: null }, error: null });
     mocks.updateUser.mockResolvedValue({ data: { user: recoverySession.user }, error: null });
+    mocks.signOut.mockResolvedValue({ error: null });
     mocks.onAuthStateChange.mockImplementation((callback: typeof mocks.authCallback) => {
       mocks.authCallback = callback;
       return { data: { subscription: { unsubscribe: vi.fn() } } };
@@ -111,6 +117,17 @@ describe('AuthProvider password recovery lifecycle', () => {
     expect(await screen.findByText('invalid')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Update' }));
     expect(mocks.updateUser).not.toHaveBeenCalled();
+  });
+
+  it('signs out only the local recovery session when recovery is abandoned', async () => {
+    render(<AuthProvider><Probe /></AuthProvider>);
+    act(() => mocks.authCallback?.('PASSWORD_RECOVERY', recoverySession));
+    expect(await screen.findByText('valid')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel recovery' }));
+
+    await waitFor(() => expect(mocks.signOut).toHaveBeenCalledWith({ scope: 'local' }));
+    expect(await screen.findByText('idle')).toBeTruthy();
   });
 
   it('immediately identifies an expired recovery callback', async () => {
