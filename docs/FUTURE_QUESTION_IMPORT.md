@@ -24,7 +24,7 @@ on the review screen.
 
 For large scanned booklets, use the local scanner instead of keeping the Admin
 page open. It uses Tesseract on your computer, sends no PDF or image to an API,
-and creates the same `manabi-question-archive-v2` JSON accepted by **Saved
+and creates the same `manabi-question-archive-v3` JSON accepted by **Saved
 question JSON**.
 
 Install Python 3.11+ and Tesseract with the Japanese language data. On Windows,
@@ -47,8 +47,13 @@ npm run scan:exam -- `
 For the Applied Information Technology Engineer morning exam, replace
 `--exam it-passport` with `--exam ap`. The expected counts are 100 and 80
 respectively. The scanner embeds a cropped WebP for questions that refer to a
-figure/table or whose choices were not read reliably. Add `--keep-all-images`
-to embed every question crop.
+figure or table, or whose choices were not read reliably. When all four printed
+choice markers have unambiguous row or column geometry, it also embeds four
+separate choice images. Manabi uploads those images to the public
+`question-images` bucket and stores their URLs on `answer_choices.image_url`.
+If the geometry is ambiguous, the scanner keeps the full question crop and
+adds a review warning instead of creating potentially wrong choice crops. Add
+`--keep-all-images` to embed every full question crop.
 
 OCR output is deliberately marked for review when a choice or answer is
 missing. Load the JSON in the Admin importer, compare each warning against its
@@ -58,12 +63,13 @@ embedded crop, correct it, and only then upload. Apply
 ## Save the conversion as JSON
 
 After reading and reviewing the PDFs, click **Download JSON** to save a portable
-`manabi-question-archive-v2` archive. Its readable fields include `exam`,
+`manabi-question-archive-v3` archive. Its readable fields include `exam`,
 `year`, `wareki`, `season`, `question_count`, `text`, a label-to-text `choices`
 object, `correct_answer`, `has_figure`, `confidence`, and `warnings`. It also
 retains the database-ready exam date/type, subject assignments, explanations,
 source pages, scoring fields, and any question images selected with **Keep
-diagram**. Unselected page-preview images are omitted to keep the JSON
+diagram**. Version 3 also stores `choice_figures` keyed by the printed choice
+labels. Version 1 and 2 archives remain supported. Unselected page-preview images are omitted to keep the JSON
 reasonably small. Older `manabi-pdf-import-v1` archives remain supported.
 
 For a later import, return to **Admin → Questions → Import PDFs**, select the

@@ -1,4 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { fetchWithGeminiRetry } from './retry.ts';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -170,7 +171,7 @@ Deno.serve(async (req) => {
       },
     ];
 
-    const upstream = await fetch(
+    const upstream = await fetchWithGeminiRetry(() => fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
       {
         method: 'POST',
@@ -189,9 +190,9 @@ Deno.serve(async (req) => {
           },
         }),
       },
-    );
+    ));
 
-    const data = await upstream.json() as {
+    const data = await upstream.json().catch(() => ({})) as {
       candidates?: Array<{
         content?: {
           parts?: Array<{ text?: string }>;
@@ -208,6 +209,9 @@ Deno.serve(async (req) => {
 
     if (!upstream.ok) {
       console.error('Gemini request failed', upstream.status, data.error?.message);
+      if (upstream.status === 503) {
+        return json({ error: 'The AI service is busy. Please try again shortly.', retryable: true }, 503, origin);
+      }
       return json({ error: 'The AI service is currently unavailable.' }, 502, origin);
     }
 

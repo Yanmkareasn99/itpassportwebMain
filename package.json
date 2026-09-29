@@ -14,8 +14,10 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "test": "vitest",
+    "test:json": "vitest run --reporter=json --outputFile=test-results.json",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage",
+    "test:coverage": "vitest run --coverage --coverage.reporter=text --coverage.reporter=lcov",
+    "test:ci": "vitest run --coverage --coverage.reporter=text --coverage.reporter=lcov --reporter=default --reporter=json --outputFile=test-results.json",
     "export:dashboard-sql": "node scripts/export_dashboard_sql.mjs",
     "export:questions:csv": "node scripts/export_questions_csv.mjs",
     "import:questions": "node scripts/import_questions.mjs",
@@ -29,7 +31,7 @@
     "pdfjs-dist": "5.1.91",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.20.0",
+    "react-router-dom": "^7.18.4",
     "tesseract.js": "7.0.0"
   },
   "devDependencies": {
@@ -38,6 +40,7 @@
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
+    "@vitest/coverage-v8": "^1.6.1",
     "@vitest/ui": "^1.2.0",
     "autoprefixer": "^10.4.18",
     "eslint": "^9.9.1",

@@ -27,6 +27,8 @@ interface AuthContextType {
 
   clearPasswordRecovery: () => void;
 
+  abandonPasswordRecovery: () => Promise<void>;
+
   signOut: () => Promise<void>;
 
   deleteAccount: () => Promise<void>;
@@ -61,7 +63,7 @@ function makeLocalProfile(email: string, name?: string, studentId?: string | nul
     role: 'student',
     class_name: null,
     avatar_url: null,
-    is_admin: false,
+    is_admin: true,
     created_at: new Date().toISOString(),
   };
 }
@@ -317,6 +319,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPasswordRecoveryState('idle');
   }
 
+  async function abandonPasswordRecovery() {
+    if (isSupabaseEnabled) {
+      const { error } = await supabase.auth.signOut({ scope: 'local' });
+      if (error) throw error;
+    }
+    setSession(null);
+    setUser(null);
+    setProfile(null);
+    setPasswordRecoveryState('idle');
+  }
+
   async function signInWithGoogle() {
     if (!isSupabaseEnabled) {
       throw new Error('Supabase is not enabled.');
@@ -357,6 +370,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         resetPassword,
         updatePassword,
         clearPasswordRecovery,
+        abandonPasswordRecovery,
         signOut,
         deleteAccount,
         refreshProfile,

@@ -38,7 +38,7 @@ export default function LoginPage() {
 
   const {
     signIn, signUp, signInWithGoogle, resetPassword, updatePassword,
-    passwordRecoveryState, clearPasswordRecovery,
+    passwordRecoveryState, clearPasswordRecovery, abandonPasswordRecovery,
   } = useAuth();
   const { language, setLanguage } = useLanguage();
   const [mode, setMode] = useState<'login' | 'signup' | 'forgot' | 'recovery'>('login');
@@ -93,7 +93,27 @@ export default function LoginPage() {
     passwordMinimum: translate(language, 'loginPage.passwordMinimum'),
     backToSignIn: translate(language, 'loginPage.backToSignIn'),
     invalidRecovery: translate(language, 'loginPage.invalidRecoveryLink'),
+    cancelRecoveryError: translate(language, 'loginPage.cancelRecoveryFailed'),
   };
+
+  async function handleBackToSignIn() {
+    setError('');
+    setNotice('');
+    if (mode !== 'recovery') {
+      setMode('login');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await abandonPasswordRecovery();
+      navigate('/login', { replace: true });
+    } catch {
+      setError(text.cancelRecoveryError);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
     const search = new URLSearchParams(location.search);
@@ -421,17 +441,14 @@ export default function LoginPage() {
 
               <div className="mt-6 text-center">
                 <button
+                  type="button"
+                  disabled={loading}
                   onClick={() => {
                     if (mode === 'login') setMode('signup');
-                    else if (mode === 'signup' || mode === 'forgot') setMode('login');
-                    else {
-                      clearPasswordRecovery();
-                      navigate('/login', { replace: true });
-                    }
-                    setError('');
-                    setNotice('');
+                    else if (mode === 'signup') setMode('login');
+                    else void handleBackToSignIn();
                   }}
-                  className="text-sm font-semibold text-blue-600 transition hover:text-blue-700"
+                  className="text-sm font-semibold text-blue-600 transition hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {mode === 'login' ? text.noAccount : mode === 'signup' ? text.hasAccount : text.backToSignIn}
                 </button>

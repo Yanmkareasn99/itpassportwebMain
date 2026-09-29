@@ -35,13 +35,13 @@ function isImagePath(value) {
   return typeof value === 'string' && value.startsWith('../');
 }
 
-function examDateFromPeriod(period) {
+function examPeriodFromPeriod(period) {
   const value = String(period ?? '');
   if (/^\d{6}$/.test(value)) {
     const month = Number(value.slice(4));
-    if (month >= 1 && month <= 12) return `${value.slice(0, 4)}-${value.slice(4)}-01`;
+    if (month >= 1 && month <= 12) return { exam_year: Number(value.slice(0, 4)), exam_month: month };
   }
-  if (/^\d{4}$/.test(value)) return `${value}-01-01`;
+  if (/^\d{4}$/.test(value)) return { exam_year: Number(value), exam_month: null };
   return null;
 }
 
@@ -77,14 +77,17 @@ function addQuestion({
   explanationVi = null,
   imageUrl = null,
   sourceKey = null,
-  examDate = null,
+  examPeriod = null,
 }) {
   const cleanText = typeof text === 'string' ? text.trim() : '';
   if (!cleanText || options.length === 0) return;
   const existingQuestion = questionByText.get(cleanText);
   if (existingQuestion) {
-    if (examDate && (!existingQuestion.exam_date || examDate > existingQuestion.exam_date)) {
-      existingQuestion.exam_date = examDate;
+    if (examPeriod && (!existingQuestion.exam_year
+      || examPeriod.exam_year > existingQuestion.exam_year
+      || (examPeriod.exam_year === existingQuestion.exam_year
+        && (examPeriod.exam_month ?? 0) > (existingQuestion.exam_month ?? 0)))) {
+      Object.assign(existingQuestion, examPeriod);
       existingQuestion.source_key = sourceKey;
     }
     return;
@@ -97,7 +100,8 @@ function addQuestion({
   questionRows.push({
     id: questionId,
     source_key: sourceKey,
-    exam_date: examDate,
+    exam_year: examPeriod?.exam_year ?? null,
+    exam_month: examPeriod?.exam_month ?? null,
     subject_id: subjectId,
     question_number: number,
     question_text: cleanText,
@@ -191,7 +195,7 @@ function addKakomon(filename, answerGroup, subjectKey) {
         }),
         correctAnswer,
         sourceKey: `${subjectKey}:${session.year}:Q${question.id}`,
-        examDate: examDateFromPeriod(session.year),
+        examPeriod: examPeriodFromPeriod(session.year),
       });
     }
   }
@@ -240,7 +244,8 @@ writeFileSync(
   toCsv(questionRows, [
     'id',
     'source_key',
-    'exam_date',
+    'exam_year',
+    'exam_month',
     'subject_id',
     'question_number',
     'question_text',
@@ -262,4 +267,4 @@ writeFileSync(
 );
 
 console.log(`Created ${questionRows.length} questions and ${choiceRows.length} answer choices in ${OUTPUT_DIR}`);
-console.log(`Exam dates populated for ${questionRows.filter(question => question.exam_date).length} questions; ${questionRows.filter(question => !question.exam_date).length} generic questions have no exam source.`);
+console.log(`Exam years populated for ${questionRows.filter(question => question.exam_year).length} questions; ${questionRows.filter(question => !question.exam_year).length} generic questions have no exam source.`);

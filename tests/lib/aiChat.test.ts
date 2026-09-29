@@ -55,7 +55,6 @@ describe('AI fallback and limits', () => {
       0,
       2,
       'en',
-      'Alice',
       [{ mimeType: 'image/png', data: 'encoded-question-image' }],
     );
 
@@ -63,6 +62,7 @@ describe('AI fallback and limits', () => {
     expect(mocks.invoke).toHaveBeenCalledWith('ai-chat', expect.objectContaining({
       body: expect.objectContaining({
         images: [{ mimeType: 'image/png', data: 'encoded-question-image' }],
+        systemPrompt: expect.stringContaining('Do not greet the learner'),
       }),
     }));
   });

@@ -38,26 +38,26 @@ describe('practice data', () => {
     expect([...await loadLatestAnswerStatus('me')]).toEqual([['q', true]]);
   });
 
-  it.each(['2025-04-20', '2024-04-21', '2023-04-16'] as const)('combines the %s exam date with question type and subject filters', async examDate => {
+  it.each(['2025-04', '2024-04', '2023-04'] as const)('combines the %s exam period with question type and subject filters', async examDate => {
     const all = await fetchPracticeQuestions(null, 'all', 'all');
     const subject = all[0].subject_id;
     const actual = await fetchPracticeQuestions([subject], examDate, 'multiple_choice');
-    const expected = all.filter(q => q.subject_id === subject && q.exam_date === examDate && q.question_type === 'multiple_choice');
+    const expected = all.filter(q => q.subject_id === subject && `${q.exam_year}-${String(q.exam_month).padStart(2, '0')}` === examDate && q.question_type === 'multiple_choice');
     expect(actual.map(q => q.id).sort()).toEqual(expected.map(q => q.id).sort());
   });
 
-  it('lists each available exam date newest first', async () => {
-    expect(await loadExamDates()).toEqual(['2025-04-20', '2024-04-21', '2023-04-16']);
+  it('lists each available exam period newest first', async () => {
+    expect(await loadExamDates()).toEqual(['2025-04', '2024-04', '2023-04', 'uncategorized']);
   });
 
-  it('filters questions without an exam date as uncategorized', async () => {
+  it('filters questions without an exam year as uncategorized', async () => {
     const questions = await fetchPracticeQuestions(null, 'uncategorized', 'all');
     expect(questions.length).toBeGreaterThan(0);
-    expect(questions.every(question => question.exam_date === null)).toBe(true);
+    expect(questions.every(question => question.exam_year === null)).toBe(true);
   });
 
   it('handles a filter with no matching questions', async () => {
-    expect(await fetchPracticeQuestions(['missing-subject'], '2025-04-20', 'tree')).toEqual([]);
+    expect(await fetchPracticeQuestions(['missing-subject'], '2025-04', 'tree')).toEqual([]);
   });
 
   it('retains plain-object Supabase error messages', () => {

@@ -7,13 +7,13 @@ const APPLY = process.argv.includes('--apply');
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DATA_DIR = resolve(ROOT, 'src', 'data');
 
-function examDateFromPeriod(period) {
+function examPeriodFromPeriod(period) {
   const value = String(period ?? '');
   if (/^\d{6}$/.test(value)) {
     const month = Number(value.slice(4));
-    if (month >= 1 && month <= 12) return `${value.slice(0, 4)}-${value.slice(4)}-01`;
+    if (month >= 1 && month <= 12) return { exam_year: Number(value.slice(0, 4)), exam_month: month };
   }
-  if (/^\d{4}$/.test(value)) return `${value}-01-01`;
+  if (/^\d{4}$/.test(value)) return { exam_year: Number(value), exam_month: null };
   return null;
 }
 
@@ -29,17 +29,19 @@ function buildSourceIndex() {
   ]) {
     const source = readJson(filename);
     for (const session of source.exam_data ?? []) {
-      const examDate = examDateFromPeriod(session.year);
-      if (!examDate) continue;
+      const examPeriod = examPeriodFromPeriod(session.year);
+      if (!examPeriod) continue;
       for (const question of session.questions ?? []) {
         const questionText = question.question?.trim();
         if (!questionText) continue;
         const candidate = {
-          exam_date: examDate,
+          ...examPeriod,
           source_key: `${sourceKind}:${session.year}:Q${question.id}`,
         };
         const current = index.get(questionText);
-        if (!current || candidate.exam_date > current.exam_date) index.set(questionText, candidate);
+        if (!current || candidate.exam_year > current.exam_year
+          || (candidate.exam_year === current.exam_year
+            && (candidate.exam_month ?? 0) > (current.exam_month ?? 0))) index.set(questionText, candidate);
       }
     }
   }
@@ -62,7 +64,7 @@ async function fetchAllQuestions(supabase) {
   const questions = [];
   for (let from = 0; ; from += 1000) {
     const { data, error } = await supabase.from('questions')
-      .select('id, question_text, exam_date, source_key')
+      .select('id, question_text, exam_year, exam_month, source_key')
       .range(from, from + 999);
     if (error) throw error;
     questions.push(...(data ?? []));
@@ -78,16 +80,16 @@ async function main() {
   const sourceIndex = buildSourceIndex();
   const questions = await fetchAllQuestions(supabase);
   const updates = questions.flatMap(question => {
-    if (question.exam_date || !question.question_text) return [];
+    if (question.exam_year || !question.question_text) return [];
     const metadata = sourceIndex.get(question.question_text.trim());
     return metadata ? [{ id: question.id, ...metadata }] : [];
   });
   const unidentified = questions.filter(question =>
-    !question.exam_date && !sourceIndex.has(question.question_text?.trim()),
+    !question.exam_year && !sourceIndex.has(question.question_text?.trim()),
   );
 
   console.log(`Database questions: ${questions.length}`);
-  console.log(`Already dated: ${questions.filter(question => question.exam_date).length}`);
+  console.log(`Already categorized: ${questions.filter(question => question.exam_year).length}`);
   console.log(`Automatically identifiable: ${updates.length}`);
   console.log(`No exam metadata in source files: ${unidentified.length}`);
 
@@ -101,7 +103,8 @@ async function main() {
     const batch = updates.slice(offset, offset + 10);
     await Promise.all(batch.map(async update => {
       const { error } = await supabase.from('questions').update({
-        exam_date: update.exam_date,
+        exam_year: update.exam_year,
+        exam_month: update.exam_month,
         source_key: update.source_key,
       }).eq('id', update.id);
       if (error) throw new Error(`Could not update question ${update.id}: ${error.message}`);

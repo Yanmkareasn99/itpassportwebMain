@@ -4,21 +4,25 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ChevronUp,
   Copy,
+  Crop,
   Edit2,
+  ImagePlus,
+  MessageSquare,
   Plus,
   RefreshCw,
   Save,
-  Search,
+  SlidersHorizontal,
   Trash2,
   Upload,
   X,
   XCircle,
 } from "lucide-react";
 import PdfQuestionImporter from "../PdfQuestionImporter";
+import ManualImageCropper from "../ManualImageCropper";
 import { translate } from "../../../i18n";
 import { useLanguage } from "../../../contexts/LanguageContext";
+import { useAuth } from "../../../contexts/AuthContext";
 import { getLocalizedExplanation } from "../../../lib/localizedQuestion";
 import { readCsvFile } from "../../../lib/csv";
 import { supabase } from "../../../lib/supabase";
@@ -32,9 +36,67 @@ import {
 import { resolveImportedSubjectId } from "../../../lib/questionSubject";
 import { findDuplicateQuestionKeys } from "../../../lib/questionDuplicates";
 import { getPdfImportJobSnapshot } from "../../../lib/pdfImportJob";
+import { formatExamPeriod } from "../../../lib/examDate";
+import { invalidatePracticeQuestionCache } from "../../../lib/practice";
+import {
+  filterAdminQuestions,
+  type ImagePresenceFilter,
+} from "../../../lib/adminQuestionFilters";
+import {
+  combineCropImages,
+  groupCropsByTarget,
+  type ManualImageCrop,
+} from "../../../lib/manualImageCrop";
 
 const QUESTION_FETCH_PAGE_SIZE = 1000;
 const QUESTION_LIST_PAGE_SIZE = 50;
+const ADMIN_QUESTION_CACHE_TTL_MS = 5 * 60 * 1000;
+type QuestionReviewStatus = "draft" | "editing" | "ready_for_review" | "needs_changes" | "approved";
+
+interface QuestionAdminReview {
+  question_id: string;
+  review_status: QuestionReviewStatus;
+  message: string;
+  updated_by: string | null;
+  updated_at: string;
+}
+
+interface AdminQuestionData {
+  questions: Question[];
+  subjects: Subject[];
+  answerImageQuestionIds: Set<string>;
+  reviews: QuestionAdminReview[];
+  reviewerNames: Record<string, string>;
+}
+
+let adminQuestionDataCache: {
+  data: AdminQuestionData;
+  loadedAt: number;
+  expiresAt: number;
+} | null = null;
+let adminQuestionDataRequest: Promise<AdminQuestionData> | null = null;
+let adminQuestionDataGeneration = 0;
+
+// Exported for deterministic cache isolation in component tests.
+// eslint-disable-next-line react-refresh/only-export-components
+export function invalidateAdminQuestionCache() {
+  adminQuestionDataGeneration += 1;
+  adminQuestionDataCache = null;
+  adminQuestionDataRequest = null;
+}
+
+function invalidateQuestionCaches() {
+  invalidateAdminQuestionCache();
+  invalidatePracticeQuestionCache();
+}
+
+const REVIEW_STATUS_STYLES: Record<QuestionReviewStatus, string> = {
+  draft: "bg-gray-100 text-gray-600",
+  editing: "bg-blue-100 text-blue-700",
+  ready_for_review: "bg-violet-100 text-violet-700",
+  needs_changes: "bg-amber-100 text-amber-700",
+  approved: "bg-emerald-100 text-emerald-700",
+};
 
 function parseQuestionPoints(value: string, fallback = 1) {
   const trimmed = value.trim();
@@ -67,6 +129,113 @@ async function fetchAllQuestions(): Promise<Question[]> {
   );
 }
 
+async function fetchAnswerImageQuestionIds() {
+  const questionIds = new Set<string>();
+
+  for (let from = 0; ; from += QUESTION_FETCH_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("answer_choices")
+      .select("question_id, image_url")
+      .order("id")
+      .range(from, from + QUESTION_FETCH_PAGE_SIZE - 1);
+
+    if (error) throw error;
+
+    const page = (data ?? []) as Pick<
+      AnswerChoice,
+      "question_id" | "image_url"
+    >[];
+    page.forEach((choice) => {
+      if (choice.image_url?.trim()) questionIds.add(choice.question_id);
+    });
+    if (page.length < QUESTION_FETCH_PAGE_SIZE) break;
+  }
+
+  return questionIds;
+}
+
+async function fetchAllQuestionAdminReviews(): Promise<QuestionAdminReview[]> {
+  const reviews: QuestionAdminReview[] = [];
+
+  for (let from = 0; ; from += QUESTION_FETCH_PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("question_admin_reviews")
+      .select("question_id, review_status, message, updated_by, updated_at")
+      .order("question_id")
+      .range(from, from + QUESTION_FETCH_PAGE_SIZE - 1);
+
+    if (error) throw error;
+    const page = (data ?? []) as QuestionAdminReview[];
+    reviews.push(...page);
+    if (page.length < QUESTION_FETCH_PAGE_SIZE) break;
+  }
+
+  return reviews;
+}
+
+async function loadAdminQuestionData(force = false): Promise<AdminQuestionData> {
+  if (force) invalidateAdminQuestionCache();
+  if (adminQuestionDataCache && adminQuestionDataCache.expiresAt > Date.now()) {
+    return adminQuestionDataCache.data;
+  }
+  if (adminQuestionDataRequest) return adminQuestionDataRequest;
+
+  const generation = adminQuestionDataGeneration;
+  const request = (async () => {
+    const [questions, subjectResult, answerImageQuestionIds, reviews] =
+      await Promise.all([
+        fetchAllQuestions(),
+        supabase.from("subjects").select("*").order("name"),
+        fetchAnswerImageQuestionIds(),
+        fetchAllQuestionAdminReviews(),
+      ]);
+    if (subjectResult.error) throw subjectResult.error;
+    const reviewerIds = [
+      ...new Set(
+        reviews.flatMap((review) =>
+          review.updated_by ? [review.updated_by] : [],
+        ),
+      ),
+    ];
+    let reviewerNames: Record<string, string> = {};
+    if (reviewerIds.length > 0) {
+      const { data: reviewers, error: reviewerError } = await supabase
+        .from("profiles")
+        .select("id, name")
+        .in("id", reviewerIds);
+      if (reviewerError) throw reviewerError;
+      reviewerNames = Object.fromEntries(
+        ((reviewers ?? []) as { id: string; name: string }[]).map(
+          (reviewer) => [reviewer.id, reviewer.name],
+        ),
+      );
+    }
+    const data: AdminQuestionData = {
+      questions,
+      subjects: (subjectResult.data ?? []) as Subject[],
+      answerImageQuestionIds,
+      reviews,
+      reviewerNames,
+    };
+    if (generation === adminQuestionDataGeneration) {
+      const loadedAt = Date.now();
+      adminQuestionDataCache = {
+        data,
+        loadedAt,
+        expiresAt: loadedAt + ADMIN_QUESTION_CACHE_TTL_MS,
+      };
+    }
+    return data;
+  })();
+
+  adminQuestionDataRequest = request;
+  try {
+    return await request;
+  } finally {
+    if (adminQuestionDataRequest === request) adminQuestionDataRequest = null;
+  }
+}
+
 function DiffBadge({ d }: { d: number }) {
   const { language } = useLanguage();
   const map = [
@@ -93,13 +262,32 @@ function DiffBadge({ d }: { d: number }) {
     </span>
   );
 }
-export default function QuestionsTab() {
+interface QuestionsTabProps {
+  active?: boolean;
+}
+
+export default function QuestionsTab({ active = true }: QuestionsTabProps) {
   const { language } = useLanguage();
+  const { user, profile } = useAuth();
+  const currentAdminId = user?.id ?? null;
+  const currentAdminProfileId = profile?.id;
+  const currentAdminName = profile?.name;
   const [questions, setQuestions] = useState<Question[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [filterSubject, setFilterSubject] = useState("all");
+  const [filterSubjectIds, setFilterSubjectIds] = useState<string[]>([]);
+  const [filterQuestionNumber, setFilterQuestionNumber] = useState("");
+  const [filterExamYear, setFilterExamYear] = useState("");
+  const [filterQuestionImage, setFilterQuestionImage] =
+    useState<ImagePresenceFilter>("all");
+  const [filterAnswerImage, setFilterAnswerImage] =
+    useState<ImagePresenceFilter>("all");
+  const [filterReviewStatus, setFilterReviewStatus] = useState<
+    QuestionReviewStatus | "all" | "none"
+  >("all");
+  const [answerImageQuestionIds, setAnswerImageQuestionIds] = useState<
+    Set<string>
+  >(new Set());
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
   const [form, setForm] = useState<QuestionForm>(emptyQuestionForm());
   const [saving, setSaving] = useState(false);
@@ -109,14 +297,29 @@ export default function QuestionsTab() {
   >({});
   const [loadingChoicesId, setLoadingChoicesId] = useState<string | null>(null);
   const [listPage, setListPage] = useState(1);
+  const [pageNumberInput, setPageNumberInput] = useState("1");
   const [error, setError] = useState("");
   const [importData, setImportData] = useState<CsvImportData | null>(null);
   const [importing, setImporting] = useState(false);
   const [uploadingQuestionImage, setUploadingQuestionImage] = useState(false);
+  const [uploadingChoiceImageIndex, setUploadingChoiceImageIndex] = useState<
+    number | null
+  >(null);
+  const [showEditImageCropper, setShowEditImageCropper] = useState(false);
+  const [reviewStatus, setReviewStatus] = useState<QuestionReviewStatus>("draft");
+  const [reviewMessage, setReviewMessage] = useState("");
+  const [reviewsByQuestion, setReviewsByQuestion] = useState<
+    Record<string, QuestionAdminReview>
+  >({});
+  const [reviewerNamesById, setReviewerNamesById] = useState<
+    Record<string, string>
+  >({});
   const [showPdfImporter, setShowPdfImporter] = useState(
     () => getPdfImportJobSnapshot().status !== "idle",
   );
   const [showQuestionInputMenu, setShowQuestionInputMenu] = useState(false);
+  const [showSubjectMenu, setShowSubjectMenu] = useState(false);
+  const [showSearchOptions, setShowSearchOptions] = useState(false);
   const [showCsvImportModal, setShowCsvImportModal] = useState(false);
   const [csvSubjectId, setCsvSubjectId] = useState("");
   const [csvFileNames, setCsvFileNames] = useState({
@@ -126,18 +329,74 @@ export default function QuestionsTab() {
   const questionCsvInput = useRef<HTMLInputElement>(null);
   const choiceCsvInput = useRef<HTMLInputElement>(null);
   const questionImageInput = useRef<HTMLInputElement>(null);
+  const questionInputMenuRef = useRef<HTMLDivElement>(null);
+  const subjectMenuRef = useRef<HTMLDivElement>(null);
+  const reviewMessageRef = useRef<HTMLTextAreaElement>(null);
+  const lastLoadedAtRef = useRef(0);
+  const wasActiveRef = useRef(active);
 
-  const load = useCallback(async () => {
+  useEffect(() => {
+    const textarea = reviewMessageRef.current;
+    if (!textarea) return;
+    if (!reviewMessage) {
+      textarea.style.height = "2.5rem";
+      return;
+    }
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [editingId, reviewMessage]);
+
+  useEffect(() => {
+    if (!showQuestionInputMenu && !showSubjectMenu) return;
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (
+        showQuestionInputMenu &&
+        !questionInputMenuRef.current?.contains(target)
+      ) {
+        setShowQuestionInputMenu(false);
+      }
+      if (showSubjectMenu && !subjectMenuRef.current?.contains(target)) {
+        setShowSubjectMenu(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setShowQuestionInputMenu(false);
+        setShowSubjectMenu(false);
+      }
+    };
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [showQuestionInputMenu, showSubjectMenu]);
+
+  const load = useCallback(async (force = false) => {
     setLoading(true);
     setError("");
     try {
-      const [qs, { data: ss, error: subjectError }] = await Promise.all([
-        fetchAllQuestions(),
-        supabase.from("subjects").select("*").order("name"),
-      ]);
-      if (subjectError) throw subjectError;
+      const {
+        questions: qs,
+        subjects: ss,
+        answerImageQuestionIds: answerImageIds,
+        reviews,
+        reviewerNames: cachedReviewerNames,
+      } = await loadAdminQuestionData(force);
+      lastLoadedAtRef.current = adminQuestionDataCache?.loadedAt ?? Date.now();
+      const reviewerNames = { ...cachedReviewerNames };
+      if (currentAdminProfileId && currentAdminName) {
+        reviewerNames[currentAdminProfileId] = currentAdminName;
+      }
       setQuestions(qs);
-      setSubjects((ss ?? []) as Subject[]);
+      setSubjects(ss);
+      setAnswerImageQuestionIds(answerImageIds);
+      setReviewsByQuestion(
+        Object.fromEntries(reviews.map((review) => [review.question_id, review])),
+      );
+      setReviewerNamesById(reviewerNames);
       setChoicesByQuestion({});
     } catch (loadError) {
       setError(
@@ -148,27 +407,67 @@ export default function QuestionsTab() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentAdminName, currentAdminProfileId]);
 
   useEffect(() => {
     load();
   }, [load]);
 
+  useEffect(() => {
+    const becameActive = active && !wasActiveRef.current;
+    wasActiveRef.current = active;
+    if (
+      becameActive &&
+      Date.now() - lastLoadedAtRef.current >= ADMIN_QUESTION_CACHE_TTL_MS
+    ) {
+      void load(true);
+    }
+  }, [active, load]);
+
   const filtered = useMemo(() => {
-    const normalizedSearch = search.trim().toLocaleLowerCase();
-    return questions.filter((q) => {
-      const matchSub =
-        filterSubject === "all" || q.subject_id === filterSubject;
-      const matchSearch =
-        !normalizedSearch ||
-        q.question_text.toLocaleLowerCase().includes(normalizedSearch) ||
-        String(q.question_number).includes(normalizedSearch);
-      return matchSub && matchSearch;
+    const matchingQuestions = filterAdminQuestions(questions, answerImageQuestionIds, {
+      search: "",
+      subjectIds: filterSubjectIds,
+      questionNumber: filterQuestionNumber,
+      examYear: filterExamYear,
+      questionImage: filterQuestionImage,
+      answerImage: filterAnswerImage,
     });
-  }, [filterSubject, questions, search]);
+    if (filterReviewStatus === "all") return matchingQuestions;
+    if (filterReviewStatus === "none") {
+      return matchingQuestions.filter(
+        (question) => !reviewsByQuestion[question.id],
+      );
+    }
+    return matchingQuestions.filter(
+      (question) =>
+        reviewsByQuestion[question.id]?.review_status === filterReviewStatus,
+    );
+  }, [
+    answerImageQuestionIds,
+    filterAnswerImage,
+    filterExamYear,
+    filterQuestionImage,
+    filterQuestionNumber,
+    filterReviewStatus,
+    filterSubjectIds,
+    questions,
+    reviewsByQuestion,
+  ]);
   const subjectById = useMemo(
     () => new Map(subjects.map((subject) => [subject.id, subject])),
     [subjects],
+  );
+  const selectedSubjectNames = filterSubjectIds
+    .map((subjectId) => subjectById.get(subjectId)?.name)
+    .filter((name): name is string => Boolean(name));
+  const hasActiveQuestionFilters = Boolean(
+    filterSubjectIds.length > 0 ||
+    filterQuestionNumber ||
+    filterExamYear ||
+    filterQuestionImage !== "all" ||
+    filterAnswerImage !== "all" ||
+    filterReviewStatus !== "all",
   );
   const listPageCount = Math.max(
     1,
@@ -184,6 +483,28 @@ export default function QuestionsTab() {
     [currentListPage, filtered],
   );
 
+  useEffect(() => {
+    setPageNumberInput(String(currentListPage));
+  }, [currentListPage]);
+
+  function goToListPage() {
+    if (!pageNumberInput.trim()) {
+      setPageNumberInput(String(currentListPage));
+      return;
+    }
+    const requestedPage = Number(pageNumberInput);
+    if (!Number.isFinite(requestedPage)) {
+      setPageNumberInput(String(currentListPage));
+      return;
+    }
+    const targetPage = Math.min(
+      listPageCount,
+      Math.max(1, Math.trunc(requestedPage)),
+    );
+    setListPage(targetPage);
+    setPageNumberInput(String(targetPage));
+  }
+
   function startNew() {
     const defaultSubject = subjects[0]?.id ?? "";
     setForm({
@@ -192,7 +513,20 @@ export default function QuestionsTab() {
       question_number: String(getNextQuestionNumber(defaultSubject)),
     });
     setEditingId("new");
+    setReviewStatus("draft");
+    setReviewMessage("");
+    setShowEditImageCropper(false);
     setError("");
+  }
+
+  function clearQuestionFilters() {
+    setFilterSubjectIds([]);
+    setFilterQuestionNumber("");
+    setFilterExamYear("");
+    setFilterQuestionImage("all");
+    setFilterAnswerImage("all");
+    setFilterReviewStatus("all");
+    setListPage(1);
   }
 
   function getNextQuestionNumber(subjectId: string) {
@@ -232,8 +566,19 @@ export default function QuestionsTab() {
   async function startEdit(q: Question) {
     setError("");
     let loadedChoices: AnswerChoice[];
+    let review: QuestionAdminReview | null;
     try {
-      loadedChoices = await loadChoices(q.id);
+      const [choices, reviewResult] = await Promise.all([
+        loadChoices(q.id),
+        supabase
+          .from("question_admin_reviews")
+          .select("review_status, message")
+          .eq("question_id", q.id)
+          .maybeSingle(),
+      ]);
+      if (reviewResult.error) throw reviewResult.error;
+      loadedChoices = choices;
+      review = reviewResult.data as QuestionAdminReview | null;
     } catch (choiceError) {
       setError(
         choiceError instanceof Error
@@ -245,6 +590,7 @@ export default function QuestionsTab() {
     const choices: ChoiceForm[] = loadedChoices.map((c) => ({
       id: c.id,
       choice_text: c.choice_text,
+      image_url: c.image_url ?? "",
       is_correct: c.is_correct,
       sort_order: c.sort_order,
     }));
@@ -256,12 +602,16 @@ export default function QuestionsTab() {
       explanation: q.explanation ?? "",
       explanation_en: q.explanation_en ?? "",
       explanation_vi: q.explanation_vi ?? "",
-      exam_date: q.exam_date ?? "",
+      exam_year: q.exam_year == null ? "" : String(q.exam_year),
+      exam_month: q.exam_month == null ? "" : String(q.exam_month),
       difficulty: q.difficulty ?? 3,
       points: q.points ?? 1,
       image_url: q.image_url ?? "",
       choices,
     });
+    setReviewStatus(review?.review_status ?? "draft");
+    setReviewMessage(review?.message ?? "");
+    setShowEditImageCropper(false);
     setEditingId(q.id);
     setError("");
   }
@@ -281,6 +631,7 @@ export default function QuestionsTab() {
     }
     const choices: ChoiceForm[] = loadedChoices.map((c) => ({
       choice_text: c.choice_text,
+      image_url: c.image_url ?? "",
       is_correct: c.is_correct,
       sort_order: c.sort_order,
     }));
@@ -292,12 +643,16 @@ export default function QuestionsTab() {
       explanation: q.explanation ?? "",
       explanation_en: q.explanation_en ?? "",
       explanation_vi: q.explanation_vi ?? "",
-      exam_date: q.exam_date ?? "",
+      exam_year: q.exam_year == null ? "" : String(q.exam_year),
+      exam_month: q.exam_month == null ? "" : String(q.exam_month),
       difficulty: q.difficulty ?? 3,
       points: q.points ?? 1,
       image_url: q.image_url ?? "",
       choices,
     });
+    setReviewStatus("draft");
+    setReviewMessage("");
+    setShowEditImageCropper(false);
     setEditingId("new");
     setError("");
   }
@@ -330,14 +685,33 @@ export default function QuestionsTab() {
       setError(translate(language, "adminPage.pleaseSelectASubject"));
       return;
     }
-    const correctCount = form.choices.filter((c) => c.is_correct).length;
-    if (correctCount === 0) {
-      setError(translate(language, "adminPage.selectAtLeastOneCorrectChoice"));
+    if (
+      form.exam_year &&
+      (!Number.isInteger(Number(form.exam_year)) ||
+        Number(form.exam_year) < 1900 ||
+        Number(form.exam_year) > 2100)
+    ) {
+      setError(translate(language, "adminPage.examYearInvalid"));
       return;
     }
-    const filledChoices = form.choices.filter((c) => c.choice_text.trim());
+    if (form.exam_month && !form.exam_year) {
+      setError(translate(language, "adminPage.examMonthRequiresYear"));
+      return;
+    }
+
+    const filledChoices = form.choices.filter(
+      (c) => c.choice_text.trim() || c.image_url.trim(),
+    );
+
     if (filledChoices.length < 2) {
       setError(translate(language, "adminPage.enterAtLeastTwoChoices"));
+      return;
+    }
+
+    const correctCount = filledChoices.filter((c) => c.is_correct).length;
+
+    if (correctCount === 0) {
+      setError(translate(language, "adminPage.selectAtLeastOneCorrectChoice"));
       return;
     }
 
@@ -352,13 +726,15 @@ export default function QuestionsTab() {
         explanation_ja: form.explanation.trim() || null,
         explanation_en: form.explanation_en.trim() || null,
         explanation_vi: form.explanation_vi.trim() || null,
-        exam_date: form.exam_date || null,
+        exam_year: form.exam_year ? Number(form.exam_year) : null,
+        exam_month: form.exam_month ? Number(form.exam_month) : null,
         difficulty: form.difficulty,
         points: form.points,
         image_url: form.image_url.trim() || null,
       };
 
       let questionId = editingId !== "new" ? editingId! : "";
+      let savedQuestion: Question;
 
       if (editingId === "new") {
         const { data, error: err } = await supabase
@@ -368,12 +744,16 @@ export default function QuestionsTab() {
           .single();
         if (err) throw err;
         questionId = data.id;
+        savedQuestion = data as Question;
       } else {
-        const { error: err } = await supabase
+        const { data, error: err } = await supabase
           .from("questions")
           .update(qPayload)
-          .eq("id", questionId);
+          .eq("id", questionId)
+          .select()
+          .single();
         if (err) throw err;
+        savedQuestion = data as Question;
         const { error: deleteChoiceError } = await supabase
           .from("answer_choices")
           .delete()
@@ -384,6 +764,7 @@ export default function QuestionsTab() {
       const choicePayloads = filledChoices.map((c, i) => ({
         question_id: questionId,
         choice_text: c.choice_text.trim(),
+        image_url: c.image_url.trim() || null,
         is_correct: c.is_correct,
         sort_order: i + 1,
       }));
@@ -392,8 +773,56 @@ export default function QuestionsTab() {
         .insert(choicePayloads);
       if (choiceErr) throw choiceErr;
 
+      const reviewUpdatedAt = new Date().toISOString();
+      const savedReview: QuestionAdminReview = {
+        question_id: questionId,
+        review_status: reviewStatus,
+        message: reviewMessage.trim(),
+        updated_by: currentAdminId,
+        updated_at: reviewUpdatedAt,
+      };
+      const { error: reviewError } = await supabase
+        .from("question_admin_reviews")
+        .upsert({
+          ...savedReview,
+        }, { onConflict: "question_id" });
+      if (reviewError) throw reviewError;
+
       setEditingId(null);
-      await load();
+      setExpandedId(null);
+      invalidateQuestionCaches();
+      setQuestions((current) => {
+        const withoutSaved = current.filter((question) => question.id !== questionId);
+        return [...withoutSaved, savedQuestion].sort(
+          (left, right) =>
+            left.question_number - right.question_number ||
+            left.id.localeCompare(right.id),
+        );
+      });
+      setReviewsByQuestion((current) => ({
+        ...current,
+        [questionId]: savedReview,
+      }));
+      if (currentAdminId && currentAdminName) {
+        setReviewerNamesById((current) => ({
+          ...current,
+          [currentAdminId]: currentAdminName,
+        }));
+      }
+      setAnswerImageQuestionIds((current) => {
+        const next = new Set(current);
+        if (choicePayloads.some((choice) => Boolean(choice.image_url))) {
+          next.add(questionId);
+        } else {
+          next.delete(questionId);
+        }
+        return next;
+      });
+      setChoicesByQuestion((current) => {
+        const next = { ...current };
+        delete next[questionId];
+        return next;
+      });
     } catch (e: unknown) {
       setError(
         e instanceof Error
@@ -419,7 +848,24 @@ export default function QuestionsTab() {
         .delete()
         .eq("id", id);
       if (questionError) throw questionError;
-      await load();
+      invalidateQuestionCaches();
+      setQuestions((current) => current.filter((question) => question.id !== id));
+      setReviewsByQuestion((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
+      setAnswerImageQuestionIds((current) => {
+        const next = new Set(current);
+        next.delete(id);
+        return next;
+      });
+      setChoicesByQuestion((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
+      setExpandedId((current) => current === id ? null : current);
     } catch (deleteError) {
       setError(
         deleteError instanceof Error
@@ -429,30 +875,46 @@ export default function QuestionsTab() {
     }
   }
 
-  async function handleQuestionImageUpload(file: File | undefined) {
-    if (!file) return;
+  function validateImageFile(file: File) {
     if (!file.type.startsWith("image/")) {
-      setError(translate(language, "adminPage.imageUploadInvalid"));
-      return;
+      return translate(language, "adminPage.imageUploadInvalid");
     }
     if (file.size > 10 * 1024 * 1024) {
-      setError(translate(language, "adminPage.imageUploadTooLarge"));
+      return translate(language, "adminPage.imageUploadTooLarge");
+    }
+    return "";
+  }
+
+  async function uploadManualImage(image: Blob, target: string) {
+    const extension =
+      image.type === "image/png"
+        ? "png"
+        : image.type === "image/jpeg"
+          ? "jpg"
+          : image.type === "image/gif"
+            ? "gif"
+            : "webp";
+    const path = `manual/${Date.now()}-${crypto.randomUUID()}-${target}.${extension}`;
+    const { error: uploadError } = await supabase.storage
+      .from("question-images")
+      .upload(path, image, { contentType: image.type, upsert: false });
+    if (uploadError) throw uploadError;
+    return supabase.storage.from("question-images").getPublicUrl(path).data
+      .publicUrl;
+  }
+
+  async function handleQuestionImageUpload(file: File | undefined) {
+    if (!file) return;
+    const problem = validateImageFile(file);
+    if (problem) {
+      setError(problem);
       return;
     }
 
     setError("");
     setUploadingQuestionImage(true);
     try {
-      const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const path = `manual/${Date.now()}-${crypto.randomUUID()}.${extension}`;
-      const { error: uploadError } = await supabase.storage
-        .from("question-images")
-        .upload(path, file, { contentType: file.type, upsert: false });
-      if (uploadError) throw uploadError;
-
-      const imageUrl = supabase.storage
-        .from("question-images")
-        .getPublicUrl(path).data.publicUrl;
+      const imageUrl = await uploadManualImage(file, "question");
       setForm((current) => ({ ...current, image_url: imageUrl }));
     } catch (uploadError) {
       setError(
@@ -464,6 +926,61 @@ export default function QuestionsTab() {
       setUploadingQuestionImage(false);
       if (questionImageInput.current) questionImageInput.current.value = "";
     }
+  }
+
+  async function handleChoiceImageUpload(
+    choiceIndex: number,
+    file: File | undefined,
+  ) {
+    if (!file) return;
+    const problem = validateImageFile(file);
+    if (problem) {
+      setError(problem);
+      return;
+    }
+
+    setError("");
+    setUploadingChoiceImageIndex(choiceIndex);
+    try {
+      const imageUrl = await uploadManualImage(
+        file,
+        `choice-${choiceIndex + 1}`,
+      );
+      setChoice(choiceIndex, { image_url: imageUrl });
+    } catch (uploadError) {
+      setError(
+        uploadError instanceof Error
+          ? uploadError.message
+          : translate(language, "adminPage.imageUploadFailed"),
+      );
+    } finally {
+      setUploadingChoiceImageIndex(null);
+    }
+  }
+
+  async function applyEditImageCrops(crops: ManualImageCrop[]) {
+    const groupedCrops = groupCropsByTarget(crops);
+    const uploadedImages = new Map<string, string>();
+
+    for (const [targetId, targetCrops] of groupedCrops) {
+      const combined = await combineCropImages(targetCrops);
+      const response = await fetch(combined.dataUrl);
+      const blob = await response.blob();
+      uploadedImages.set(
+        targetId,
+        await uploadManualImage(blob, targetId.replace(":", "-")),
+      );
+    }
+
+    setForm((current) => ({
+      ...current,
+      image_url: uploadedImages.get("question") ?? current.image_url,
+      choices: current.choices.map((choice, choiceIndex) => ({
+        ...choice,
+        image_url:
+          uploadedImages.get(`choice:${choiceIndex}`) ?? choice.image_url,
+      })),
+    }));
   }
 
   async function handleCsvFileChange(
@@ -539,6 +1056,21 @@ export default function QuestionsTab() {
         throw new Error(
           `Question ${question.id} has an invalid question_number.`,
         );
+      if (
+        question.exam_year &&
+        (!Number.isInteger(Number(question.exam_year)) ||
+          Number(question.exam_year) < 1900 ||
+          Number(question.exam_year) > 2100)
+      )
+        throw new Error(`Question ${question.id} has an invalid exam_year.`);
+      if (
+        question.exam_month &&
+        (!question.exam_year ||
+          !Number.isInteger(Number(question.exam_month)) ||
+          Number(question.exam_month) < 1 ||
+          Number(question.exam_month) > 12)
+      )
+        throw new Error(`Question ${question.id} has an invalid exam_month.`);
       const resolvedSubjectId = resolveImportedSubjectId(
         question.subject_id || csvSubjectId,
         Number(question.question_number),
@@ -639,7 +1171,8 @@ export default function QuestionsTab() {
         explanation_vi: question.explanation_vi || null,
         difficulty: Number(question.difficulty) || 2,
         points: parseQuestionPoints(question.points),
-        exam_date: question.exam_date || null,
+        exam_year: question.exam_year ? Number(question.exam_year) : null,
+        exam_month: question.exam_month ? Number(question.exam_month) : null,
         source_key: question.source_key || null,
       }));
       const { error: questionError } = await supabase
@@ -675,6 +1208,7 @@ export default function QuestionsTab() {
       setCsvFileNames({ questions: "", choices: "" });
       if (questionCsvInput.current) questionCsvInput.current.value = "";
       if (choiceCsvInput.current) choiceCsvInput.current.value = "";
+      invalidateQuestionCaches();
       await load();
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "";
@@ -702,6 +1236,7 @@ export default function QuestionsTab() {
         ...f.choices,
         {
           choice_text: "",
+          image_url: "",
           is_correct: false,
           sort_order: f.choices.length + 1,
         },
@@ -715,362 +1250,571 @@ export default function QuestionsTab() {
 
   if (editingId !== null) {
     return (
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-bold text-gray-800">
-            {editingId === "new"
-              ? translate(language, "adminPage.addQuestion")
-              : translate(language, "adminPage.editQuestion")}
-          </h2>
-          <button
-            onClick={() => setEditingId(null)}
-            className="p-2 hover:bg-gray-100 rounded-xl transition"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
-
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 flex items-center gap-2">
-            <XCircle className="w-4 h-4 shrink-0" />
-            {error}
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">
-              {translate(language, "adminPage.subject")}
-            </label>
-            <select
-              value={form.subject_id}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  subject_id: e.target.value,
-                  question_number:
-                    editingId === "new"
-                      ? String(getNextQuestionNumber(e.target.value))
-                      : f.question_number,
-                }))
-              }
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+      <>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-lg font-bold text-gray-800">
+              {editingId === "new"
+                ? translate(language, "adminPage.addQuestion")
+                : translate(language, "adminPage.editQuestion")}
+            </h2>
+            <button
+              onClick={() => setEditingId(null)}
+              className="p-2 hover:bg-gray-100 rounded-xl transition"
             >
-              {subjects.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 flex items-center gap-2">
+              <XCircle className="w-4 h-4 shrink-0" />
+              {error}
+            </div>
+          )}
+
+          <div className="mb-6 grid items-start gap-4 md:grid-cols-[12rem_minmax(0,1fr)]">
+            <label className="text-xs font-semibold text-gray-500">
+              {translate(language, "adminPage.reviewStatus")}
+              <select
+                value={reviewStatus}
+                onChange={(event) =>
+                  setReviewStatus(event.target.value as QuestionReviewStatus)
+                }
+                className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-normal text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              >
+                <option value="draft">
+                  {translate(language, "adminPage.reviewDraft")}
                 </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">
-              {translate(language, "adminPage.questionNumber")}
+                <option value="editing">
+                  {translate(language, "adminPage.reviewEditing")}
+                </option>
+                <option value="ready_for_review">
+                  {translate(language, "adminPage.reviewReady")}
+                </option>
+                <option value="needs_changes">
+                  {translate(language, "adminPage.reviewNeedsChanges")}
+                </option>
+                <option value="approved">
+                  {translate(language, "adminPage.reviewApproved")}
+                </option>
+              </select>
             </label>
-            <input
-              type="number"
-              value={form.question_number}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, question_number: e.target.value }))
-              }
-              placeholder={translate(language, "adminPage.eG1")}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">
-              {translate(language, "adminPage.questionType")}
-            </label>
-            <select
-              value={form.question_type}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  question_type: e.target
-                    .value as QuestionForm["question_type"],
-                }))
-              }
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-            >
-              <option value="multiple_choice">
-                {translate(language, "adminPage.multipleChoice")}
-              </option>
-              <option value="true_false">
-                {translate(language, "adminPage.trueFalse")}
-              </option>
-              <option value="tree">
-                {translate(language, "adminPage.tree")}
-              </option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">
-              {translate(language, "adminPage.examDate")}
-            </label>
-            <input
-              type="date"
-              value={form.exam_date}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, exam_date: e.target.value }))
-              }
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">
-              {translate(language, "adminPage.difficulty")} ({form.difficulty})
-            </label>
-            <input
-              type="range"
-              min={1}
-              max={5}
-              value={form.difficulty}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, difficulty: parseInt(e.target.value) }))
-              }
-              className="w-full mt-2"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">
-              {translate(language, "adminPage.points")}
-            </label>
-            <input
-              type="number"
-              min={1}
-              value={form.points}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  points: parseQuestionPoints(e.target.value, f.points),
-                }))
-              }
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-500 mb-1">
-              {translate(language, "adminPage.questionImageOptional")}
-            </label>
-            <input
-              ref={questionImageInput}
-              type="file"
-              accept="image/png,image/jpeg,image/webp,image/gif"
-              className="hidden"
-              onChange={(event) =>
-                void handleQuestionImageUpload(event.target.files?.[0])
-              }
-            />
-            <div className="flex items-center gap-3 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-3">
-              {form.image_url ? (
-                <img
-                  src={form.image_url}
-                  alt={translate(language, "adminPage.questionImagePreview")}
-                  className="h-16 w-16 rounded-lg border border-gray-200 bg-white object-contain p-1"
-                />
-              ) : (
-                <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-blue-50 text-blue-500">
-                  <Upload className="h-5 w-5" />
-                </div>
-              )}
-              <div className="min-w-0 flex-1">
-                <button
-                  type="button"
-                  onClick={() => questionImageInput.current?.click()}
-                  disabled={uploadingQuestionImage}
-                  className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60"
-                >
-                  {uploadingQuestionImage
-                    ? translate(language, "adminPage.imageUploading")
-                    : translate(language, "adminPage.uploadQuestionImage")}
-                </button>
-                <p className="mt-1 text-[11px] text-gray-400">
-                  {translate(language, "adminPage.imageUploadHelp")}
-                </p>
-                {form.image_url && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setForm((current) => ({ ...current, image_url: "" }))
-                    }
-                    className="mt-1 text-[11px] text-red-500 hover:text-red-600"
-                  >
-                    {translate(language, "adminPage.removeQuestionImage")}
-                  </button>
+            <label className="text-xs font-semibold text-gray-500">
+              {translate(language, "adminPage.adminReviewMessage")}
+              <textarea
+                ref={reviewMessageRef}
+                value={reviewMessage}
+                onChange={(event) => setReviewMessage(event.target.value)}
+                rows={1}
+                placeholder={translate(
+                  language,
+                  "adminPage.adminReviewMessagePlaceholder",
                 )}
+                className="mt-1 h-10 min-h-10 w-full resize-none overflow-hidden rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-normal leading-5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-200"
+              />
+            </label>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                {translate(language, "adminPage.subject")}
+              </label>
+              <select
+                value={form.subject_id}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    subject_id: e.target.value,
+                    question_number:
+                      editingId === "new"
+                        ? String(getNextQuestionNumber(e.target.value))
+                        : f.question_number,
+                  }))
+                }
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+              >
+                {subjects.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                {translate(language, "adminPage.questionNumber")}
+              </label>
+              <input
+                type="number"
+                value={form.question_number}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, question_number: e.target.value }))
+                }
+                placeholder={translate(language, "adminPage.eG1")}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                {translate(language, "adminPage.questionType")}
+              </label>
+              <select
+                value={form.question_type}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    question_type: e.target
+                      .value as QuestionForm["question_type"],
+                  }))
+                }
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+              >
+                <option value="multiple_choice">
+                  {translate(language, "adminPage.multipleChoice")}
+                </option>
+                <option value="true_false">
+                  {translate(language, "adminPage.trueFalse")}
+                </option>
+                <option value="tree">
+                  {translate(language, "adminPage.tree")}
+                </option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                {translate(language, "adminPage.examDate")}
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  min="1900"
+                  max="2100"
+                  placeholder={translate(language, "adminPage.examYear")}
+                  value={form.exam_year}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, exam_year: e.target.value }))
+                  }
+                  className="w-1/2 border border-gray-200 rounded-xl px-3 py-2 text-sm"
+                />
+                <select
+                  value={form.exam_month}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, exam_month: e.target.value }))
+                  }
+                  className="w-1/2 border border-gray-200 rounded-xl px-3 py-2 text-sm"
+                >
+                  <option value="">
+                    {translate(language, "adminPage.examMonthUnknown")}
+                  </option>
+                  {Array.from({ length: 12 }, (_, index) => (
+                    <option key={index + 1} value={index + 1}>
+                      {index + 1}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                {translate(language, "adminPage.difficulty")} ({form.difficulty}
+                )
+              </label>
+              <input
+                type="range"
+                min={1}
+                max={5}
+                value={form.difficulty}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    difficulty: parseInt(e.target.value),
+                  }))
+                }
+                className="w-full mt-2"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                {translate(language, "adminPage.points")}
+              </label>
+              <input
+                type="number"
+                min={1}
+                value={form.points}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    points: parseQuestionPoints(e.target.value, f.points),
+                  }))
+                }
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                {translate(language, "adminPage.questionImageOptional")}
+              </label>
+              <input
+                ref={questionImageInput}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                className="hidden"
+                onChange={(event) =>
+                  void handleQuestionImageUpload(event.target.files?.[0])
+                }
+              />
+              <div className="flex items-center gap-3 rounded-xl border border-dashed border-gray-300 bg-gray-50 p-3">
+                {form.image_url ? (
+                  <img
+                    src={form.image_url}
+                    alt={translate(language, "adminPage.questionImagePreview")}
+                    className="h-16 w-16 rounded-lg border border-gray-200 bg-white object-contain p-1"
+                  />
+                ) : (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-blue-50 text-blue-500">
+                    <Upload className="h-5 w-5" />
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => questionImageInput.current?.click()}
+                      disabled={uploadingQuestionImage}
+                      className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60"
+                    >
+                      {uploadingQuestionImage
+                        ? translate(language, "adminPage.imageUploading")
+                        : translate(language, "adminPage.uploadQuestionImage")}
+                    </button>
+                    {form.image_url && (
+                      <button
+                        type="button"
+                        onClick={() => setShowEditImageCropper(true)}
+                        className="flex items-center gap-1.5 rounded-lg border border-violet-200 bg-white px-3 py-2 text-xs font-semibold text-violet-700 transition hover:bg-violet-50"
+                      >
+                        <Crop className="h-3.5 w-3.5" />
+                        {translate(language, "adminPage.pdfManualCrop")}
+                      </button>
+                    )}
+                  </div>
+                  <p className="mt-1 text-[11px] text-gray-400">
+                    {translate(language, "adminPage.imageUploadHelp")}
+                  </p>
+                  {form.image_url && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setForm((current) => ({ ...current, image_url: "" }))
+                      }
+                      className="mt-1 text-[11px] text-red-500 hover:text-red-600"
+                    >
+                      {translate(language, "adminPage.removeQuestionImage")}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="mb-4">
-          <label className="block text-xs font-semibold text-gray-500 mb-1">
-            {translate(language, "adminPage.questionText")}
-          </label>
-          <textarea
-            value={form.question_text}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, question_text: e.target.value }))
-            }
-            rows={4}
-            placeholder={translate(language, "adminPage.enterTheQuestionText")}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
-          />
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-xs font-semibold text-gray-500 mb-1">
-            {translate(language, "adminPage.explanationJapanese")}
-          </label>
-          <textarea
-            value={form.explanation}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, explanation: e.target.value }))
-            }
-            rows={3}
-            placeholder={translate(language, "adminPage.enterAnExplanation")}
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
+          <div className="mb-4">
             <label className="block text-xs font-semibold text-gray-500 mb-1">
-              {translate(language, "adminPage.explanationEnglish")}
+              {translate(language, "adminPage.questionText")}
             </label>
             <textarea
-              value={form.explanation_en}
+              value={form.question_text}
               onChange={(e) =>
-                setForm((f) => ({ ...f, explanation_en: e.target.value }))
+                setForm((f) => ({ ...f, question_text: e.target.value }))
               }
-              rows={3}
+              rows={4}
               placeholder={translate(
                 language,
-                "adminPage.englishExplanationPlaceholder",
+                "adminPage.enterTheQuestionText",
               )}
               className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
             />
           </div>
-          <div>
+
+          <div className="mb-4">
             <label className="block text-xs font-semibold text-gray-500 mb-1">
-              {translate(language, "adminPage.explanationVietnamese")}
+              {translate(language, "adminPage.explanationJapanese")}
             </label>
             <textarea
-              value={form.explanation_vi}
+              value={form.explanation}
               onChange={(e) =>
-                setForm((f) => ({ ...f, explanation_vi: e.target.value }))
+                setForm((f) => ({ ...f, explanation: e.target.value }))
               }
               rows={3}
-              placeholder={translate(
-                language,
-                "adminPage.vietnameseExplanationPlaceholder",
-              )}
+              placeholder={translate(language, "adminPage.enterAnExplanation")}
               className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
             />
           </div>
-        </div>
 
-        <p className="mb-4 text-xs text-gray-400">
-          {translate(
-            language,
-            "adminPage.questionsAndChoicesStayInJapaneseOnlyExplanations",
-          )}
-        </p>
-
-        {/* Choices */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-xs font-semibold text-gray-500">
-              {translate(language, "adminPage.choices")}
-            </label>
-            <button
-              onClick={addChoice}
-              className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium"
-            >
-              <Plus className="w-3.5 h-3.5" />{" "}
-              {translate(language, "adminPage.add")}
-            </button>
-          </div>
-          <div className="space-y-2">
-            {form.choices.map((c, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    if (c.is_correct) {
-                      setChoice(i, { is_correct: false });
-                    } else {
-                      setForm((f) => ({
-                        ...f,
-                        choices: f.choices.map((ch, idx) => ({
-                          ...ch,
-                          is_correct: idx === i,
-                        })),
-                      }));
-                    }
-                  }}
-                  className={`w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition ${
-                    c.is_correct
-                      ? "bg-emerald-500 border-emerald-500"
-                      : "border-gray-300 hover:border-emerald-400"
-                  }`}
-                >
-                  {c.is_correct && (
-                    <CheckCircle className="w-4 h-4 text-white" />
-                  )}
-                </button>
-                <input
-                  type="text"
-                  value={c.choice_text}
-                  onChange={(e) =>
-                    setChoice(i, { choice_text: e.target.value })
-                  }
-                  placeholder={translate(
-                    language,
-                    "adminPage.choicePlaceholder",
-                    { number: i + 1 },
-                  )}
-                  className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-                />
-                {form.choices.length > 2 && (
-                  <button
-                    onClick={() => removeChoice(i)}
-                    className="p-1 text-gray-400 hover:text-red-500 transition"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                {translate(language, "adminPage.explanationEnglish")}
+              </label>
+              <textarea
+                value={form.explanation_en}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, explanation_en: e.target.value }))
+                }
+                rows={3}
+                placeholder={translate(
+                  language,
+                  "adminPage.englishExplanationPlaceholder",
                 )}
-              </div>
-            ))}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                {translate(language, "adminPage.explanationVietnamese")}
+              </label>
+              <textarea
+                value={form.explanation_vi}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, explanation_vi: e.target.value }))
+                }
+                rows={3}
+                placeholder={translate(
+                  language,
+                  "adminPage.vietnameseExplanationPlaceholder",
+                )}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
+              />
+            </div>
           </div>
-          <p className="text-xs text-gray-400 mt-2">
+
+          <p className="mb-4 text-xs text-gray-400">
             {translate(
               language,
-              "adminPage.clickTheRoundButtonToSelectTheCorrect",
+              "adminPage.questionsAndChoicesStayInJapaneseOnlyExplanations",
             )}
           </p>
+
+          {/* Choices */}
+          <div className="mb-6">
+            <div className="mb-2 flex items-center justify-between">
+              <label className="text-xs font-semibold text-gray-500">
+                {translate(language, "adminPage.choices")}
+              </label>
+
+              <button
+                type="button"
+                onClick={addChoice}
+                className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                {translate(language, "adminPage.add")}
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {form.choices.map((c, i) => (
+                <div
+                  key={c.id ?? i}
+                  className="rounded-xl border border-gray-200 bg-white p-3"
+                >
+                  <div className="flex items-center gap-2">
+                    {/* Correct answer */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (c.is_correct) {
+                          setChoice(i, { is_correct: false });
+                        } else {
+                          setForm((f) => ({
+                            ...f,
+                            choices: f.choices.map((choice, index) => ({
+                              ...choice,
+                              is_correct: index === i,
+                            })),
+                          }));
+                        }
+                      }}
+                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition ${
+                        c.is_correct
+                          ? "border-emerald-500 bg-emerald-500"
+                          : "border-gray-300 hover:border-emerald-400"
+                      }`}
+                    >
+                      {c.is_correct && (
+                        <CheckCircle className="h-4 w-4 text-white" />
+                      )}
+                    </button>
+
+                    {/* Choice text */}
+                    <input
+                      type="text"
+                      value={c.choice_text}
+                      onChange={(e) =>
+                        setChoice(i, {
+                          choice_text: e.target.value,
+                        })
+                      }
+                      placeholder={translate(
+                        language,
+                        "adminPage.choicePlaceholder",
+                        { number: i + 1 },
+                      )}
+                      className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                    />
+
+                    {/* Delete choice */}
+                    {form.choices.length > 2 && (
+                      <button
+                        type="button"
+                        onClick={() => removeChoice(i)}
+                        className="p-1 text-gray-400 transition hover:text-red-500"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Choice image */}
+                  <div className="mt-3 flex flex-wrap items-center gap-3 pl-8">
+                    {c.image_url ? (
+                      <img
+                        src={c.image_url}
+                        alt={`Choice ${i + 1}`}
+                        className="h-20 w-28 rounded-lg border border-gray-200 bg-gray-50 object-contain p-1"
+                      />
+                    ) : (
+                      <div className="flex h-20 w-28 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 text-gray-400">
+                        <ImagePlus className="h-5 w-5" />
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label
+                        className={`flex cursor-pointer items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-600 transition hover:bg-blue-100 ${
+                          uploadingChoiceImageIndex === i
+                            ? "pointer-events-none opacity-50"
+                            : ""
+                        }`}
+                      >
+                        <ImagePlus className="h-3.5 w-3.5" />
+
+                        {uploadingChoiceImageIndex === i
+                          ? translate(language, "adminPage.imageUploading")
+                          : c.image_url
+                            ? translate(language, "adminPage.replaceChoiceImage")
+                            : translate(language, "adminPage.uploadChoiceImage")}
+
+                        <input
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp,image/gif"
+                          className="hidden"
+                          disabled={uploadingChoiceImageIndex === i}
+                          onChange={(event) => {
+                            void handleChoiceImageUpload(
+                              i,
+                              event.target.files?.[0],
+                            );
+
+                            event.target.value = "";
+                          }}
+                        />
+                      </label>
+
+                      {c.image_url && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setChoice(i, {
+                              image_url: "",
+                            })
+                          }
+                          className="rounded-lg px-3 py-2 text-xs font-semibold text-red-500 transition hover:bg-red-50"
+                        >
+                          {translate(language, "adminPage.removeChoiceImage")}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <p className="mt-2 text-xs text-gray-400">
+              {translate(
+                language,
+                "adminPage.clickTheRoundButtonToSelectTheCorrect",
+              )}
+            </p>
+          </div>
+
+          {/* Save / Cancel */}
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setEditingId(null)}
+              className="rounded-xl px-4 py-2 text-sm text-gray-600 transition hover:bg-gray-100"
+            >
+              {translate(language, "adminPage.cancel")}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60"
+            >
+              {saving ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+
+              {translate(language, "adminPage.save")}
+            </button>
+          </div>
         </div>
 
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={() => setEditingId(null)}
-            className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl transition"
-          >
-            {translate(language, "adminPage.cancel")}
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition disabled:opacity-60"
-          >
-            {saving ? (
-              <RefreshCw className="w-4 h-4 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
-            {translate(language, "adminPage.save")}
-          </button>
-        </div>
-      </div>
+        {/* Manual image cropper */}
+        {showEditImageCropper && form.image_url && (
+          <ManualImageCropper
+            sourceUrl={form.image_url}
+            title={translate(language, "adminPage.pdfManualCropTitle", {
+              number: form.question_number || "-",
+            })}
+            targets={[
+              {
+                id: "question",
+                label: translate(language, "adminPage.pdfCropQuestionImage"),
+              },
+              ...form.choices.map((_choice, index) => ({
+                id: `choice:${index}`,
+                label: translate(language, "adminPage.pdfCropChoiceImage", {
+                  choice: index + 1,
+                }),
+              })),
+            ]}
+            labels={{
+              instructions: translate(language, "adminPage.pdfCropInstructions"),
+              target: translate(language, "adminPage.pdfCropTarget"),
+              addCrop: translate(language, "adminPage.pdfAddCrop"),
+              crops: translate(language, "adminPage.pdfCrops"),
+              empty: translate(language, "adminPage.pdfNoCrops"),
+              apply: translate(language, "adminPage.pdfApplyCrops"),
+              cancel: translate(language, "adminPage.cancel"),
+              applying: translate(language, "adminPage.pdfApplyingCrops"),
+              zoomIn: translate(language, "adminPage.pdfZoomIn"),
+              zoomOut: translate(language, "adminPage.pdfZoomOut"),
+              resetZoom: translate(language, "adminPage.pdfResetZoom"),
+              cropTool: translate(language, "adminPage.pdfCropTool"),
+              moveTool: translate(language, "adminPage.pdfMoveTool"),
+            }}
+            onApply={applyEditImageCrops}
+            onClose={() => setShowEditImageCropper(false)}
+          />
+        )}
+      </>
     );
   }
 
@@ -1078,37 +1822,103 @@ export default function QuestionsTab() {
     <div className="space-y-4">
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setListPage(1);
-            }}
-            placeholder={translate(language, "adminPage.searchQuestions")}
-            className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-          />
-        </div>
-        <select
-          value={filterSubject}
-          onChange={(e) => {
-            setFilterSubject(e.target.value);
-            setListPage(1);
-          }}
-          className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-        >
-          <option value="all">
-            {translate(language, "adminPage.allSubjects")}
-          </option>
-          {subjects.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
         <button
-          onClick={load}
+          type="button"
+          aria-expanded={showSearchOptions}
+          aria-controls="question-search-options"
+          onClick={() => {
+            setShowSearchOptions((current) => !current);
+            setShowQuestionInputMenu(false);
+            setShowSubjectMenu(false);
+          }}
+          className={`flex min-w-56 items-center justify-between gap-3 rounded-xl border bg-white px-3 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-blue-300 ${showSearchOptions ? "border-blue-300 text-blue-700" : "border-gray-200 text-gray-700 hover:border-blue-300"}`}
+        >
+          <span className="flex items-center gap-2">
+            <SlidersHorizontal className="h-4 w-4 text-blue-600" />
+            {translate(language, "adminPage.questionSearchOptions")}
+          </span>
+          <ChevronDown
+            className={`h-4 w-4 shrink-0 transition-transform ${showSearchOptions ? "rotate-180" : ""}`}
+          />
+        </button>
+        <div ref={subjectMenuRef} className="relative w-56 max-w-full">
+          <button
+            type="button"
+            aria-haspopup="listbox"
+            aria-expanded={showSubjectMenu}
+            aria-controls="question-subject-menu"
+            onClick={() => {
+              setShowSubjectMenu((current) => !current);
+              setShowQuestionInputMenu(false);
+            }}
+            className="flex w-full items-center justify-between gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-left text-sm text-gray-700 transition hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-300"
+          >
+            <span className="truncate">
+              {selectedSubjectNames.length === 0
+                ? translate(language, "adminPage.allSubjects")
+                : selectedSubjectNames.join(", ")}
+            </span>
+            <ChevronDown
+              className={`
+                h-4
+                w-4
+                shrink-0
+                transition-transform
+                ${showSubjectMenu ? "rotate-180" : ""}
+              `}
+            />
+          </button>
+          {showSubjectMenu && (
+            <div
+              id="question-subject-menu"
+              role="listbox"
+              aria-multiselectable="true"
+              aria-label={translate(language, "adminPage.allSubjects")}
+              className="absolute left-0 top-full z-30 mt-2 max-h-72 w-64 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl border border-gray-200 bg-white p-2 shadow-lg"
+            >
+              {[
+                {
+                  id: "all",
+                  name: translate(language, "adminPage.allSubjects"),
+                },
+                ...subjects,
+              ].map((subject) => {
+                const selected = subject.id === "all"
+                  ? filterSubjectIds.length === 0
+                  : filterSubjectIds.includes(subject.id);
+                return (
+                  <label
+                    key={subject.id}
+                    role="option"
+                    aria-selected={selected}
+                    className={`flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition hover:bg-blue-50 hover:text-blue-700 ${selected ? "bg-blue-50 font-semibold text-blue-700" : "text-gray-700"}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selected}
+                      onChange={() => {
+                        if (subject.id === "all") {
+                          setFilterSubjectIds([]);
+                        } else {
+                          setFilterSubjectIds((current) =>
+                            current.includes(subject.id)
+                              ? current.filter((id) => id !== subject.id)
+                              : [...current, subject.id],
+                          );
+                        }
+                        setListPage(1);
+                      }}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span>{subject.name}</span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <button
+          onClick={() => void load(true)}
           className="p-2 hover:bg-gray-100 rounded-xl transition text-gray-500"
         >
           <RefreshCw className="w-4 h-4" />
@@ -1129,18 +1939,28 @@ export default function QuestionsTab() {
           className="hidden"
           onChange={(e) => handleCsvFileChange("choices", e.target.files?.[0])}
         />
-        <div className="relative">
+        <div ref={questionInputMenuRef} className="relative">
           <button
             type="button"
-            onClick={() => setShowQuestionInputMenu((current) => !current)}
+            aria-expanded={showQuestionInputMenu}
+            aria-haspopup="menu"
+            aria-controls="question-input-menu"
+            onClick={() => {
+              setShowQuestionInputMenu((current) => !current);
+              setShowSubjectMenu(false);
+            }}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition"
           >
             <Plus className="w-4 h-4" />
             {translate(language, "adminPage.addQuestion")}
             <ChevronDown
-              className={`w-4 h-4 transition-transform ${
-                showQuestionInputMenu ? "rotate-180" : ""
-              }`}
+              className={`
+                h-4
+                w-4
+                shrink-0
+                transition-transform
+                ${showQuestionInputMenu ? "rotate-180" : ""}
+              `}
             />
           </button>
 
@@ -1169,6 +1989,7 @@ export default function QuestionsTab() {
             >
               <button
                 type="button"
+                role="menuitem"
                 onClick={() => {
                   setShowQuestionInputMenu(false);
                   startNew();
@@ -1187,6 +2008,7 @@ export default function QuestionsTab() {
               </button>
               <button
                 type="button"
+                role="menuitem"
                 onClick={() => {
                   setShowQuestionInputMenu(false);
                   setShowCsvImportModal(true);
@@ -1205,6 +2027,7 @@ export default function QuestionsTab() {
               </button>
               <button
                 type="button"
+                role="menuitem"
                 onClick={() => {
                   setShowQuestionInputMenu(false);
                   setShowPdfImporter((current) => !current);
@@ -1225,6 +2048,141 @@ export default function QuestionsTab() {
           )}
         </div>
       </div>
+
+      {showSearchOptions && (
+        <div
+          id="question-search-options"
+          className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm"
+        >
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+              <SlidersHorizontal className="h-4 w-4 text-blue-600" />
+              {translate(language, "adminPage.questionSearchOptions")}
+            </div>
+            {hasActiveQuestionFilters && (
+              <button
+                type="button"
+                onClick={clearQuestionFilters}
+                className="text-xs font-semibold text-blue-600 hover:text-blue-700"
+              >
+                {translate(language, "adminPage.clearFilters")}
+              </button>
+            )}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <label className="text-xs font-semibold text-gray-600">
+              {translate(language, "adminPage.filterQuestionNumber")}
+              <input
+                type="number"
+                min="1"
+                value={filterQuestionNumber}
+                onChange={(event) => {
+                  setFilterQuestionNumber(event.target.value);
+                  setListPage(1);
+                }}
+                placeholder={translate(language, "adminPage.anyQuestionNumber")}
+                className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm font-normal text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+            </label>
+            <label className="text-xs font-semibold text-gray-600">
+              {translate(language, "adminPage.filterExamYear")}
+              <input
+                type="number"
+                min="1900"
+                max="2100"
+                value={filterExamYear}
+                onChange={(event) => {
+                  setFilterExamYear(event.target.value);
+                  setListPage(1);
+                }}
+                placeholder={translate(language, "adminPage.anyExamYear")}
+                className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm font-normal text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              />
+            </label>
+            <label className="text-xs font-semibold text-gray-600">
+              {translate(language, "adminPage.filterQuestionImage")}
+              <select
+                value={filterQuestionImage}
+                onChange={(event) => {
+                  setFilterQuestionImage(
+                    event.target.value as ImagePresenceFilter,
+                  );
+                  setListPage(1);
+                }}
+                className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-normal text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              >
+                <option value="all">
+                  {translate(language, "adminPage.anyImageStatus")}
+                </option>
+                <option value="with">
+                  {translate(language, "adminPage.includesImage")}
+                </option>
+                <option value="without">
+                  {translate(language, "adminPage.noImage")}
+                </option>
+              </select>
+            </label>
+            <label className="text-xs font-semibold text-gray-600">
+              {translate(language, "adminPage.filterAnswerImage")}
+              <select
+                value={filterAnswerImage}
+                onChange={(event) => {
+                  setFilterAnswerImage(
+                    event.target.value as ImagePresenceFilter,
+                  );
+                  setListPage(1);
+                }}
+                className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-normal text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              >
+                <option value="all">
+                  {translate(language, "adminPage.anyImageStatus")}
+                </option>
+                <option value="with">
+                  {translate(language, "adminPage.includesImage")}
+                </option>
+                <option value="without">
+                  {translate(language, "adminPage.noImage")}
+                </option>
+              </select>
+            </label>
+            <label className="text-xs font-semibold text-gray-600">
+              {translate(language, "adminPage.filterReviewStatus")}
+              <select
+                value={filterReviewStatus}
+                onChange={(event) => {
+                  setFilterReviewStatus(
+                    event.target.value as QuestionReviewStatus | "all" | "none",
+                  );
+                  setListPage(1);
+                }}
+                className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-normal text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+              >
+                <option value="all">
+                  {translate(language, "adminPage.anyReviewStatus")}
+                </option>
+                <option value="none">
+                  {translate(language, "adminPage.noReviewStatus")}
+                </option>
+                <option value="draft">
+                  {translate(language, "adminPage.reviewDraft")}
+                </option>
+                <option value="editing">
+                  {translate(language, "adminPage.reviewEditing")}
+                </option>
+                <option value="ready_for_review">
+                  {translate(language, "adminPage.reviewReady")}
+                </option>
+                <option value="needs_changes">
+                  {translate(language, "adminPage.reviewNeedsChanges")}
+                </option>
+                <option value="approved">
+                  {translate(language, "adminPage.reviewApproved")}
+                </option>
+              </select>
+            </label>
+          </div>
+        </div>
+      )}
 
       {showCsvImportModal && (
         <div className="w-full mb-4">
@@ -1631,7 +2589,10 @@ export default function QuestionsTab() {
         <PdfQuestionImporter
           subjects={subjects}
           onClose={() => setShowPdfImporter(false)}
-          onImported={load}
+          onImported={async () => {
+            invalidateQuestionCaches();
+            await load();
+          }}
         />
       )}
 
@@ -1709,6 +2670,25 @@ export default function QuestionsTab() {
               const choices = choicesByQuestion[q.id] ?? [];
               const choicesLoading = loadingChoicesId === q.id;
               const explanation = getLocalizedExplanation(q, language);
+              const review = reviewsByQuestion[q.id];
+              const listReviewStatus = review?.review_status;
+              const reviewStatusLabel = listReviewStatus
+                ? {
+                    draft: translate(language, "adminPage.reviewDraft"),
+                    editing: translate(language, "adminPage.reviewEditing"),
+                    ready_for_review: translate(language, "adminPage.reviewReady"),
+                    needs_changes: translate(
+                      language,
+                      "adminPage.reviewNeedsChanges",
+                    ),
+                    approved: translate(language, "adminPage.reviewApproved"),
+                  }[listReviewStatus]
+                : "";
+              const savedReviewMessage = review?.message.trim() ?? "";
+              const reviewerName = review?.updated_by
+                ? reviewerNamesById[review.updated_by] ??
+                  translate(language, "adminPage.unknownAdmin")
+                : translate(language, "adminPage.unknownAdmin");
               return (
                 <div key={q.id} className="p-4">
                   <div className="flex items-start gap-3">
@@ -1728,18 +2708,42 @@ export default function QuestionsTab() {
                             {sub.name}
                           </span>
                         )}
-                        {q.exam_date && (
+                        {q.exam_year && (
                           <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                            {q.exam_date}
+                            {formatExamPeriod(
+                              q.exam_year,
+                              q.exam_month,
+                              language,
+                            )}
                           </span>
                         )}
                         <DiffBadge d={q.difficulty ?? 3} />
+                        {listReviewStatus && (
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-xs font-semibold ${REVIEW_STATUS_STYLES[listReviewStatus]}`}
+                          >
+                            {reviewStatusLabel}
+                          </span>
+                        )}
+                        {savedReviewMessage && (
+                          <span
+                            title={savedReviewMessage}
+                            aria-label={`${reviewerName}: ${savedReviewMessage}`}
+                            className="flex max-w-48 items-center gap-1 text-xs font-semibold text-emerald-600"
+                          >
+                            <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">{reviewerName}</span>
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm text-gray-800 leading-snug line-clamp-2">
                         {q.question_text}
                       </p>
                       {isExpanded && (
-                        <div className="mt-3 space-y-1.5">
+                        <div
+                          id={`question-details-${q.id}`}
+                          className="mt-3 space-y-1.5"
+                        >
                           {choicesLoading && (
                             <div className="flex items-center gap-2 px-3 py-2 text-xs text-gray-400">
                               <RefreshCw className="h-3.5 w-3.5 animate-spin" />
@@ -1772,15 +2776,16 @@ export default function QuestionsTab() {
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       <button
+                        type="button"
                         onClick={() => void toggleExpanded(q)}
                         disabled={choicesLoading}
+                        aria-expanded={isExpanded}
+                        aria-controls={`question-details-${q.id}`}
                         className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition"
                       >
-                        {isExpanded ? (
-                          <ChevronUp className="w-4 h-4" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4" />
-                        )}
+                        <ChevronDown
+                          className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                        />
                       </button>
                       <button
                         onClick={() => void startEdit(q)}
@@ -1830,12 +2835,42 @@ export default function QuestionsTab() {
               <ChevronLeft className="h-4 w-4" />
               {translate(language, "adminPage.previousPage")}
             </button>
-            <span className="text-xs font-medium text-gray-400">
-              {translate(language, "adminPage.pageOf", {
-                current: currentListPage,
-                total: listPageCount,
-              })}
-            </span>
+            <form
+              aria-label={translate(language, "adminPage.goToPage")}
+              className="flex items-center gap-2"
+              noValidate
+              onSubmit={(event) => {
+                event.preventDefault();
+                goToListPage();
+              }}
+            >
+              <label
+                htmlFor="admin-question-page-number"
+                className="text-xs font-medium text-gray-500"
+              >
+                {translate(language, "adminPage.pageNumber")}
+              </label>
+              <input
+                id="admin-question-page-number"
+                type="number"
+                min={1}
+                max={listPageCount}
+                step={1}
+                inputMode="numeric"
+                value={pageNumberInput}
+                onChange={(event) => setPageNumberInput(event.target.value)}
+                className="w-16 rounded-lg border border-gray-200 px-2 py-1.5 text-center text-sm text-gray-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              />
+              <span className="text-xs font-medium text-gray-400">
+                / {listPageCount}
+              </span>
+              <button
+                type="submit"
+                className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+              >
+                {translate(language, "adminPage.goToPage")}
+              </button>
+            </form>
             <button
               type="button"
               onClick={() =>

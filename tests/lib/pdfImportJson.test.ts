@@ -28,7 +28,7 @@ describe('PDF import JSON', () => {
   it('round-trips reviewed questions without transient preview blobs', async () => {
     const text = await serializePdfImportArchive({
       examKey: '2027r09',
-      examDate: '2027-01-01',
+      examDate: '2027-01',
       importExam: 'it-passport',
       subjectRanges: [],
       questions: [question],
@@ -41,6 +41,8 @@ describe('PDF import JSON', () => {
     expect(stored).toMatchObject({
       exam: '2027r09',
       year: 2027,
+      exam_year: 2027,
+      exam_month: 1,
       wareki: '令和9年度',
       question_count: 1,
     });
@@ -68,6 +70,18 @@ describe('PDF import JSON', () => {
       schema_version: 'unknown',
       questions: [],
     }))).toThrow(PDF_IMPORT_JSON_SCHEMA);
+  });
+
+  it('keeps annual exams without an invented month', async () => {
+    const text = await serializePdfImportArchive({
+      examKey: '2026r08',
+      examDate: '2026',
+      importExam: 'it-passport',
+      subjectRanges: [],
+      questions: [question],
+    });
+    expect(JSON.parse(text)).toMatchObject({ exam_year: 2026, exam_month: null });
+    expect(parsePdfImportArchive(text).examDate).toBe('2026');
   });
 
   it('requires embedded image data when keep_image is enabled', () => {
@@ -143,5 +157,44 @@ describe('PDF import JSON', () => {
       }],
     };
     expect(parsePdfImportArchive(JSON.stringify(stored)).importExam).toBe('ap');
+  });
+
+  it('round-trips embedded answer-choice images', async () => {
+    const choiceImage = 'data:image/webp;base64,UklGRg==';
+    const text = await serializePdfImportArchive({
+      examKey: '2027r09',
+      examDate: '2027-01',
+      importExam: 'it-passport',
+      subjectRanges: [],
+      questions: [{
+        ...question,
+        choices: [
+          { label: 'ア', text: 'ア', sortOrder: 1, imageDataUrl: choiceImage, imageSizeBytes: 7 },
+          { label: 'イ', text: 'イ', sortOrder: 2 },
+        ],
+      }],
+    });
+    const stored = JSON.parse(text);
+    const restored = parsePdfImportArchive(text);
+
+    expect(stored.questions[0].choice_figures.ア).toMatchObject({
+      data_url: choiceImage,
+      size_bytes: 7,
+    });
+    expect(restored.questions[0].choices[0]).toMatchObject({
+      label: 'ア',
+      imageDataUrl: choiceImage,
+      imageSizeBytes: 7,
+    });
+  });
+
+  it('continues to read version 2 archives without choice figures', () => {
+    const stored = {
+      schema_version: 'manabi-question-archive-v2', exam: '2026r08', exam_year: 2026,
+      import_exam: 'it-passport', question_count: 1, subject_ranges: [],
+      questions: [{ source_key: '2026r08:Q1', number: 1, text: 'Question', choices: { ア: 'A', イ: 'B' },
+        correct_answer: 'ア', has_figure: false, figure: null, warnings: [], source_pages: [] }],
+    };
+    expect(parsePdfImportArchive(JSON.stringify(stored)).questions[0].choices[0].imageDataUrl).toBeUndefined();
   });
 });

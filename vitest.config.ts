@@ -17,6 +17,12 @@ export default defineConfig({
         'src/**/index.ts',
         'src/main.tsx',
       ],
+      thresholds: {
+        statements: 60,
+        branches: 76,
+        functions: 24,
+        lines: 60,
+      },
     },
   },
   resolve: {
