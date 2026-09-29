@@ -1145,7 +1145,28 @@ export default function QuestionsTab() {
           </button>
 
           {showQuestionInputMenu && (
-            <div className="absolute right-0 top-full z-20 mt-2 w-72 overflow-hidden rounded-2xl border border-gray-200 bg-white p-2 shadow-lg">
+            <div
+              id="question-input-menu"
+              role="menu"
+             className="
+  absolute
+  left-0
+  top-full
+  z-20
+  mt-2
+  w-72
+  max-w-[calc(100vw-24px)]
+  overflow-hidden
+  rounded-2xl
+  border
+  border-gray-200
+  bg-white
+  p-2
+  shadow-lg
+  sm:left-auto
+  sm:right-0
+"
+            >
               <button
                 type="button"
                 onClick={() => {
@@ -1558,8 +1579,7 @@ export default function QuestionsTab() {
             </div>
 
             {/* Footer */}
-            <div className="flex flex-col gap-3 border-t border-gray-100 bg-gray-50 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="text-xs">
+<div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">              <div className="text-xs">
                 {importData?.questions.length && importData?.choices.length ? (
                   <span className="flex items-center gap-1.5 font-medium text-emerald-600">
                     <CheckCircle className="h-3.5 w-3.5" />
