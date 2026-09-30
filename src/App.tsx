@@ -141,12 +141,13 @@ function PracticeSessionRoute() {
 
 function AppRoutes() {
   const onNavigate = usePageNavigation();
+  const navigate = useNavigate();
 
   return (
     <Suspense fallback={<LoadingScreen />}>
       <Routes>
         <Route path="/login" element={<LoginRoute />} />
-        <Route path="/" element={<ProtectedRoute><HomePage currentPage="home" onNavigate={onNavigate} /></ProtectedRoute>} />
+        <Route path="/" element={<ProtectedRoute><HomePage currentPage="home" onNavigate={onNavigate} onSetExamDate={() => navigate('/settings/exam-target')} /></ProtectedRoute>} />
         <Route path="/practice" element={<ProtectedRoute><PracticeListRoute /></ProtectedRoute>} />
         <Route path="/practice/session" element={<ProtectedRoute><PracticeSessionRoute /></ProtectedRoute>} />
         <Route path="/mock-exam" element={<ProtectedRoute><MockExamPage currentPage="mock-exam" onNavigate={onNavigate} /></ProtectedRoute>} />
@@ -154,6 +155,7 @@ function AppRoutes() {
         <Route path="/ai-chat" element={<ProtectedRoute><AIChatPage currentPage="ai-chat" onNavigate={onNavigate} /></ProtectedRoute>} />
         <Route path="/materials" element={<ProtectedRoute><MaterialsPage currentPage="materials" onNavigate={onNavigate} /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsPage currentPage="settings" onNavigate={onNavigate} /></ProtectedRoute>} />
+        <Route path="/settings/exam-target" element={<ProtectedRoute><SettingsPage currentPage="settings" onNavigate={onNavigate} initialView="target" /></ProtectedRoute>} />
         <Route path="/settings/profile" element={<ProtectedRoute><SettingsPage currentPage="profile" onNavigate={onNavigate} /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminPage currentPage="admin" onNavigate={onNavigate} /></AdminRoute></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />

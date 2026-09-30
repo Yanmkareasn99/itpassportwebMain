@@ -70,16 +70,17 @@ const AVATAR_CHOICES = [
 interface SettingsPageProps {
   currentPage: Page;
   onNavigate: (page: Page) => void;
+  initialView?: 'target';
 }
 
 type SettingsView = 'home' | 'profile' | 'language' | 'target' | 'password' | 'deleteAccount' | 'help';
 const REPORT_ISSUE_URL = 'https://github.com/Yanmkareasn99/itpassportwebMain/issues/new';
 
-export default function SettingsPage({ currentPage, onNavigate }: SettingsPageProps) {
+export default function SettingsPage({ currentPage, onNavigate, initialView }: SettingsPageProps) {
   const { user, profile, refreshProfile, deleteAccount } = useAuth();
   const { language, setLanguage } = useLanguage();
 
-  const [view, setView] = useState<SettingsView>(currentPage === 'profile' ? 'profile' : 'home');
+  const [view, setView] = useState<SettingsView>(initialView ?? (currentPage === 'profile' ? 'profile' : 'home'));
   const [openFaq, setOpenFaq] = useState<string | null>(null);
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -112,8 +113,8 @@ export default function SettingsPage({ currentPage, onNavigate }: SettingsPagePr
   const [deleteAccountMsg, setDeleteAccountMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
 
   useEffect(() => {
-    setView(currentPage === 'profile' ? 'profile' : 'home');
-  }, [currentPage]);
+    setView(initialView ?? (currentPage === 'profile' ? 'profile' : 'home'));
+  }, [currentPage, initialView]);
 
   useEffect(() => {
     if (profile) {
