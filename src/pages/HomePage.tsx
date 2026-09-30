@@ -12,9 +12,10 @@ import AnnouncementBanner from '../components/AnnouncementBanner';
 interface HomePageProps {
   currentPage: Page;
   onNavigate: (page: Page) => void;
+  onSetExamDate?: () => void;
 }
 
-function CalendarWidget({ daysLeft, language, sessions = [], examTargetDate }: { daysLeft: number; language: Language; sessions?: PracticeSession[]; examTargetDate?: string | null }) {
+function CalendarWidget({ daysLeft, language, sessions = [], examTargetDate, onSetExamDate }: { daysLeft: number; language: Language; sessions?: PracticeSession[]; examTargetDate?: string | null; onSetExamDate: () => void }) {
   const today = new Date();
   const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
 
@@ -39,7 +40,21 @@ function CalendarWidget({ daysLeft, language, sessions = [], examTargetDate }: {
   );
   
   // Parse exam target date
-  const examDate = examTargetDate ? new Date(examTargetDate) : null;
+  const examDate = examTargetDate ? new Date(`${examTargetDate}T00:00:00`) : null;
+  const examEnd = examDate
+    ? new Date(
+        examDate.getFullYear(),
+        examDate.getMonth(),
+        examDate.getDate(),
+        23,
+        59,
+        59,
+        999,
+      )
+    : null;
+  const examHasEnded = examEnd !== null && today > examEnd;
+  const needsExamDate = examDate === null || examHasEnded;
+  const showExamMarker = examEnd !== null && !examHasEnded;
   
   const isToday = (d: number | null) =>
     d !== null &&
@@ -49,7 +64,8 @@ function CalendarWidget({ daysLeft, language, sessions = [], examTargetDate }: {
     
   const isExamDay = (d: number | null) =>
     d !== null &&
-    examDate &&
+    showExamMarker &&
+    examDate !== null &&
     examDate.getFullYear() === year &&
     examDate.getMonth() === month &&
     examDate.getDate() === d;
@@ -61,15 +77,26 @@ function CalendarWidget({ daysLeft, language, sessions = [], examTargetDate }: {
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 dark:bg-[rgba(255,255,255,0.055)] dark:border-[rgba(255,255,255,0.10)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.15)] dark:[backdrop-filter:blur(16px)] dark:[-webkit-backdrop-filter:blur(16px)]">
       {/* Countdown */}
       <div className="flex items-center justify-between mb-4">
-        <div>
-          <p className="text-xs text-gray-500 dark:text-[#94A3B8]">{translate(language, 'homePage.untilExam')}</p>
-          <p className="text-3xl font-bold text-blue-600 dark:text-[#7EA2F8]">
-            {translate(language, 'homePage.daysRemaining', { count: daysLeft })}
-          </p>
-        </div>
+        {!needsExamDate ? (
+          <div>
+            <p className="text-xs text-gray-500 dark:text-[#94A3B8]">{translate(language, 'homePage.untilExam')}</p>
+            <p className="text-3xl font-bold text-blue-600 dark:text-[#7EA2F8]">
+              {translate(language, 'homePage.daysRemaining', { count: daysLeft })}
+            </p>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={onSetExamDate}
+            className="inline-flex h-10 items-center gap-2 rounded-full bg-blue-600 px-4 text-sm font-semibold text-white transition hover:bg-blue-700 active:bg-blue-800 dark:bg-[#7EA2F8] dark:text-slate-950 dark:hover:bg-blue-300"
+          >
+            <Clock className="h-4 w-4" />
+            {translate(language, 'homePage.setExamDate')}
+          </button>
+        )}
         <button 
           onClick={() => setViewDate(new Date(today.getFullYear(), today.getMonth(), 1))}
-          className="h-10 rounded-full bg-blue-50 px-4 text-sm font-semibold text-blue-600 hover:bg-blue-100 active:bg-blue-200 transition cursor-pointer dark:bg-[rgba(126,162,248,0.12)] dark:text-[#7EA2F8] dark:hover:bg-[rgba(126,162,248,0.18)]"
+          className="ml-auto h-10 rounded-full bg-blue-50 px-4 text-sm font-semibold text-blue-600 hover:bg-blue-100 active:bg-blue-200 transition cursor-pointer dark:bg-[rgba(126,162,248,0.12)] dark:text-[#7EA2F8] dark:hover:bg-[rgba(126,162,248,0.18)]"
           title={translate(language, 'homePage.today')}
         >
           {translate(language, 'homePage.today')}
@@ -209,7 +236,7 @@ function getFeatures(language: Language) {
   ];
 }
 
-export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
+export default function HomePage({ currentPage, onNavigate, onSetExamDate }: HomePageProps) {
   const { profile, user } = useAuth();
   const userId = user?.id;
   const { language } = useLanguage();
@@ -335,7 +362,13 @@ export default function HomePage({ currentPage, onNavigate }: HomePageProps) {
           </div>
 
           <div className="home-dashboard-sidebar motion-stagger space-y-5">
-            <CalendarWidget daysLeft={daysLeft} language={language} sessions={practiceSessions} examTargetDate={examTargetDate} />
+            <CalendarWidget
+              daysLeft={daysLeft}
+              language={language}
+              sessions={practiceSessions}
+              examTargetDate={examTargetDate}
+              onSetExamDate={onSetExamDate ?? (() => onNavigate('settings'))}
+            />
             {progressError && <p role="alert" className="text-sm text-red-600">{translateMessage(language, progressError)}</p>}
             <StatsCard sessions={practiceSessions} examSessions={examSessions} language={language} />
           </div>
