@@ -973,4 +973,11 @@ export const en = {
   "issuesPage.addComment": "Add a comment",
   "issuesPage.commentPlaceholder": "Add a comment or update...",
   "issuesPage.postComment": "Post comment",
+  "issuesPage.commentOptions": "Comment options",
+  "issuesPage.editComment": "Edit comment",
+  "issuesPage.deleteComment": "Delete comment",
+  "issuesPage.deleteCommentConfirm": "Delete this comment? This cannot be undone.",
+  "issuesPage.cancelEdit": "Cancel",
+  "issuesPage.saveComment": "Save",
+  "issuesPage.edited": "edited",
 } as const;

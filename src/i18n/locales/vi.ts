@@ -962,4 +962,11 @@ export const vi = {
   "issuesPage.addComment": "Thêm bình luận",
   "issuesPage.commentPlaceholder": "Thêm bình luận hoặc cập nhật...",
   "issuesPage.postComment": "Đăng bình luận",
+  "issuesPage.commentOptions": "Tùy chọn bình luận",
+  "issuesPage.editComment": "Sửa bình luận",
+  "issuesPage.deleteComment": "Xóa bình luận",
+  "issuesPage.deleteCommentConfirm": "Xóa bình luận này? Thao tác này không thể hoàn tác.",
+  "issuesPage.cancelEdit": "Hủy",
+  "issuesPage.saveComment": "Lưu",
+  "issuesPage.edited": "đã chỉnh sửa",
 } as const;

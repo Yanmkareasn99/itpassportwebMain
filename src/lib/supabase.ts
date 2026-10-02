@@ -117,6 +117,7 @@ function normalizeLocalRow(table: string, value: unknown): LocalRow {
   }
   if (table === 'bug_report_comments') {
     row.created_at ??= now;
+    row.updated_at ??= row.created_at;
   }
   return row;
 }
