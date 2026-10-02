@@ -49,7 +49,7 @@ export default function MobileTabBar({
   const isActive = (page: Page) =>
     currentPage === page ||
     (page === "practice-list" && currentPage === "practice-question") ||
-    (page === "settings" && currentPage === "profile");
+    (page === "settings" && (currentPage === "profile" || currentPage === "issues"));
 
   return (
     <>

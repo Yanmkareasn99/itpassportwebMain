@@ -110,6 +110,15 @@ function normalizeLocalRow(table: string, value: unknown): LocalRow {
     row.correct_answers ??= 0;
     row.completed_at ??= null;
   }
+  if (table === 'bug_reports') {
+    row.status ??= 'open';
+    row.labels ??= [];
+    row.updated_at ??= now;
+  }
+  if (table === 'bug_report_comments') {
+    row.created_at ??= now;
+    row.updated_at ??= row.created_at;
+  }
   return row;
 }
 

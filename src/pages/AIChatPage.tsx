@@ -7,6 +7,7 @@ import { getChatReply, ChatMessage } from '../lib/aiChat';
 import { useAuth } from '../contexts/AuthContext';
 import { Page, Question, Subject } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
+import { takeAiChatHandoff } from '../lib/aiChatHandoff';
 
 interface AIChatPageProps {
   currentPage: Page;
@@ -59,17 +60,27 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [recentQuestions, setRecentQuestions] = useState<Question[]>([]);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const handoffRef = useRef<ReturnType<typeof takeAiChatHandoff> | undefined>(undefined);
+  const handoffPersistedRef = useRef(false);
 
   useEffect(() => {
+    if (handoffRef.current === undefined) {
+      handoffRef.current = takeAiChatHandoff();
+    }
+    const handoff = handoffRef.current;
+    let cancelled = false;
+
     async function loadData() {
       const [{ data: subjectData }, { data: questionData }] = await Promise.all([
         supabase.from('subjects').select('*').order('name'),
         supabase.from('questions').select('id, subject_id, question_number, question_text, question_type, image_url, explanation, difficulty, points').order('created_at', { ascending: false }).limit(8),
       ]);
+      if (cancelled) return;
       if (subjectData) setSubjects(subjectData as Subject[]);
       if (questionData) setRecentQuestions(questionData as Question[]);
 
       // load persisted chat messages for logged-in user
+      let loadedMessages: ChatMessage[] = [];
       if (profileId) {
         try {
           const { data: msgs } = await supabase
@@ -79,22 +90,53 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
             .order('created_at', { ascending: true })
             .limit(500);
 
+          if (cancelled) return;
           if (msgs && msgs.length > 0) {
-            const loaded = (msgs as StoredChatMessage[]).map(m => ({
+            loadedMessages = (msgs as StoredChatMessage[]).map(m => ({
               id: `${new Date(m.created_at).getTime()}-${Math.random().toString(36).slice(2,6)}`,
               role: m.role as 'user' | 'assistant',
               content: m.content as string,
               createdAt: new Date(m.created_at).getTime(),
             }));
-            setMessages(loaded);
           }
         } catch (err) {
           console.warn('Failed to load ai chat messages', err);
         }
       }
+
+      const handoffMessages: ChatMessage[] = handoff
+        ? handoff.turns.map((turn, index) => ({
+            id: `handoff-${handoff.createdAt}-${index}`,
+            role: turn.role,
+            content: turn.content,
+            createdAt: handoff.createdAt + index,
+          }))
+        : [];
+
+      if (!cancelled && (loadedMessages.length > 0 || handoffMessages.length > 0)) {
+        setMessages([...loadedMessages, ...handoffMessages]);
+      }
+
+      if (profileId && handoff && !handoffPersistedRef.current) {
+        const { error } = await supabase.from('ai_chat_messages').insert(
+          handoff.turns.map(turn => ({
+            user_id: profileId,
+            role: turn.role,
+            content: turn.content,
+          })),
+        );
+        if (error) {
+          console.warn('Failed to persist AI chat handoff', error);
+        } else {
+          handoffPersistedRef.current = true;
+        }
+      }
     }
 
-    loadData();
+    void loadData();
+    return () => {
+      cancelled = true;
+    };
   }, [profileId]);
 
   useEffect(() => {
@@ -190,7 +232,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
     >
       <div className="max-w-5xl mx-auto grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col min-h-[70vh] overflow-hidden">
-          <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-violet-50">
+          <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-violet-50 dark:border-blue-900 dark:from-blue-950 dark:to-blue-900">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div className="min-w-0">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/80 text-blue-600 text-xs font-semibold mb-3">

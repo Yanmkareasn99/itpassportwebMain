@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AIChatPage from '../../src/pages/AIChatPage';
 import { supabase } from '../../src/lib/supabase';
+import { queueAiChatHandoff } from '../../src/lib/aiChatHandoff';
 
 const mocks = vi.hoisted(() => ({
   profile: { id: 'profile-1', name: 'Student' } as { id: string; name: string } | null,
@@ -48,6 +49,7 @@ function createQuery(table: string) {
 describe('AIChatPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.sessionStorage.clear();
     mocks.profile = { id: 'profile-1', name: 'Student' };
     mocks.getChatReply.mockResolvedValue('Here is the explanation.');
     tableResults = {
@@ -80,6 +82,25 @@ describe('AIChatPage', () => {
     expect(fromMock).toHaveBeenCalledWith('subjects');
     expect(fromMock).toHaveBeenCalledWith('questions');
     expect(fromMock).toHaveBeenCalledWith('ai_chat_messages');
+  });
+
+  it('loads and persists a queued practice-question handoff', async () => {
+    queueAiChatHandoff('Handed-off question context', 'Handed-off explanation');
+
+    render(<AIChatPage currentPage="ai-chat" onNavigate={vi.fn()} />);
+
+    expect(await screen.findByText('Handed-off question context')).toBeTruthy();
+    expect(screen.getByText('Handed-off explanation')).toBeTruthy();
+
+    await waitFor(() => {
+      const inserts = queries
+        .filter(item => item.table === 'ai_chat_messages')
+        .flatMap(item => item.query.insert.mock.calls.map(call => call[0]));
+      expect(inserts).toContainEqual([
+        { user_id: 'profile-1', role: 'user', content: 'Handed-off question context' },
+        { user_id: 'profile-1', role: 'assistant', content: 'Handed-off explanation' },
+      ]);
+    });
   });
 
   it('sends and persists user and assistant messages', async () => {

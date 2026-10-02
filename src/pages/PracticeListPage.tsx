@@ -654,6 +654,7 @@ export default function PracticeListPage({
   const [progressWarning, setProgressWarning] = useState("");
 
   const [selectedExamDates, setSelectedExamDates] = useState<string[]>([]);
+  const [selectedSubjectIds, setSelectedSubjectIds] = useState<string[]>([]);
   const [examDates, setExamDates] = useState<string[]>([]);
   const [modeFilter, setModeFilter] = useState<ModeFilter>("all");
   const [filterResult, setFilterResult] = useState<{
@@ -663,7 +664,12 @@ export default function PracticeListPage({
   } | null>(null);
   const examDateFilter: ExamDateFilter =
     selectedExamDates.length > 0 ? selectedExamDates : "all";
-  const filterKey = JSON.stringify([user?.id, selectedExamDates, modeFilter]);
+  const filterKey = JSON.stringify([
+    user?.id,
+    selectedExamDates,
+    selectedSubjectIds,
+    modeFilter,
+  ]);
   const currentResult = filterResult?.key === filterKey ? filterResult : null;
   const matchingQuestions = currentResult?.questions ?? [];
   const userId = user?.id;
@@ -674,7 +680,7 @@ export default function PracticeListPage({
     const timer = window.setTimeout(async () => {
       try {
         let questions = await fetchPracticeQuestions(
-          null,
+          selectedSubjectIds.length > 0 ? selectedSubjectIds : null,
           examDateFilter,
           "all",
         );
@@ -704,7 +710,13 @@ export default function PracticeListPage({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [userId, examDateFilter, modeFilter, filterKey]);
+  }, [
+    userId,
+    examDateFilter,
+    selectedSubjectIds,
+    modeFilter,
+    filterKey,
+  ]);
 
   async function startFilteredPractice() {
     if (
@@ -1073,6 +1085,20 @@ export default function PracticeListPage({
                     date === UNCATEGORIZED_EXAM_DATE
                       ? translate(currentLanguage, "ui.uncategorized")
                       : formatExamPeriodKey(date, currentLanguage),
+                }))}
+              />
+
+              <MultiSelectDropdown
+                label={translate(currentLanguage, "practiceListPage.subject")}
+                allLabel={translate(currentLanguage, "practiceListPage.all")}
+                selectedValues={selectedSubjectIds}
+                onChange={(values) => {
+                  setSelectedSubjectIds(values);
+                  setError("");
+                }}
+                options={categories.map((category) => ({
+                  value: category.subjectIds[0],
+                  label: getCategoryLabel(category, currentLanguage),
                 }))}
               />
 

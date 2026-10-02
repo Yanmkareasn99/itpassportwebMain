@@ -108,6 +108,31 @@ export interface PointSetting {
   updated_at: string;
 }
 
+export type BugReportStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+export type BugReportLabel = 'bug' | 'ui' | 'content' | 'performance' | 'accessibility' | 'other';
+
+export interface BugReport {
+  id: string;
+  reporter_id: string;
+  reporter_name: string;
+  title: string;
+  details: string;
+  status: BugReportStatus;
+  labels: BugReportLabel[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BugReportComment {
+  id: string;
+  issue_id: string;
+  author_id: string | null;
+  author_name: string;
+  body: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export type Page =
   | 'home'
   | 'practice-list'
@@ -118,5 +143,6 @@ export type Page =
   | 'materials'
   | 'settings'
   | 'profile'
+  | 'issues'
   | 'results'
   | 'admin';
