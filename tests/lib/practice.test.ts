@@ -46,6 +46,22 @@ describe('practice data', () => {
     expect(actual.map(q => q.id).sort()).toEqual(expected.map(q => q.id).sort());
   });
 
+  it('combines multiple selected subjects with multiple selected exam periods', async () => {
+    const all = await fetchPracticeQuestions(null, 'all', 'all');
+    const subjects = [...new Set(all.map(question => question.subject_id))].slice(0, 2);
+    const examDates = ['2025-04', '2024-04'];
+    const actual = await fetchPracticeQuestions(subjects, examDates, 'all');
+    const expected = all.filter(question =>
+      subjects.includes(question.subject_id)
+      && examDates.includes(`${question.exam_year}-${String(question.exam_month).padStart(2, '0')}`),
+    );
+
+    expect(actual.length).toBeGreaterThan(0);
+    expect(actual.map(question => question.id).sort()).toEqual(
+      expected.map(question => question.id).sort(),
+    );
+  });
+
   it('lists each available exam period newest first', async () => {
     expect(await loadExamDates()).toEqual(['2025-04', '2024-04', '2023-04', 'uncategorized']);
   });

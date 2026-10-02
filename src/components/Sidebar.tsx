@@ -27,7 +27,7 @@ export default function Sidebar({
   const { isAdmin } = useAuth();
   const { language } = useLanguage();
   const adminActive = currentPage === "admin";
-  const settingsActive = currentPage === "settings" || currentPage === "profile";
+  const settingsActive = currentPage === "settings" || currentPage === "profile" || currentPage === "issues";
 
   const navItems = [
     {
