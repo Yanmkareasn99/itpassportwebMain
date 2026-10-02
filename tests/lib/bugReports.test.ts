@@ -8,8 +8,10 @@ vi.mock('../../src/lib/supabase', async importOriginal => {
 import {
   createBugReport,
   createBugReportComment,
+  deleteBugReportComment,
   loadBugReportComments,
   loadBugReports,
+  updateBugReportComment,
   updateBugReportStatus,
 } from '../../src/lib/bugReports';
 
@@ -80,6 +82,12 @@ describe('bug reports', () => {
       body: 'This happens on the practice page.',
     });
     expect(await loadBugReportComments([report.id])).toEqual([comment]);
+    const updated = await updateBugReportComment(comment.id, 'The image is missing on every attempt.');
+    expect(updated.body).toBe('The image is missing on every attempt.');
+    expect(updated.updated_at).toBeTruthy();
+
+    await deleteBugReportComment(comment.id);
+    expect(await loadBugReportComments([report.id])).toEqual([]);
     expect(await loadBugReportComments([])).toEqual([]);
   });
 });

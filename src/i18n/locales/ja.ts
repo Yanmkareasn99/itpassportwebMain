@@ -963,4 +963,11 @@ export const ja = {
   "issuesPage.addComment": "コメントを追加",
   "issuesPage.commentPlaceholder": "コメントや進捗を入力...",
   "issuesPage.postComment": "コメントを投稿",
+  "issuesPage.commentOptions": "コメントのオプション",
+  "issuesPage.editComment": "コメントを編集",
+  "issuesPage.deleteComment": "コメントを削除",
+  "issuesPage.deleteCommentConfirm": "このコメントを削除しますか？元に戻すことはできません。",
+  "issuesPage.cancelEdit": "キャンセル",
+  "issuesPage.saveComment": "保存",
+  "issuesPage.edited": "編集済み",
 } as const;

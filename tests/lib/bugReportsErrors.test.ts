@@ -8,6 +8,9 @@ const mocks = vi.hoisted(() => {
   for (const method of ['select', 'eq', 'insert', 'update', 'in']) {
     query[method] = vi.fn(() => query);
   }
+  query.delete = vi.fn(() => ({
+    eq: vi.fn(() => Promise.resolve(state.result)),
+  }));
   query.order = vi.fn(() => Promise.resolve(state.result));
   query.single = vi.fn(() => Promise.resolve(state.result));
   return { state, query, from: vi.fn(() => query) };
@@ -20,8 +23,10 @@ vi.mock('../../src/lib/supabase', () => ({
 import {
   createBugReport,
   createBugReportComment,
+  deleteBugReportComment,
   loadBugReportComments,
   loadBugReports,
+  updateBugReportComment,
   updateBugReportStatus,
 } from '../../src/lib/bugReports';
 
@@ -56,5 +61,7 @@ describe('bug report database failures', () => {
       authorName: 'User',
       body: 'Comment',
     })).rejects.toBe(databaseError);
+    await expect(updateBugReportComment('comment', 'Updated comment')).rejects.toBe(databaseError);
+    await expect(deleteBugReportComment('comment')).rejects.toBe(databaseError);
   });
 });

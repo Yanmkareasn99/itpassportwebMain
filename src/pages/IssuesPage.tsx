@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { AlertCircle, Bug, CheckCircle2, Clock3, MessageCircle, Plus, Send, Tag, UserRound } from 'lucide-react';
+import { AlertCircle, Bug, Check, CheckCircle2, Clock3, MessageCircle, MoreHorizontal, Pencil, Plus, Send, Tag, Trash2, UserRound, X } from 'lucide-react';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -9,8 +9,10 @@ import {
   BUG_REPORT_STATUSES,
   createBugReport,
   createBugReportComment,
+  deleteBugReportComment,
   loadBugReportComments,
   loadBugReports,
+  updateBugReportComment,
   updateBugReportStatus,
 } from '../lib/bugReports';
 import type { BugReport, BugReportComment, BugReportLabel, BugReportStatus, Page } from '../types';
@@ -58,6 +60,9 @@ export default function IssuesPage({ currentPage, onNavigate }: IssuesPageProps)
   const [reports, setReports] = useState<BugReport[]>([]);
   const [comments, setComments] = useState<BugReportComment[]>([]);
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
+  const [openCommentMenu, setOpenCommentMenu] = useState<string | null>(null);
+  const [editingComment, setEditingComment] = useState<string | null>(null);
+  const [editCommentBody, setEditCommentBody] = useState('');
   const [title, setTitle] = useState('');
   const [details, setDetails] = useState('');
   const [labels, setLabels] = useState<BugReportLabel[]>(['bug']);
@@ -66,6 +71,7 @@ export default function IssuesPage({ currentPage, onNavigate }: IssuesPageProps)
   const [submitting, setSubmitting] = useState(false);
   const [savingStatus, setSavingStatus] = useState<string | null>(null);
   const [submittingComment, setSubmittingComment] = useState<string | null>(null);
+  const [savingComment, setSavingComment] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -155,6 +161,48 @@ export default function IssuesPage({ currentPage, onNavigate }: IssuesPageProps)
       setError(commentError instanceof Error ? commentError.message : 'Unable to submit comment.');
     } finally {
       setSubmittingComment(null);
+    }
+  }
+
+  function beginEditComment(comment: BugReportComment) {
+    setOpenCommentMenu(null);
+    setEditingComment(comment.id);
+    setEditCommentBody(comment.body);
+  }
+
+  async function saveEditedComment(event: FormEvent, commentId: string) {
+    event.preventDefault();
+    if (!editCommentBody.trim() || savingComment) return;
+    setSavingComment(commentId);
+    setError('');
+    try {
+      const updated = await updateBugReportComment(commentId, editCommentBody);
+      setComments(current => current.map(comment => comment.id === commentId ? updated : comment));
+      setEditingComment(null);
+      setEditCommentBody('');
+    } catch (editError) {
+      setError(editError instanceof Error ? editError.message : 'Unable to edit comment.');
+    } finally {
+      setSavingComment(null);
+    }
+  }
+
+  async function removeComment(comment: BugReportComment) {
+    setOpenCommentMenu(null);
+    if (!window.confirm(translate(language, 'issuesPage.deleteCommentConfirm'))) return;
+    setSavingComment(comment.id);
+    setError('');
+    try {
+      await deleteBugReportComment(comment.id);
+      setComments(current => current.filter(value => value.id !== comment.id));
+      if (editingComment === comment.id) {
+        setEditingComment(null);
+        setEditCommentBody('');
+      }
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete comment.');
+    } finally {
+      setSavingComment(null);
     }
   }
 
@@ -356,17 +404,86 @@ export default function IssuesPage({ currentPage, onNavigate }: IssuesPageProps)
 
                       <div className="space-y-2">
                         {comments.filter(comment => comment.issue_id === report.id).map(comment => (
-                          <div key={comment.id} className="rounded-xl bg-gray-50 px-3 py-2.5 dark:bg-slate-800/70">
-                            <div className="mb-1 flex flex-wrap items-center gap-x-2 text-xs">
-                              <span className="font-bold text-gray-700 dark:text-slate-200">{comment.author_name}</span>
-                              {comment.author_id === report.reporter_id && (
-                                <span className="rounded-full bg-blue-100 px-1.5 py-0.5 font-semibold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
-                                  {translate(language, 'issuesPage.reporterBadge')}
-                                </span>
+                          <div key={comment.id} className="relative rounded-xl bg-gray-50 px-3 py-2.5 dark:bg-slate-800/70">
+                            <div className="mb-1 flex items-start justify-between gap-2">
+                              <div className="flex min-w-0 flex-wrap items-center gap-x-2 text-xs">
+                                <span className="font-bold text-gray-700 dark:text-slate-200">{comment.author_name}</span>
+                                {comment.author_id === report.reporter_id && (
+                                  <span className="rounded-full bg-blue-100 px-1.5 py-0.5 font-semibold text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
+                                    {translate(language, 'issuesPage.reporterBadge')}
+                                  </span>
+                                )}
+                                <span className="text-gray-400 dark:text-slate-500">{new Date(comment.created_at).toLocaleString(language)}</span>
+                                {comment.updated_at && comment.updated_at !== comment.created_at && (
+                                  <span className="text-gray-400 dark:text-slate-500">({translate(language, 'issuesPage.edited')})</span>
+                                )}
+                              </div>
+
+                              {(comment.author_id === user?.id || isAdmin) && (
+                                <div className="relative shrink-0">
+                                  <button
+                                    type="button"
+                                    aria-label={translate(language, 'issuesPage.commentOptions')}
+                                    aria-expanded={openCommentMenu === comment.id}
+                                    onClick={() => setOpenCommentMenu(current => current === comment.id ? null : comment.id)}
+                                    className="rounded-lg p-1 text-gray-400 transition hover:bg-gray-200 hover:text-gray-600 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                                  >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </button>
+                                  {openCommentMenu === comment.id && (
+                                    <div className="absolute right-0 top-full z-20 mt-1 min-w-32 overflow-hidden rounded-xl border border-gray-200 bg-white py-1 shadow-lg dark:border-slate-700 dark:bg-slate-900">
+                                      {comment.author_id === user?.id && (
+                                        <button
+                                          type="button"
+                                          onClick={() => beginEditComment(comment)}
+                                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:text-slate-200 dark:hover:bg-slate-800"
+                                        >
+                                          <Pencil className="h-3.5 w-3.5" /> {translate(language, 'issuesPage.editComment')}
+                                        </button>
+                                      )}
+                                      <button
+                                        type="button"
+                                        onClick={() => void removeComment(comment)}
+                                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50 dark:text-red-300 dark:hover:bg-red-950/30"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" /> {translate(language, 'issuesPage.deleteComment')}
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
                               )}
-                              <span className="text-gray-400 dark:text-slate-500">{new Date(comment.created_at).toLocaleString(language)}</span>
                             </div>
-                            <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-gray-600 dark:text-slate-300">{comment.body}</p>
+                            {editingComment === comment.id ? (
+                              <form onSubmit={event => void saveEditedComment(event, comment.id)} className="space-y-2">
+                                <textarea
+                                  aria-label={translate(language, 'issuesPage.editComment')}
+                                  value={editCommentBody}
+                                  onChange={event => setEditCommentBody(event.target.value)}
+                                  maxLength={5000}
+                                  rows={3}
+                                  required
+                                  className="w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:ring-blue-900"
+                                />
+                                <div className="flex justify-end gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => { setEditingComment(null); setEditCommentBody(''); }}
+                                    className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-200 dark:text-slate-400 dark:hover:bg-slate-700"
+                                  >
+                                    <X className="h-3.5 w-3.5" /> {translate(language, 'issuesPage.cancelEdit')}
+                                  </button>
+                                  <button
+                                    type="submit"
+                                    disabled={savingComment === comment.id || !editCommentBody.trim()}
+                                    className="flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                                  >
+                                    <Check className="h-3.5 w-3.5" /> {translate(language, 'issuesPage.saveComment')}
+                                  </button>
+                                </div>
+                              </form>
+                            ) : (
+                              <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-gray-600 dark:text-slate-300">{comment.body}</p>
+                            )}
                           </div>
                         ))}
                       </div>

@@ -81,3 +81,17 @@ export async function createBugReportComment(input: {
   if (error) throw error;
   return data as BugReportComment;
 }
+
+export async function updateBugReportComment(id: string, body: string): Promise<BugReportComment> {
+  const { data, error } = await supabase.from('bug_report_comments').update({
+    body: body.trim(),
+    updated_at: new Date().toISOString(),
+  }).eq('id', id).select('*').single();
+  if (error) throw error;
+  return data as BugReportComment;
+}
+
+export async function deleteBugReportComment(id: string): Promise<void> {
+  const { error } = await supabase.from('bug_report_comments').delete().eq('id', id);
+  if (error) throw error;
+}
