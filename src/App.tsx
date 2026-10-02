@@ -16,6 +16,7 @@ const MockExamPage = lazy(() => import('./pages/MockExamPage'));
 const PracticeListPage = lazy(() => import('./pages/PracticeListPage'));
 const PracticeQuestionPage = lazy(() => import('./pages/PracticeQuestionPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const IssuesPage = lazy(() => import('./pages/IssuesPage'));
 
 const pagePaths: Record<Page, string> = {
   home: '/',
@@ -27,6 +28,7 @@ const pagePaths: Record<Page, string> = {
   materials: '/materials',
   settings: '/settings',
   profile: '/settings/profile',
+  issues: '/issues',
   results: '/results',
   admin: '/admin',
 };
@@ -157,6 +159,7 @@ function AppRoutes() {
         <Route path="/settings" element={<ProtectedRoute><SettingsPage currentPage="settings" onNavigate={onNavigate} /></ProtectedRoute>} />
         <Route path="/settings/exam-target" element={<ProtectedRoute><SettingsPage currentPage="settings" onNavigate={onNavigate} initialView="target" /></ProtectedRoute>} />
         <Route path="/settings/profile" element={<ProtectedRoute><SettingsPage currentPage="profile" onNavigate={onNavigate} /></ProtectedRoute>} />
+        <Route path="/issues" element={<ProtectedRoute><IssuesPage currentPage="issues" onNavigate={onNavigate} /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><AdminRoute><AdminPage currentPage="admin" onNavigate={onNavigate} /></AdminRoute></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

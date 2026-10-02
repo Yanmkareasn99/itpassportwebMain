@@ -74,7 +74,6 @@ interface SettingsPageProps {
 }
 
 type SettingsView = 'home' | 'profile' | 'language' | 'target' | 'password' | 'deleteAccount' | 'help';
-const REPORT_ISSUE_URL = 'https://github.com/Yanmkareasn99/itpassportwebMain/issues/new';
 
 export default function SettingsPage({ currentPage, onNavigate, initialView }: SettingsPageProps) {
   const { user, profile, refreshProfile, deleteAccount } = useAuth();
@@ -437,7 +436,7 @@ export default function SettingsPage({ currentPage, onNavigate, initialView }: S
                   iconBg="#fee2e2"
                   iconColor="#dc2626"
                   label={translate(language, 'settingsPage.reportIssue')}
-                  href={REPORT_ISSUE_URL}
+                  onClick={() => onNavigate('issues')}
                 />
               </div>
             </div>
