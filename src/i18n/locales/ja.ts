@@ -564,6 +564,10 @@ export const ja = {
   "mockExamPage.timeLimitMin": "制限時間（分）",
   "mockExamPage.youCannotPauseTheExamOnceItStarts":
     "試験中は途中で中断できません。準備ができたら開始ボタンを押してください。",
+   "mockExamPage.unansweredWarningTitle":
+    "未回答の問題があります。本当に提出しますか？",
+   "mockExamPage.continueExam": "続ける",
+   "mockExamPage.submitAnyway": "無視して提出",
   "practiceListPage.accuracy": "正答率",
   "practiceListPage.action": "アクション",
   "practiceListPage.all": "すべて",

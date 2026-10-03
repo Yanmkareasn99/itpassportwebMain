@@ -1174,10 +1174,11 @@ export default function PracticeListPage({
           )}
         </div>
 
+        {/* ▼▼▼ THAY NGUYÊN KHỐI NÀY: từ dòng grid-cols-2 gap-5 đến hết thẻ </div> tương ứng ▼▼▼ */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <div className="min-w-0 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-blue-500" />
+          <div className="min-w-0 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none p-5">
+            <h3 className="font-bold text-gray-800 dark:text-slate-50 mb-4 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-blue-500 dark:text-blue-400" />
               {translate(currentLanguage, "practiceListPage.progressBySubject")}
             </h3>
 
@@ -1186,7 +1187,7 @@ export default function PracticeListPage({
                 {[1, 2, 3].map((i) => (
                   <div
                     key={i}
-                    className="h-8 bg-gray-100 rounded-lg animate-pulse"
+                    className="h-8 bg-gray-100 dark:bg-slate-700 rounded-lg animate-pulse"
                   />
                 ))}
               </div>
@@ -1200,8 +1201,8 @@ export default function PracticeListPage({
                     <col className="w-[18%]" />
                   </colgroup>
                   <thead>
-                    <tr className="text-[10px] sm:text-xs text-gray-400 border-b border-gray-100">
-                      <th className="pb-2 pr-2 text-left font-semibold truncate">
+                    <tr className="text-[10px] sm:text-xs text-gray-400 dark:text-slate-300 border-b border-gray-100 dark:border-slate-700">
+                      <th className="pb-2 pl-3 pr-2 text-left font-semibold truncate">
                         {translate(currentLanguage, "practiceListPage.subject")}
                       </th>
                       <th className="pb-2 text-center font-semibold truncate">
@@ -1216,7 +1217,7 @@ export default function PracticeListPage({
                           "practiceListPage.accuracy",
                         )}
                       </th>
-                      <th className="pb-2 text-right font-semibold truncate">
+                      <th className="pb-2 pr-3 text-right font-semibold truncate">
                         {translate(
                           currentLanguage,
                           "practiceListPage.questions",
@@ -1225,19 +1226,19 @@ export default function PracticeListPage({
                     </tr>
                   </thead>
 
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-gray-50 dark:divide-slate-700/70">
                     {summaryRows.map((row) => (
                       <tr
                         key={row.id}
-                        className="group hover:bg-gray-50 transition"
+                        className="group"
                       >
-                        <td className="min-w-0 py-3 pr-2">
+                        <td className="min-w-0 rounded-l-xl py-3 pl-3 pr-2 transition-colors group-hover:bg-gray-50 dark:group-hover:bg-slate-700/40">
                           <div className="flex min-w-0 items-center gap-2">
                             <div
                               className={`w-2.5 h-2.5 shrink-0 rounded-full ${row.dotColor}`}
                             />
                             <span
-                              className="block min-w-0 truncate font-medium text-gray-700"
+                              className="block min-w-0 truncate font-medium text-gray-700 dark:text-slate-100"
                               title={getCategoryLabel(row, currentLanguage)}
                             >
                               {getCategoryLabel(row, currentLanguage)}
@@ -1245,30 +1246,30 @@ export default function PracticeListPage({
                           </div>
                         </td>
 
-                        <td className="py-3 text-center whitespace-nowrap">
+                        <td className="py-3 text-center whitespace-nowrap transition-colors group-hover:bg-gray-50 dark:group-hover:bg-slate-700/40">
                           <span
                             className={`font-bold ${
                               row.stats.progress >= 70
-                                ? "text-emerald-600"
+                                ? "text-emerald-600 dark:text-emerald-400"
                                 : row.stats.progress >= 40
-                                  ? "text-amber-500"
-                                  : "text-gray-500"
+                                  ? "text-amber-500 dark:text-amber-400"
+                                  : "text-gray-500 dark:text-slate-300"
                             }`}
                           >
                             {row.stats.progress}%
                           </span>
                         </td>
 
-                        <td className="py-3 text-center whitespace-nowrap">
+                        <td className="py-3 text-center whitespace-nowrap transition-colors group-hover:bg-gray-50 dark:group-hover:bg-slate-700/40">
                           <span
                             className={`font-bold ${
                               row.stats.accuracy >= 70
-                                ? "text-emerald-600"
+                                ? "text-emerald-600 dark:text-emerald-400"
                                 : row.stats.accuracy >= 50
-                                  ? "text-amber-500"
+                                  ? "text-amber-500 dark:text-amber-400"
                                   : row.stats.answeredCount === 0
-                                    ? "text-gray-300"
-                                    : "text-red-500"
+                                    ? "text-gray-300 dark:text-slate-500"
+                                    : "text-red-500 dark:text-red-400"
                             }`}
                           >
                             {row.stats.answeredCount === 0
@@ -1277,7 +1278,7 @@ export default function PracticeListPage({
                           </span>
                         </td>
 
-                        <td className="py-3 text-right text-gray-500 whitespace-nowrap">
+                        <td className="rounded-r-xl py-3 pr-3 text-right text-gray-500 dark:text-slate-300 whitespace-nowrap transition-colors group-hover:bg-gray-50 dark:group-hover:bg-slate-700/40">
                           {row.stats.questionCount}
                           {translate(
                             currentLanguage,
@@ -1292,9 +1293,9 @@ export default function PracticeListPage({
             )}
           </div>
 
-          <div className="min-w-0 bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-              <ChevronRight className="w-4 h-4 text-blue-500" />
+          <div className="min-w-0 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none p-5">
+            <h3 className="font-bold text-gray-800 dark:text-slate-50 mb-4 flex items-center gap-2">
+              <ChevronRight className="w-4 h-4 text-blue-500 dark:text-blue-400" />
               {translate(
                 currentLanguage,
                 "practiceListPage.recommendedNextActions",
@@ -1308,17 +1309,17 @@ export default function PracticeListPage({
                   <col className="w-[28%]" />
                 </colgroup>
                 <thead>
-                  <tr className="text-xs text-gray-400 border-b border-gray-100">
-                    <th className="pb-2 pr-2 text-left font-semibold truncate">
+                  <tr className="text-xs text-gray-400 dark:text-slate-300 border-b border-gray-100 dark:border-slate-700">
+                    <th className="pb-2 pl-3 pr-2 text-left font-semibold truncate">
                       {translate(currentLanguage, "practiceListPage.item")}
                     </th>
-                    <th className="pb-2 text-right font-semibold truncate">
+                    <th className="pb-2 pr-3 text-right font-semibold truncate">
                       {translate(currentLanguage, "practiceListPage.action")}
                     </th>
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-gray-50">
+                <tbody className="divide-y divide-gray-50 dark:divide-slate-700/70">
                   {[...summaryRows]
                     .sort(
                       (a, b) =>
@@ -1327,10 +1328,13 @@ export default function PracticeListPage({
                     )
                     .slice(0, 2)
                     .map((row) => (
-                      <tr key={row.id} className="hover:bg-gray-50 transition">
-                        <td className="min-w-0 py-3 pr-2">
+                      <tr
+                        key={row.id}
+                        className="group"
+                      >
+                        <td className="min-w-0 rounded-l-xl py-3 pl-3 pr-2 transition-colors group-hover:bg-gray-50 dark:group-hover:bg-slate-700/40">
                           <p
-                            className="truncate font-semibold text-gray-700"
+                            className="truncate font-semibold text-gray-700 dark:text-slate-100"
                             title={`${getCategoryLabel(row, currentLanguage)}${translate(currentLanguage, "practiceListPage.fundamentals")}`}
                           >
                             {getCategoryLabel(row, currentLanguage)}
@@ -1340,7 +1344,7 @@ export default function PracticeListPage({
                             )}
                           </p>
 
-                          <p className="truncate text-xs text-gray-400">
+                          <p className="truncate text-xs text-gray-400 dark:text-slate-300">
                             {row.stats.answeredCount === 0
                               ? translate(
                                   currentLanguage,
@@ -1353,16 +1357,12 @@ export default function PracticeListPage({
                           </p>
                         </td>
 
-                        <td className="min-w-0 py-3 text-right">
+                        <td className="min-w-0 rounded-r-xl py-3 pl-2 pr-3 text-right transition-colors group-hover:bg-gray-50 dark:group-hover:bg-slate-700/40">
                           <button
                             onClick={() =>
                               startCategory(row.subjectIds, row.id)
                             }
-                            className="block w-full truncate text-right text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline transition"
-                            title={translate(
-                              currentLanguage,
-                              "practiceListPage.solve",
-                            )}
+                            className="ml-auto block max-w-full truncate rounded-md !border-0 !bg-transparent !p-0 !shadow-none !translate-y-0 hover:!bg-transparent hover:!shadow-none hover:!translate-y-0 focus:!bg-transparent text-right text-xs font-semibold text-blue-600 transition hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
                           >
                             {translate(
                               currentLanguage,
@@ -1373,10 +1373,10 @@ export default function PracticeListPage({
                       </tr>
                     ))}
 
-                  <tr className="hover:bg-gray-50 transition">
-                    <td className="min-w-0 py-3 pr-2">
+                  <tr className="group">
+                    <td className="min-w-0 rounded-l-xl py-3 pl-3 pr-2 transition-colors group-hover:bg-gray-50 dark:group-hover:bg-slate-700/40">
                       <p
-                        className="truncate font-semibold text-gray-700"
+                        className="truncate font-semibold text-gray-700 dark:text-slate-100"
                         title={translate(
                           currentLanguage,
                           "practiceListPage.checkYourLevelWithAMockExam",
@@ -1387,7 +1387,7 @@ export default function PracticeListPage({
                           "practiceListPage.checkYourLevelWithAMockExam",
                         )}
                       </p>
-                      <p className="truncate text-xs text-gray-400">
+                      <p className="truncate text-xs text-gray-400 dark:text-slate-300">
                         {translate(
                           currentLanguage,
                           "practiceListPage.takeItUnderRealExamTiming",
@@ -1395,14 +1395,10 @@ export default function PracticeListPage({
                       </p>
                     </td>
 
-                    <td className="min-w-0 py-3 text-right">
+                    <td className="min-w-0 rounded-r-xl py-3 pl-2 pr-3 text-right transition-colors group-hover:bg-gray-50 dark:group-hover:bg-slate-700/40">
                       <button
                         onClick={() => onNavigate("mock-exam")}
-                        className="block w-full truncate text-right text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline transition"
-                        title={translate(
-                          currentLanguage,
-                          "practiceListPage.goToMockExam",
-                        )}
+                        className="ml-auto block max-w-full truncate rounded-md !border-0 !bg-transparent !p-0 !shadow-none !translate-y-0 hover:!bg-transparent hover:!shadow-none hover:!translate-y-0 focus:!bg-transparent text-right text-xs font-semibold text-blue-600 transition hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
                       >
                         {translate(
                           currentLanguage,
@@ -1413,10 +1409,10 @@ export default function PracticeListPage({
                   </tr>
 
                   {incorrectCount > 0 && (
-                    <tr className="hover:bg-gray-50 transition">
-                      <td className="min-w-0 py-3 pr-2">
+                    <tr className="group">
+                      <td className="min-w-0 rounded-l-xl py-3 pl-3 pr-2 transition-colors group-hover:bg-gray-50 dark:group-hover:bg-slate-700/40">
                         <p
-                          className="truncate font-semibold text-gray-700"
+                          className="truncate font-semibold text-gray-700 dark:text-slate-100"
                           title={translate(
                             currentLanguage,
                             "practiceListPage.reviewMissedQuestions",
@@ -1428,7 +1424,7 @@ export default function PracticeListPage({
                           )}
                         </p>
 
-                        <p className="truncate text-xs text-gray-400">
+                        <p className="truncate text-xs text-gray-400 dark:text-slate-300">
                           {translate(
                             currentLanguage,
                             "practiceListPage.unreviewedCount",
@@ -1437,14 +1433,10 @@ export default function PracticeListPage({
                         </p>
                       </td>
 
-                      <td className="min-w-0 py-3 text-right">
+                      <td className="min-w-0 rounded-r-xl py-3 pl-2 pr-3 text-right transition-colors group-hover:bg-gray-50 dark:group-hover:bg-slate-700/40">
                         <button
                           onClick={startReview}
-                          className="block w-full truncate text-right text-xs font-semibold text-purple-600 hover:text-purple-700 hover:underline transition"
-                          title={translate(
-                            currentLanguage,
-                            "practiceListPage.review2",
-                          )}
+                          className="ml-auto block max-w-full truncate rounded-md !border-0 !bg-transparent !p-0 !shadow-none !translate-y-0 hover:!bg-transparent hover:!shadow-none hover:!translate-y-0 focus:!bg-transparent text-right text-xs font-semibold text-purple-600 transition hover:text-purple-700 hover:underline dark:text-purple-400 dark:hover:text-purple-300"
                         >
                           {translate(
                             currentLanguage,
@@ -1459,6 +1451,7 @@ export default function PracticeListPage({
             </div>
           </div>
         </div>
+        {/* ▲▲▲ HẾT KHỐI. Phía dưới vẫn là </div> (app-shell) và </Layout> như cũ ▲▲▲ */}
       </div>
     </Layout>
   );
