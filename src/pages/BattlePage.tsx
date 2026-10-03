@@ -748,7 +748,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                     className="mt-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-indigo-500 px-5 py-2.5 text-sm font-extrabold uppercase text-white transition hover:from-violet-500 hover:to-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0f1530]"
                   >
                     <Zap className="h-4 w-4" />
-                    {translate(language, 'ui.createRoom')}
+                    {translate(language, 'ui.gotoCreateRoom')}
                   </button>
                 </li>
               )}

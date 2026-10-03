@@ -89,6 +89,7 @@ export const vi = {
   "ui.battleSeconds": "Số giây mỗi câu (5-300)",
   "ui.wager": "Điểm cược",
   "ui.createRoom": "Tạo phòng",
+  "ui.gotoCreateRoom": "Đi đến tạo phòng",
   "ui.waitingOpponent": "Đang chờ đối thủ",
   "ui.wagerLocked": "Điểm cược đã giữ: {count}",
   "ui.keepOpen":
