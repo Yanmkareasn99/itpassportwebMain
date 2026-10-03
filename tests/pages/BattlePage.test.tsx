@@ -84,7 +84,8 @@ it('shows rankings ordered by wins with battle correct answers as the tiebreak s
   expect(screen.getByText('Battle correct')).toBeTruthy();
   expect(screen.getByText('Alice')).toBeTruthy();
   expect(screen.getByText('100')).toBeTruthy();
-  expect(screen.getByText('Me (You)')).toBeTruthy();
+  expect(screen.getByText('Me')).toBeTruthy();
+  expect(screen.getByText('You')).toBeTruthy();
   expect(mocks.rpc).toHaveBeenCalledWith('get_battle_rankings', { ranking_limit: 50 });
 });
 
@@ -253,10 +254,10 @@ it.each(['creator', 'opponent'])('uses the room time limit for the %s', async ro
 });
 
 it.each([
-  ['win', 'me', '+100', '-0'],
-  ['loss', 'them', '+0', '-50'],
-  ['draw', null, '+50', '-0'],
-])('shows battle point changes for a %s', async (_label, winnerId, added, deducted) => {
+  ['win', 'me', 'Added', '+100', 'Deducted'],
+  ['loss', 'them', 'Deducted', '-50', 'Added'],
+  ['draw', null, 'Added', '+50', 'Deducted'],
+])('shows battle point changes for a %s', async (_label, winnerId, label, value, absentLabel) => {
   mocks.room.status = 'completed';
   mocks.room.wager_points = 50;
   mocks.room.winner_id = winnerId;
@@ -266,8 +267,7 @@ it.each([
   fireEvent.click(screen.getByRole('button', { name: /Resume/ }));
   await flush();
 
-  expect(screen.getByText('Added')).toBeTruthy();
-  expect(screen.getByText(added)).toBeTruthy();
-  expect(screen.getByText('Deducted')).toBeTruthy();
-  expect(screen.getByText(deducted)).toBeTruthy();
+  expect(screen.getByText(label)).toBeTruthy();
+  expect(screen.getByText(value)).toBeTruthy();
+  expect(screen.queryByText(absentLabel)).toBeNull();
 });
