@@ -571,6 +571,10 @@ export const en = {
   "mockExamPage.timeLimitMin": "Time limit (min)",
   "mockExamPage.youCannotPauseTheExamOnceItStarts":
     "You cannot pause the exam once it starts. Press start when ready.",
+     "mockExamPage.unansweredWarningTitle":
+    "You have unanswered questions. Are you sure you want to submit?",  
+   "mockExamPage.continueExam": "Continue",
+   "mockExamPage.submitAnyway": "Submit anyway",
   "practiceListPage.accuracy": "Accuracy",
   "practiceListPage.action": "Action",
   "practiceListPage.all": "All",

@@ -559,6 +559,10 @@ export const vi = {
   "mockExamPage.timeLimitMin": "Thời gian (phút)",
   "mockExamPage.youCannotPauseTheExamOnceItStarts":
     "Khi đã bắt đầu, bạn không thể dừng giữa chừng. Nhấn bắt đầu khi sẵn sàng.",
+  "mockExamPage.unansweredWarningTitle":
+    "Bạn còn câu chưa trả lời. Bạn có chắc muốn nộp bài?",  
+   "mockExamPage.continueExam": "Tiếp tục",
+   "mockExamPage.submitAnyway": "nộp bài",
   "practiceListPage.accuracy": "Độ chính xác",
   "practiceListPage.action": "Hành động",
   "practiceListPage.all": "Tất cả",

@@ -1,5 +1,6 @@
 import { translateMessage, translate } from '../i18n';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Clock, ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertCircle, BarChart2 } from 'lucide-react';
 import Layout from '../components/Layout';
 import { supabase } from '../lib/supabase';
@@ -30,6 +31,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
   const [timeLeft, setTimeLeft] = useState(DEFAULT_MOCK_EXAM_SETTINGS.duration_minutes * 60);
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [showConfirm, setShowConfirm] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const finishingRef = useRef(false);
   const [randomizeAnswerChoices] = useState(getRandomizeAnswerChoicesPreference);
@@ -147,47 +149,86 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
   const choices: AnswerChoice[] = question ? answerChoiceOrders.get(question.id) ?? [] : [];
   const answeredCount = Object.keys(userAnswers).length;
   const timeWarning = timeLeft < 600;
+  const unansweredCount = questions.length - answeredCount;
+
+  // Bấm nộp bài: nếu còn câu chưa trả lời thì hỏi xác nhận trước
+  function requestFinish() {
+    if (unansweredCount > 0) {
+      setShowConfirm(true);
+    } else {
+      void finishExam();
+    }
+  }
 
   if (stage === 'intro') {
     return (
       <Layout currentPage={currentPage} onNavigate={onNavigate} title={translate(language, 'mockExamPage.mockExam')} subtitle={translate(language, 'mockExamPage.studyMenu')}>
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
-            <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
-              <BarChart2 className="w-8 h-8 text-emerald-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">{translate(language, 'mockExamPage.mockExam')}</h2>
-            <p className="text-gray-500 mb-8">{translate(language, 'mockExamPage.checkYourAbilityInTheSameFormatAs')}</p>
-            <div className="grid grid-cols-3 gap-4 mb-8">
-              <div className="bg-gray-50 rounded-xl p-4">
-                <p className="text-2xl font-bold text-gray-800">{settings?.question_count ?? '—'}</p>
-                <p className="text-xs text-gray-400 mt-1">{translate(language, 'mockExamPage.questions')}</p>
+        <div className="min-h-full rounded-3xl bg-slate-50/80 px-4 py-6 dark:bg-slate-900/60 sm:px-8 sm:py-10">
+          <div className="mx-auto max-w-4xl">
+            <div className="rounded-3xl border border-blue-100/80 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:shadow-none sm:p-8 lg:p-10">
+              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300">
+                <BarChart2 className="h-8 w-8" strokeWidth={2.2} />
               </div>
-              <div className="bg-gray-50 rounded-xl p-4">
-                <p className="text-2xl font-bold text-gray-800">{settings?.duration_minutes ?? '—'}</p>
-                <p className="text-xs text-gray-400 mt-1">{translate(language, 'mockExamPage.timeLimitMin')}</p>
+
+              <div className="text-center">
+                <h2 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-50 sm:text-3xl">
+                  {translate(language, 'mockExamPage.mockExam')}
+                </h2>
+                <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500 dark:text-slate-300 sm:text-base">
+                  {translate(language, 'mockExamPage.checkYourAbilityInTheSameFormatAs')}
+                </p>
               </div>
-              <div className="bg-gray-50 rounded-xl p-4">
-                <p className="text-2xl font-bold text-gray-800">{settings ? `${settings.passing_score_percent}%` : '—'}</p>
-                <p className="text-xs text-gray-400 mt-1">{translate(language, 'mockExamPage.passingScore')}</p>
+
+              <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+                <div className="rounded-2xl border border-blue-100/70 bg-blue-50/70 px-4 py-5 text-center dark:border-blue-400/20 dark:bg-blue-500/10">
+                  <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm dark:bg-slate-700 dark:text-blue-300 dark:shadow-none">
+                    <CheckCircle className="h-5 w-5" />
+                  </div>
+                  <p className="text-3xl font-bold text-slate-900 dark:text-slate-50">{settings?.question_count ?? '—'}</p>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">{translate(language, 'mockExamPage.questions')}</p>
+                </div>
+                <div className="rounded-2xl border border-violet-100/70 bg-violet-50/70 px-4 py-5 text-center dark:border-violet-400/20 dark:bg-violet-500/10">
+                  <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white text-violet-600 shadow-sm dark:bg-slate-700 dark:text-violet-300 dark:shadow-none">
+                    <Clock className="h-5 w-5" />
+                  </div>
+                  <p className="text-3xl font-bold text-slate-900 dark:text-slate-50">{settings?.duration_minutes ?? '—'}</p>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">{translate(language, 'mockExamPage.timeLimitMin')}</p>
+                </div>
+                <div className="rounded-2xl border border-emerald-100/70 bg-emerald-50/70 px-4 py-5 text-center dark:border-emerald-400/20 dark:bg-emerald-500/10">
+                  <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white text-emerald-600 shadow-sm dark:bg-slate-700 dark:text-emerald-300 dark:shadow-none">
+                    <BarChart2 className="h-5 w-5" />
+                  </div>
+                  <p className="text-3xl font-bold text-slate-900 dark:text-slate-50">{settings ? `${settings.passing_score_percent}%` : '—'}</p>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">{translate(language, 'mockExamPage.passingScore')}</p>
+                </div>
               </div>
-            </div>
-            <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 mb-8 text-left">
-              <div className="flex gap-2">
-                <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                <p className="text-sm text-amber-700">
+
+              <div className="mt-6 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 dark:border-amber-400/30 dark:bg-amber-500/10">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500 dark:text-amber-300" />
+                <p className="text-sm leading-6 text-amber-800 dark:text-amber-100">
                   {translate(language, 'mockExamPage.youCannotPauseTheExamOnceItStarts')}
                 </p>
               </div>
+
+              {error && (
+                <p role="alert" className="mt-4 text-center text-sm text-red-600 dark:text-red-300">
+                  {translateMessage(language, error)}
+                </p>
+              )}
+
+              <div className="mt-7 flex justify-center">
+                <button
+                  onClick={startExam}
+                  disabled={loading || settingsLoading}
+                  className="inline-flex min-h-12 min-w-44 items-center justify-center gap-2 rounded-full bg-blue-600 px-8 py-3 font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-200 dark:bg-blue-500 dark:shadow-none dark:hover:bg-blue-400 dark:focus:ring-blue-400/40 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loading
+                    ? translate(language, 'mockExamPage.loadingQuestions')
+                    : translate(language, 'mockExamPage.startExam')}
+                  {!loading && <ChevronRight className="h-5 w-5" />}
+                </button>
+              </div>
             </div>
-            {error && <p role="alert" className="text-sm text-red-600 mb-4">{translateMessage(language, error)}</p>}
-            <button
-              onClick={startExam}
-              disabled={loading || settingsLoading}
-              className="px-8 py-3 bg-emerald-600 text-white rounded-xl font-semibold hover:bg-emerald-700 transition disabled:opacity-60"
-            >
-              {loading ? (translate(language, 'mockExamPage.loadingQuestions')) : (translate(language, 'mockExamPage.startExam'))}
-            </button>
           </div>
         </div>
       </Layout>
@@ -209,17 +250,19 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
     return (
       <Layout currentPage={currentPage} onNavigate={onNavigate} title={translate(language, 'mockExamPage.examResults')} subtitle={translate(language, 'mockExamPage.mockExam')}>
         <div className="max-w-2xl mx-auto space-y-5">
-          <div className={`rounded-2xl p-8 text-center ${passed ? 'bg-emerald-50 border border-emerald-200' : 'bg-red-50 border border-red-200'}`}>
-            <p className={`text-6xl font-bold mb-2 ${passed ? 'text-emerald-600' : 'text-red-500'}`}>{pct}%</p>
-            <p className={`text-xl font-bold ${passed ? 'text-emerald-700' : 'text-red-700'}`}>
+          <div className={`rounded-2xl p-8 text-center border ${passed
+            ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-400/30'
+            : 'bg-red-50 border-red-200 dark:bg-red-500/10 dark:border-red-400/30'}`}>
+            <p className={`text-6xl font-bold mb-2 ${passed ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>{pct}%</p>
+            <p className={`text-xl font-bold ${passed ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'}`}>
               {passed ? (translate(language, 'mockExamPage.passedCongratulations')) : (translate(language, 'mockExamPage.notPassedTryAgain'))}
             </p>
-            <p className="text-gray-500 mt-2">{translate(language, 'mockExamPage.resultSummary', { total, correct, time: formatTime(timeTaken) })}</p>
+            <p className="text-gray-500 dark:text-slate-300 mt-2">{translate(language, 'mockExamPage.resultSummary', { total, correct, time: formatTime(timeTaken) })}</p>
           </div>
 
           {/* Per-question review */}
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <h3 className="font-semibold text-gray-700 mb-4">{translate(language, 'mockExamPage.perQuestionResults')}</h3>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none p-5">
+            <h3 className="font-semibold text-gray-700 dark:text-slate-100 mb-4">{translate(language, 'mockExamPage.perQuestionResults')}</h3>
             <div className="space-y-3">
               {questions.map((q, i) => {
                 const chosen = userAnswers[q.id];
@@ -227,15 +270,15 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
                 const isCorrect = !!chosen && (ch.find(c => c.id === chosen)?.is_correct ?? false);
                 const correctChoice = ch.find(c => c.is_correct);
                 return (
-                  <div key={q.id} className="flex items-start gap-3 p-3 rounded-xl bg-gray-50">
+                  <div key={q.id} className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-slate-900/50 border border-transparent dark:border-slate-700">
                     {isCorrect
-                      ? <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                      : <XCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />}
+                      ? <CheckCircle className="w-5 h-5 text-emerald-500 dark:text-emerald-400 shrink-0 mt-0.5" />
+                      : <XCircle className="w-5 h-5 text-red-500 dark:text-red-400 shrink-0 mt-0.5" />}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-700">{translate(language, 'mockExamPage.questionNumber', { number: i + 1 })}</p>
-                      <p className="text-xs text-gray-500 truncate">{q.question_text.slice(0, 60)}...</p>
+                      <p className="text-sm font-medium text-gray-700 dark:text-slate-100">{translate(language, 'mockExamPage.questionNumber', { number: i + 1 })}</p>
+                      <p className="text-xs text-gray-500 dark:text-slate-400 truncate">{q.question_text.slice(0, 60)}...</p>
                       {!isCorrect && correctChoice && (
-                        <p className="text-xs text-emerald-600 mt-0.5">{translate(language, 'mockExamPage.correct')}: {correctChoice.choice_text}</p>
+                        <p className="text-xs text-emerald-600 dark:text-emerald-300 mt-0.5">{translate(language, 'mockExamPage.correct')}: {correctChoice.choice_text}</p>
                       )}
                     </div>
                   </div>
@@ -245,10 +288,10 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
           </div>
 
           <div className="flex gap-3 justify-center">
-            <button onClick={() => { finishingRef.current = false; setStage('intro'); setUserAnswers({}); setCurrentIndex(0); setTimeLeft(examDuration); setSessionId(null); }} className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition">
+            <button onClick={() => { finishingRef.current = false; setStage('intro'); setUserAnswers({}); setCurrentIndex(0); setTimeLeft(examDuration); setSessionId(null); }} className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600">
               {translate(language, 'mockExamPage.retake')}
             </button>
-            <button onClick={() => onNavigate('home')} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition">
+            <button onClick={() => onNavigate('home')} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition dark:bg-blue-500 dark:hover:bg-blue-400">
               {translate(language, 'mockExamPage.home')}
             </button>
           </div>
@@ -261,28 +304,30 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
     <Layout currentPage={currentPage} onNavigate={onNavigate} title={translate(language, 'mockExamPage.mockExam')} subtitle={translate(language, 'mockExamPage.inProgress')}>
       <div className="max-w-5xl mx-auto">
         {/* Timer bar */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-5">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none p-4 mb-5">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-gray-700">{translate(language, 'mockExamPage.questionProgress', { current: currentIndex + 1, total: questions.length })}</span>
-            <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full ${timeWarning ? 'bg-red-50 text-red-600' : 'bg-gray-50 text-gray-700'}`}>
+            <span className="text-sm font-semibold text-gray-700 dark:text-slate-100">{translate(language, 'mockExamPage.questionProgress', { current: currentIndex + 1, total: questions.length })}</span>
+            <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full ${timeWarning
+              ? 'bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-300'
+              : 'bg-gray-50 text-gray-700 dark:bg-slate-700 dark:text-slate-100'}`}>
               <Clock className="w-4 h-4" />
               <span className="text-sm font-bold font-mono">{formatTime(timeLeft)}</span>
             </div>
-            <span className="text-sm text-gray-400">{translate(language, 'mockExamPage.answeredProgress', { answered: answeredCount, total: questions.length })}</span>
+            <span className="text-sm text-gray-400 dark:text-slate-300">{translate(language, 'mockExamPage.answeredProgress', { answered: answeredCount, total: questions.length })}</span>
           </div>
-          <div className="mt-3 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-            <div className={`h-full rounded-full transition-all ${timeWarning ? 'bg-red-400' : 'bg-emerald-400'}`} style={{ width: `${(timeLeft / examDuration) * 100}%` }} />
+          <div className="mt-3 h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
+            <div className={`h-full rounded-full transition-all ${timeWarning ? 'bg-red-400 dark:bg-red-400' : 'bg-emerald-400 dark:bg-emerald-400'}`} style={{ width: `${(timeLeft / examDuration) * 100}%` }} />
           </div>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-5">
           {/* Question */}
           <div className="flex-1 space-y-4">
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-              <p className="text-xs text-blue-600 font-bold bg-blue-50 px-2.5 py-1 rounded-full inline-block mb-4">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none p-6">
+              <p className="text-xs text-blue-600 dark:text-blue-300 font-bold bg-blue-50 dark:bg-blue-500/20 px-2.5 py-1 rounded-full inline-block mb-4">
                 {translate(language, 'mockExamPage.questionNumber', { number: currentIndex + 1 })}
               </p>
-              <p className="text-gray-800 leading-relaxed text-sm whitespace-pre-line">{question?.question_text}</p>
+              <p className="text-gray-800 dark:text-slate-100 leading-relaxed text-sm whitespace-pre-line">{question?.question_text}</p>
               <QuestionImage question={question} />
             </div>
 
@@ -293,11 +338,17 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
                   <button
                     key={choice.id}
                     onClick={() => setUserAnswers(prev => ({ ...prev, [question.id]: choice.id }))}
-                    className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-center gap-3 ${
-                      selected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/30'
+                    className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-center gap-3 text-gray-800 dark:text-slate-100 ${
+                      selected
+                        ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-500/15'
+                        : 'border-gray-200 bg-white hover:border-blue-300 hover:bg-blue-50/30 dark:border-slate-600 dark:bg-slate-800 dark:hover:border-blue-400/70 dark:hover:bg-slate-700/60'
                     }`}
                   >
-                    <span className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold shrink-0 ${selected ? 'border-blue-500 text-blue-600' : 'border-gray-300 text-gray-400'}`}>
+                    <span className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold shrink-0 ${
+                      selected
+                        ? 'border-blue-500 text-blue-600 dark:border-blue-400 dark:bg-blue-500 dark:text-white'
+                        : 'border-gray-300 text-gray-400 dark:border-slate-500 dark:text-slate-300'
+                    }`}>
                       {String.fromCharCode(65 + idx)}
                     </span>
                     <AnswerChoiceContent question={question} choice={choice} displayIndex={idx} />
@@ -310,21 +361,21 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
               <button
                 disabled={currentIndex === 0}
                 onClick={() => setCurrentIndex(i => i - 1)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition disabled:opacity-40"
+                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition disabled:opacity-40 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
               >
                 <ChevronLeft className="w-4 h-4" />{translate(language, 'mockExamPage.previous')}
               </button>
               {currentIndex + 1 < questions.length ? (
                 <button
                   onClick={() => setCurrentIndex(i => i + 1)}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition dark:bg-blue-500 dark:hover:bg-blue-400"
                 >
                   {translate(language, 'mockExamPage.next')} <ChevronRight className="w-4 h-4" />
                 </button>
               ) : (
                 <button
-                  onClick={finishExam}
-                  className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition"
+                  onClick={requestFinish}
+                  className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition dark:bg-emerald-500 dark:hover:bg-emerald-400"
                 >
                   {translate(language, 'mockExamPage.finishExam')}
                 </button>
@@ -334,13 +385,13 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
 
           {/* Side panel */}
           <div className="w-full lg:w-52 shrink-0">
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-              <p className="text-xs font-semibold text-gray-500 mb-3">{translate(language, 'mockExamPage.questionList')}</p>
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none p-4">
+              <p className="text-xs font-semibold text-gray-500 dark:text-slate-300 mb-3">{translate(language, 'mockExamPage.questionList')}</p>
               <div className="grid grid-cols-8 sm:grid-cols-10 lg:grid-cols-4 gap-1.5">
                 {questions.map((q, i) => {
-                  let cls = 'bg-gray-100 text-gray-500';
-                  if (i === currentIndex) cls = 'bg-blue-600 text-white';
-                  else if (userAnswers[q.id]) cls = 'bg-emerald-100 text-emerald-700';
+                  let cls = 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600';
+                  if (i === currentIndex) cls = 'bg-blue-600 text-white dark:bg-blue-500';
+                  else if (userAnswers[q.id]) cls = 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300';
                   return (
                     <button
                       key={i}
@@ -352,12 +403,12 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
                   );
                 })}
               </div>
-              <div className="mt-4 pt-4 border-t border-gray-100 text-center">
-                <p className="text-xs text-gray-400">{translate(language, 'mockExamPage.answeredCount', { answered: answeredCount, total: questions.length })}</p>
+              <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700 text-center">
+                <p className="text-xs text-gray-400 dark:text-slate-300">{translate(language, 'mockExamPage.answeredCount', { answered: answeredCount, total: questions.length })}</p>
               </div>
               <button
-                onClick={finishExam}
-                className="w-full mt-3 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 transition"
+                onClick={requestFinish}
+                className="w-full mt-3 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 transition dark:bg-emerald-500 dark:hover:bg-emerald-400"
               >
                 {translate(language, 'mockExamPage.submit')}
               </button>
@@ -365,6 +416,48 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
           </div>
         </div>
       </div>
+
+      {showConfirm && createPortal(
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setShowConfirm(false)}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="confirm-finish-title"
+            className="w-full max-w-md rounded-2xl border border-gray-100 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-800"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-500 dark:bg-amber-500/15 dark:text-amber-300">
+                <AlertCircle className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 id="confirm-finish-title" className="text-base font-bold text-gray-800 dark:text-slate-50">
+                  {translate(language, 'mockExamPage.unansweredWarningTitle')}
+                </h3>
+                
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setShowConfirm(false)}
+                className="rounded-xl bg-gray-100 px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600"
+              >
+                {translate(language, 'mockExamPage.continueExam')}
+              </button>
+              <button
+                onClick={() => { setShowConfirm(false); void finishExam(); }}
+                className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+              >
+                {translate(language, 'mockExamPage.submitAnyway')}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </Layout>
   );
 }
