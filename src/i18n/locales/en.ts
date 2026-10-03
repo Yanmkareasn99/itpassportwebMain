@@ -91,6 +91,7 @@ export const en = {
   "ui.battleSeconds": "Seconds per question (5-300)",
   "ui.wager": "Wager points",
   "ui.createRoom": "Create Room",
+  "ui.gotoCreateRoom": "Go to Create Room",
   "ui.waitingOpponent": "Waiting for Opponent",
   "ui.wagerLocked": "Wager locked: {count} pts",
   "ui.keepOpen":

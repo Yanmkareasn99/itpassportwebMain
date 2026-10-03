@@ -89,6 +89,7 @@ export const ja = {
   "ui.battleSeconds": "1問の制限時間（5〜300秒）",
   "ui.wager": "賭けるポイント",
   "ui.createRoom": "ルームを作成",
+  "ui.gotoCreateRoom": "ルーム作成へ行く",
   "ui.waitingOpponent": "対戦相手を待っています",
   "ui.wagerLocked": "確保した賭けポイント：{count}",
   "ui.keepOpen":
