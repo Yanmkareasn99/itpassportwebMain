@@ -34,6 +34,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
   const [showConfirm, setShowConfirm] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const finishingRef = useRef(false);
+  const questionCardRef = useRef<HTMLDivElement | null>(null);
   const [randomizeAnswerChoices] = useState(getRandomizeAnswerChoicesPreference);
   const answerChoiceOrders = useMemo(
     () => createAnswerChoiceOrders(questions, randomizeAnswerChoices),
@@ -157,6 +158,13 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
       setShowConfirm(true);
     } else {
       void finishExam();
+    }
+  }
+
+  function selectQuestion(index: number) {
+    setCurrentIndex(index);
+    if (window.matchMedia('(max-width: 1023px)').matches) {
+      questionCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }
 
@@ -302,7 +310,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
 
   return (
     <Layout currentPage={currentPage} onNavigate={onNavigate} title={translate(language, 'mockExamPage.mockExam')} subtitle={translate(language, 'mockExamPage.inProgress')}>
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Timer bar */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none p-4 mb-5">
           <div className="flex items-center justify-between">
@@ -323,7 +331,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
         <div className="flex flex-col lg:flex-row gap-5">
           {/* Question */}
           <div className="flex-1 space-y-4">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none p-6">
+            <div ref={questionCardRef} className="scroll-mt-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none p-6">
               <p className="text-xs text-blue-600 dark:text-blue-300 font-bold bg-blue-50 dark:bg-blue-500/20 px-2.5 py-1 rounded-full inline-block mb-4">
                 {translate(language, 'mockExamPage.questionNumber', { number: currentIndex + 1 })}
               </p>
@@ -384,10 +392,10 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
           </div>
 
           {/* Side panel */}
-          <div className="w-full lg:w-52 shrink-0">
+          <div className="w-full shrink-0 lg:w-52 xl:w-72 2xl:w-96">
             <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none p-4">
               <p className="text-xs font-semibold text-gray-500 dark:text-slate-300 mb-3">{translate(language, 'mockExamPage.questionList')}</p>
-              <div className="grid grid-cols-8 sm:grid-cols-10 lg:grid-cols-4 gap-1.5">
+              <div className="grid grid-cols-8 gap-1.5 sm:grid-cols-10 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8">
                 {questions.map((q, i) => {
                   let cls = 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600';
                   if (i === currentIndex) cls = 'bg-blue-600 text-white dark:bg-blue-500';
@@ -395,7 +403,8 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
                   return (
                     <button
                       key={i}
-                      onClick={() => setCurrentIndex(i)}
+                      onClick={() => selectQuestion(i)}
+                      aria-label={translate(language, 'mockExamPage.questionNumber', { number: i + 1 })}
                       className={`h-8 rounded-lg text-xs font-bold transition ${cls}`}
                     >
                       {i + 1}

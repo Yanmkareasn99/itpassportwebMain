@@ -66,3 +66,30 @@ it('shows an actionable error when the question bank is too small', async () => 
   await flush();
   expect(screen.getByRole('alert').textContent).toContain('only 3 are available');
 });
+
+it('scrolls back to the selected question on mobile', async () => {
+  const scrollIntoView = vi.fn();
+  Object.defineProperty(Element.prototype, 'scrollIntoView', {
+    configurable: true,
+    value: scrollIntoView,
+  });
+  vi.mocked(window.matchMedia).mockImplementation(query => ({
+    matches: query === '(max-width: 1023px)',
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  }));
+
+  render(<MockExamPage currentPage="mock-exam" onNavigate={() => {}} />);
+  await flush();
+  fireEvent.click(screen.getByRole('button', { name: /Start Exam/i }));
+  await flush();
+  fireEvent.click(screen.getByRole('button', { name: 'Question 2' }));
+
+  expect(screen.getByText('Question 2 / 2')).toBeTruthy();
+  expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+});
