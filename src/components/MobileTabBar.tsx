@@ -81,7 +81,7 @@ export default function MobileTabBar({
                   className={`flex flex-col items-center gap-1.5 py-3 rounded-xl transition ${
                     isActive(page)
                       ? "bg-blue-50 text-blue-600"
-                      : "text-gray-600 hover:bg-gray-50"
+                      : "text-gray-800 "
                   }`}
                 >
                   <Icon size={20} />
