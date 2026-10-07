@@ -277,7 +277,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
                 value={prompt}
                 onChange={e => setPrompt(e.target.value)}
                 onKeyDown={e => {
-                  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                  if ((e.metaKey) && e.key === 'Enter') {
                     e.preventDefault();
                     void sendMessage();
                   }
