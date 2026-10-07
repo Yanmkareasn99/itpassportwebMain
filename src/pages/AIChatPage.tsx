@@ -279,7 +279,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
                 onKeyDown={e => {
                   if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                     e.preventDefault();
-                    void sendMessage();
+                    void sendMessage(e.currentTarget.value);
                   }
                 }}
                 placeholder={
