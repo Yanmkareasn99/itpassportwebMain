@@ -436,6 +436,15 @@ export const vi = {
   "homePage.untilExam": "còn",
   "homePage.viewMaterials": "Xem tài liệu",
   "loginPage.alreadyHaveAnAccount": "Đã có tài khoản?",
+  "googleSetupPage.complete": "Lưu và tiếp tục",
+  "googleSetupPage.failed": "Không thể hoàn tất thiết lập tài khoản: {error}",
+  "googleSetupPage.help":
+    "Hoàn tất hồ sơ và tạo mật khẩu Manabi để bạn cũng có thể đăng nhập bằng địa chỉ Gmail.",
+  "googleSetupPage.passwordHint":
+    "Hãy tạo mật khẩu riêng cho Manabi. Không nhập mật khẩu Google của bạn.",
+  "googleSetupPage.saving": "Đang lưu...",
+  "googleSetupPage.signOut": "Đăng xuất",
+  "googleSetupPage.title": "Hoàn tất tài khoản Manabi",
   "loginPage.backToSignIn": "Quay lại đăng nhập",
   "loginPage.cancelRecoveryFailed": "Không thể thoát khỏi đặt lại mật khẩu. Vui lòng thử lại.",
   "loginPage.brand": "Manabi",

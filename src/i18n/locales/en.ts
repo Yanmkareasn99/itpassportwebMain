@@ -448,6 +448,15 @@ export const en = {
   "homePage.untilExam": "Until exam",
   "homePage.viewMaterials": "View materials",
   "loginPage.alreadyHaveAnAccount": "Already have an account?",
+  "googleSetupPage.complete": "Save and continue",
+  "googleSetupPage.failed": "Unable to complete account setup: {error}",
+  "googleSetupPage.help":
+    "Complete your profile and create a Manabi password so you can also sign in with your Gmail address.",
+  "googleSetupPage.passwordHint":
+    "Create a password for Manabi. Do not enter your Google password.",
+  "googleSetupPage.saving": "Saving...",
+  "googleSetupPage.signOut": "Sign out",
+  "googleSetupPage.title": "Complete your Manabi account",
   "loginPage.backToSignIn": "Back to sign in",
   "loginPage.cancelRecoveryFailed": "Unable to leave password reset. Please try again.",
   "loginPage.brand": "Manabi",
