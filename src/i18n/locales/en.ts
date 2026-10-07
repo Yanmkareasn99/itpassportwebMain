@@ -555,6 +555,7 @@ export const en = {
   "mockExamPage.home": "Home",
   "mockExamPage.inProgress": "In progress",
   "mockExamPage.loadingQuestions": "Loading questions...",
+  "mockExamPage.goToQuestionList": "Go to question list",
   "mockExamPage.mockExam": "Mock exam",
   "mockExamPage.next": "Next",
   "mockExamPage.notPassedTryAgain": "Not passed. Try again!",

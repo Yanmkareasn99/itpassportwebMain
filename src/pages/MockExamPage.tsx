@@ -34,6 +34,8 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
   const [showConfirm, setShowConfirm] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const finishingRef = useRef(false);
+  const [mobileQuestionListOpen, setMobileQuestionListOpen] = useState(false);
+  const mobileQuestionListRef = useRef<HTMLDivElement | null>(null);
   const [randomizeAnswerChoices] = useState(getRandomizeAnswerChoicesPreference);
   const answerChoiceOrders = useMemo(
     () => createAnswerChoiceOrders(questions, randomizeAnswerChoices),
@@ -138,6 +140,19 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
   useEffect(() => {
     if (stage === 'exam' && timeLeft === 0) void finishExam();
   }, [finishExam, stage, timeLeft]);
+
+  useEffect(() => {
+    if (!mobileQuestionListOpen) return;
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target as Node | null;
+      if (target && mobileQuestionListRef.current?.contains(target)) return;
+      setMobileQuestionListOpen(false);
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [mobileQuestionListOpen]);
 
   function formatTime(s: number) {
     const m = Math.floor(s / 60);
@@ -357,7 +372,61 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
               })}
             </div>
 
-            <div className="flex items-center justify-between pt-2">
+            <div className="lg:hidden">
+              <div ref={mobileQuestionListRef} className="rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                <button
+                  type="button"
+                  aria-expanded={mobileQuestionListOpen}
+                  onClick={() => setMobileQuestionListOpen(open => !open)}
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-blue-600 transition hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-slate-700"
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    <BarChart2 className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{translate(language, 'mockExamPage.questionList')}</span>
+                  </span>
+                  <span className="text-xs font-medium text-blue-500 dark:text-blue-300">
+                    {mobileQuestionListOpen ? '−' : '+'}
+                  </span>
+                </button>
+
+                {mobileQuestionListOpen && (
+                  <div className="border-t border-gray-100 p-4 dark:border-slate-700">
+                    <div className="grid grid-cols-8 gap-1.5 sm:grid-cols-10">
+                      {questions.map((q, i) => {
+                        let cls = 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600';
+                        if (i === currentIndex) cls = 'bg-blue-600 text-white dark:bg-blue-500';
+                        else if (userAnswers[q.id]) cls = 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300';
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => {
+                              setCurrentIndex(i);
+                              setMobileQuestionListOpen(false);
+                            }}
+                            className={`h-8 rounded-lg text-xs font-bold transition ${cls}`}
+                          >
+                            {i + 1}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-gray-100 text-center dark:border-slate-700">
+                      <p className="text-xs text-gray-400 dark:text-slate-300">{translate(language, 'mockExamPage.answeredCount', { answered: answeredCount, total: questions.length })}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={requestFinish}
+                      className="w-full mt-3 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 transition dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                    >
+                      {translate(language, 'mockExamPage.submit')}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 pt-2">
               <button
                 disabled={currentIndex === 0}
                 onClick={() => setCurrentIndex(i => i - 1)}
@@ -384,7 +453,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
           </div>
 
           {/* Side panel */}
-          <div className="w-full lg:w-52 shrink-0">
+          <div className="hidden w-full shrink-0 lg:block lg:w-52">
             <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none p-4">
               <p className="text-xs font-semibold text-gray-500 dark:text-slate-300 mb-3">{translate(language, 'mockExamPage.questionList')}</p>
               <div className="grid grid-cols-8 sm:grid-cols-10 lg:grid-cols-4 gap-1.5">

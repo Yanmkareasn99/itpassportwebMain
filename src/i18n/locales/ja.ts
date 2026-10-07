@@ -548,6 +548,7 @@ export const ja = {
   "mockExamPage.home": "ホームへ",
   "mockExamPage.inProgress": "試験中",
   "mockExamPage.loadingQuestions": "問題を読み込み中...",
+  "mockExamPage.goToQuestionList": "問題一覧へ",
   "mockExamPage.mockExam": "模擬試験",
   "mockExamPage.next": "次へ",
   "mockExamPage.notPassedTryAgain": "不合格。もう一度頑張りましょう！",

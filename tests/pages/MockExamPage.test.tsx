@@ -66,3 +66,17 @@ it('shows an actionable error when the question bank is too small', async () => 
   await flush();
   expect(screen.getByRole('alert').textContent).toContain('only 3 are available');
 });
+
+it('lets mobile users expand and collapse the question list', async () => {
+  render(<MockExamPage currentPage="mock-exam" onNavigate={() => {}} />);
+  await flush();
+  fireEvent.click(screen.getByRole('button', { name: /Start Exam/i }));
+  await flush();
+
+  fireEvent.click(screen.getByRole('button', { name: /Question list/i }));
+  expect(screen.getByRole('button', { name: /^1$/ })).toBeTruthy();
+
+  fireEvent.pointerDown(document.body);
+
+  expect(screen.queryByRole('button', { name: /^1$/ })).toBeNull();
+});
