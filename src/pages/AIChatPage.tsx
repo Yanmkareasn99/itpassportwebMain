@@ -277,11 +277,11 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
                 value={prompt}
                 onChange={e => setPrompt(e.target.value)}
                 onKeyDown={e => {
-                  if ((e.metaKey) && e.key === 'Enter') {
-                    e.preventDefault();
-                    void sendMessage();
-                  }
-                }}
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      void sendMessage();
+                    }
+                  }}
                 placeholder={
                   translate(language, 'aiChatPage.exampleExplainThisQuestionCreateAStudyPlan')
                 }
