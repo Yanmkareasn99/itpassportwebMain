@@ -439,6 +439,15 @@ export const ja = {
   "homePage.untilExam": "試験まで",
   "homePage.viewMaterials": "教材を見る",
   "loginPage.alreadyHaveAnAccount": "すでにアカウントをお持ちの方",
+  "googleSetupPage.complete": "保存して続ける",
+  "googleSetupPage.failed": "アカウント設定を完了できませんでした: {error}",
+  "googleSetupPage.help":
+    "プロフィールを入力し、GmailアドレスでもログインできるManabi用パスワードを作成してください。",
+  "googleSetupPage.passwordHint":
+    "Manabi専用のパスワードを作成してください。Googleのパスワードは入力しないでください。",
+  "googleSetupPage.saving": "保存中...",
+  "googleSetupPage.signOut": "ログアウト",
+  "googleSetupPage.title": "Manabiアカウントの設定",
   "loginPage.backToSignIn": "ログインに戻る",
   "loginPage.cancelRecoveryFailed": "パスワードの再設定を終了できませんでした。もう一度お試しください。",
   "loginPage.brand": "マナビ",

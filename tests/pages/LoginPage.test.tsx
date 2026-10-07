@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   abandonPasswordRecovery: vi.fn(),
   passwordRecoveryState: 'idle' as 'idle' | 'pending' | 'valid' | 'invalid',
   user: null as { id: string } | null,
+  needsGooglePasswordSetup: false,
   loading: false,
 }));
 
@@ -29,12 +30,14 @@ beforeEach(() => {
   vi.clearAllMocks();
   window.localStorage.removeItem('manabi-theme');
   document.documentElement.classList.remove('dark');
+  mocks.signIn.mockResolvedValue(undefined);
   mocks.signUp.mockResolvedValue(false);
   mocks.resetPassword.mockResolvedValue(undefined);
   mocks.updatePassword.mockResolvedValue(undefined);
   mocks.abandonPasswordRecovery.mockResolvedValue(undefined);
   mocks.passwordRecoveryState = 'idle';
   mocks.user = null;
+  mocks.needsGooglePasswordSetup = false;
 });
 
 it.each([null, 'light'])('keeps light mode after leaving login with saved theme %s', savedTheme => {
@@ -189,4 +192,29 @@ it('redirects a normal signed-in user away from a recovery URL', async () => {
   );
   expect(await screen.findByText('Home route')).toBeTruthy();
   expect(screen.queryByLabelText('New password')).toBeNull();
+});
+
+it('submits a Gmail address and Manabi password through regular sign-in', async () => {
+  render(<MemoryRouter><LoginPage /></MemoryRouter>);
+
+  fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'student@gmail.com' } });
+  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'manabi-secret' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+  await waitFor(() => expect(mocks.signIn).toHaveBeenCalledWith('student@gmail.com', 'manabi-secret'));
+});
+
+it('redirects a Google user without a Manabi password to account setup', async () => {
+  mocks.user = { id: 'google-user' };
+  mocks.needsGooglePasswordSetup = true;
+  render(
+    <MemoryRouter initialEntries={['/login']}>
+      <Routes>
+        <Route path="/login" element={<LoginRoute />} />
+        <Route path="/google-account-setup" element={<span>Google account setup</span>} />
+      </Routes>
+    </MemoryRouter>,
+  );
+
+  expect(await screen.findByText('Google account setup')).toBeTruthy();
 });

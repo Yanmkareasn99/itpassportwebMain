@@ -10,6 +10,7 @@ const AIChatPage = lazy(() => import('./pages/AIChatPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const BattlePage = lazy(() => import('./pages/BattlePage'));
 const HomePage = lazy(() => import('./pages/HomePage'));
+const GoogleAccountSetupPage = lazy(() => import('./pages/GoogleAccountSetupPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const MaterialsPage = lazy(() => import('./pages/MaterialsPage.tsx'));
 const MockExamPage = lazy(() => import('./pages/MockExamPage'));
@@ -54,11 +55,12 @@ function usePageNavigation() {
 }
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
-  const { user, loading } = useAuth();
+  const { user, loading, needsGooglePasswordSetup } = useAuth();
   const location = useLocation();
 
   if (loading) return <LoadingScreen />;
   if (!user) return <Navigate to="/login" replace state={{ from: location }} />;
+  if (needsGooglePasswordSetup) return <Navigate to="/google-account-setup" replace />;
 
   return children;
 }
@@ -73,14 +75,24 @@ function AdminRoute({ children }: { children: JSX.Element }) {
 }
 
 export function LoginRoute() {
-  const { user, loading, passwordRecoveryState } = useAuth();
+  const { user, loading, passwordRecoveryState, needsGooglePasswordSetup } = useAuth();
 
   if (loading) return <LoadingScreen />;
   if (user && (passwordRecoveryState === 'idle' || passwordRecoveryState === 'invalid')) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={needsGooglePasswordSetup ? '/google-account-setup' : '/'} replace />;
   }
 
   return <LoginPage />;
+}
+
+function GoogleAccountSetupRoute() {
+  const { user, loading, needsGooglePasswordSetup } = useAuth();
+
+  if (loading) return <LoadingScreen />;
+  if (!user) return <Navigate to="/login" replace />;
+  if (!needsGooglePasswordSetup) return <Navigate to="/" replace />;
+
+  return <GoogleAccountSetupPage />;
 }
 
 function PracticeListRoute() {
@@ -149,6 +161,7 @@ function AppRoutes() {
     <Suspense fallback={<LoadingScreen />}>
       <Routes>
         <Route path="/login" element={<LoginRoute />} />
+        <Route path="/google-account-setup" element={<GoogleAccountSetupRoute />} />
         <Route path="/" element={<ProtectedRoute><HomePage currentPage="home" onNavigate={onNavigate} onSetExamDate={() => navigate('/settings/exam-target')} /></ProtectedRoute>} />
         <Route path="/practice" element={<ProtectedRoute><PracticeListRoute /></ProtectedRoute>} />
         <Route path="/practice/session" element={<ProtectedRoute><PracticeSessionRoute /></ProtectedRoute>} />

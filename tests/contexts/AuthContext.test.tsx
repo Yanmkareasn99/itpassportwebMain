@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   onAuthStateChange: vi.fn(),
   signUp: vi.fn(),
   updateUser: vi.fn(),
+  updateProfile: vi.fn(),
   signOut: vi.fn(),
   authCallback: null as ((event: AuthChangeEvent, session: Session | null) => void) | null,
 }));
@@ -28,6 +29,12 @@ vi.mock('../../src/lib/supabase', () => ({
         select: () => query,
         eq: () => query,
         maybeSingle: async () => ({ data: null, error: null }),
+        update: (value: unknown) => {
+          mocks.updateProfile(value);
+          return query;
+        },
+        then: (resolve: (value: { data: null; error: null }) => unknown) =>
+          Promise.resolve({ data: null, error: null }).then(resolve),
       };
       return query;
     },
@@ -70,6 +77,25 @@ function SignupProbe() {
   );
 }
 
+function GoogleSetupProbe() {
+  const auth = useAuth();
+  return (
+    <div>
+      <span data-testid="google-setup-required">{String(auth.needsGooglePasswordSetup)}</span>
+      <button
+        type="button"
+        onClick={() => void auth.completeGooglePasswordSetup({
+          password: 'manabi-secret',
+          name: 'Google Student',
+          studentId: 'S-100',
+        })}
+      >
+        Complete Google setup
+      </button>
+    </div>
+  );
+}
+
 const recoverySession = {
   access_token: 'access',
   refresh_token: 'refresh',
@@ -81,6 +107,18 @@ const recoverySession = {
     user_metadata: {},
     aud: 'authenticated',
     created_at: '2026-01-01T00:00:00.000Z',
+  },
+} as Session;
+
+const googleSession = {
+  ...recoverySession,
+  user: {
+    ...recoverySession.user,
+    id: 'google-user',
+    email: 'student@gmail.com',
+    app_metadata: { provider: 'google', providers: ['google'] },
+    user_metadata: { name: 'Google Student' },
+    identities: [{ provider: 'google' }],
   },
 } as Session;
 
@@ -156,5 +194,35 @@ describe('AuthProvider password recovery lifecycle', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign up' }));
 
     expect(await screen.findByText('User already registered')).toBeTruthy();
+  });
+
+  it('adds a Manabi password and profile information to a Google account', async () => {
+    const updatedUser = {
+      ...googleSession.user,
+      app_metadata: { provider: 'google', providers: ['google', 'email'] },
+      user_metadata: { name: 'Google Student', manabi_password_set: true },
+      identities: [{ provider: 'google' }, { provider: 'email' }],
+    };
+    mocks.getSession.mockResolvedValueOnce({ data: { session: googleSession }, error: null });
+    mocks.updateUser.mockResolvedValueOnce({ data: { user: updatedUser }, error: null });
+
+    render(<AuthProvider><GoogleSetupProbe /></AuthProvider>);
+
+    expect(await screen.findByText('true')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Complete Google setup' }));
+
+    await waitFor(() => expect(mocks.updateProfile).toHaveBeenCalledWith({
+      name: 'Google Student',
+      student_id: 'S-100',
+    }));
+    expect(mocks.updateUser).toHaveBeenCalledWith({
+      password: 'manabi-secret',
+      data: {
+        manabi_password_set: true,
+        name: 'Google Student',
+        student_id: 'S-100',
+      },
+    });
+    expect(await screen.findByText('false')).toBeTruthy();
   });
 });
