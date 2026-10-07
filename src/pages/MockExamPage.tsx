@@ -1,7 +1,7 @@
 import { translateMessage, translate } from '../i18n';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Clock, ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertCircle, BarChart2 } from 'lucide-react';
+import { Clock, ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertCircle, BarChart2, Flag, List, X } from 'lucide-react';
 import Layout from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,6 +16,14 @@ interface MockExamPageProps {
   currentPage: Page;
   onNavigate: (page: Page) => void;
 }
+
+type ReviewMark = 'red' | 'yellow' | 'green';
+
+const REVIEW_MARK_STYLES: Record<ReviewMark, string> = {
+  red: 'bg-red-500 text-white hover:bg-red-600 dark:bg-red-500 dark:hover:bg-red-400',
+  yellow: 'bg-amber-300 text-amber-950 hover:bg-amber-400 dark:bg-amber-300 dark:text-amber-950 dark:hover:bg-amber-200',
+  green: 'bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-500 dark:hover:bg-emerald-400',
+};
 
 export default function MockExamPage({ currentPage, onNavigate }: MockExamPageProps) {
   const { user } = useAuth();
@@ -32,9 +40,11 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [reviewMarks, setReviewMarks] = useState<Record<string, ReviewMark>>({});
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const finishingRef = useRef(false);
   const questionCardRef = useRef<HTMLDivElement | null>(null);
+  const questionListRef = useRef<HTMLDivElement | null>(null);
   const [randomizeAnswerChoices] = useState(getRandomizeAnswerChoicesPreference);
   const answerChoiceOrders = useMemo(
     () => createAnswerChoiceOrders(questions, randomizeAnswerChoices),
@@ -79,6 +89,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
       setQuestions(selected);
       finishingRef.current = false;
       setUserAnswers({});
+      setReviewMarks({});
       setCurrentIndex(0);
       setTimeLeft(config.duration_minutes * 60);
       setSessionId(newSessionId);
@@ -166,6 +177,22 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
     if (window.matchMedia('(max-width: 1023px)').matches) {
       questionCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+  }
+
+  function scrollToQuestionList() {
+    questionListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function changeReviewMark(mark: ReviewMark | null) {
+    if (!question) return;
+    setReviewMarks(current => {
+      if (mark !== null && current[question.id] !== mark) {
+        return { ...current, [question.id]: mark };
+      }
+      const next = { ...current };
+      delete next[question.id];
+      return next;
+    });
   }
 
   if (stage === 'intro') {
@@ -296,7 +323,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
           </div>
 
           <div className="flex gap-3 justify-center">
-            <button onClick={() => { finishingRef.current = false; setStage('intro'); setUserAnswers({}); setCurrentIndex(0); setTimeLeft(examDuration); setSessionId(null); }} className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600">
+            <button onClick={() => { finishingRef.current = false; setStage('intro'); setUserAnswers({}); setReviewMarks({}); setCurrentIndex(0); setTimeLeft(examDuration); setSessionId(null); }} className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600">
               {translate(language, 'mockExamPage.retake')}
             </button>
             <button onClick={() => onNavigate('home')} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition dark:bg-blue-500 dark:hover:bg-blue-400">
@@ -332,9 +359,46 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
           {/* Question */}
           <div className="flex-1 space-y-4">
             <div ref={questionCardRef} className="scroll-mt-4 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none p-6">
-              <p className="text-xs text-blue-600 dark:text-blue-300 font-bold bg-blue-50 dark:bg-blue-500/20 px-2.5 py-1 rounded-full inline-block mb-4">
-                {translate(language, 'mockExamPage.questionNumber', { number: currentIndex + 1 })}
-              </p>
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <p className="inline-block rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-600 dark:bg-blue-500/20 dark:text-blue-300">
+                  {translate(language, 'mockExamPage.questionNumber', { number: currentIndex + 1 })}
+                </p>
+                <div className="flex items-center gap-1.5" role="group" aria-label={translate(language, 'mockExamPage.reviewMark')}>
+                  <span className="mr-1 text-xs font-medium text-gray-500 dark:text-slate-300">
+                    {translate(language, 'mockExamPage.reviewMark')}
+                  </span>
+                  {(['red', 'yellow', 'green'] as const).map(mark => {
+                    const labelKey = {
+                      red: 'mockExamPage.markRed',
+                      yellow: 'mockExamPage.markYellow',
+                      green: 'mockExamPage.markGreen',
+                    }[mark] as 'mockExamPage.markRed' | 'mockExamPage.markYellow' | 'mockExamPage.markGreen';
+                    const selected = reviewMarks[question.id] === mark;
+                    return (
+                      <button
+                        key={mark}
+                        type="button"
+                        onClick={() => changeReviewMark(mark)}
+                        aria-label={translate(language, labelKey)}
+                        aria-pressed={selected}
+                        className={`flex h-7 w-7 items-center justify-center rounded-full transition ${REVIEW_MARK_STYLES[mark]} ${selected ? 'ring-2 ring-slate-700 ring-offset-2 dark:ring-white dark:ring-offset-slate-800' : ''}`}
+                      >
+                        <Flag className="h-3.5 w-3.5" fill="currentColor" />
+                      </button>
+                    );
+                  })}
+                  {reviewMarks[question.id] && (
+                    <button
+                      type="button"
+                      onClick={() => changeReviewMark(null)}
+                      aria-label={translate(language, 'mockExamPage.clearReviewMark')}
+                      className="ml-0.5 flex h-7 w-7 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
               <p className="text-gray-800 dark:text-slate-100 leading-relaxed text-sm whitespace-pre-line">{question?.question_text}</p>
               <QuestionImage question={question} />
             </div>
@@ -365,25 +429,35 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
               })}
             </div>
 
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center justify-between gap-2 pt-2">
               <button
                 disabled={currentIndex === 0}
                 onClick={() => setCurrentIndex(i => i - 1)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition disabled:opacity-40 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-700"
+                className="flex shrink-0 items-center gap-1 px-2.5 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition disabled:opacity-40 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-700 sm:gap-2 sm:px-4"
               >
                 <ChevronLeft className="w-4 h-4" />{translate(language, 'mockExamPage.previous')}
               </button>
+
+              <button
+                type="button"
+                onClick={scrollToQuestionList}
+                className="flex min-w-0 flex-1 items-center justify-center gap-1 rounded-xl border border-blue-200 bg-white px-2 py-2.5 text-xs font-semibold text-blue-600 transition hover:bg-blue-50 dark:border-blue-400/40 dark:bg-slate-800 dark:text-blue-300 dark:hover:bg-slate-700 lg:hidden"
+              >
+                <List className="h-4 w-4 shrink-0" />
+                <span className="truncate">{translate(language, 'mockExamPage.goToQuestionList')}</span>
+              </button>
+
               {currentIndex + 1 < questions.length ? (
                 <button
                   onClick={() => setCurrentIndex(i => i + 1)}
-                  className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition dark:bg-blue-500 dark:hover:bg-blue-400"
+                  className="flex shrink-0 items-center gap-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition dark:bg-blue-500 dark:hover:bg-blue-400 sm:gap-2 sm:px-6"
                 >
                   {translate(language, 'mockExamPage.next')} <ChevronRight className="w-4 h-4" />
                 </button>
               ) : (
                 <button
                   onClick={requestFinish}
-                  className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                  className="shrink-0 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition dark:bg-emerald-500 dark:hover:bg-emerald-400 sm:px-6"
                 >
                   {translate(language, 'mockExamPage.finishExam')}
                 </button>
@@ -392,14 +466,20 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
           </div>
 
           {/* Side panel */}
-          <div className="w-full shrink-0 lg:w-52 xl:w-72 2xl:w-96">
+          <div ref={questionListRef} className="scroll-mt-4 w-full shrink-0 lg:w-52 xl:w-72 2xl:w-96">
             <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none p-4">
               <p className="text-xs font-semibold text-gray-500 dark:text-slate-300 mb-3">{translate(language, 'mockExamPage.questionList')}</p>
               <div className="grid grid-cols-8 gap-1.5 sm:grid-cols-10 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8">
                 {questions.map((q, i) => {
                   let cls = 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600';
-                  if (i === currentIndex) cls = 'bg-blue-600 text-white dark:bg-blue-500';
+                  const reviewMark = reviewMarks[q.id];
+                  if (reviewMark) cls = REVIEW_MARK_STYLES[reviewMark];
                   else if (userAnswers[q.id]) cls = 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300';
+                  if (i === currentIndex) {
+                    cls = reviewMark
+                      ? `${cls} ring-2 ring-blue-600 ring-offset-2 dark:ring-blue-300 dark:ring-offset-slate-800`
+                      : 'bg-blue-600 text-white ring-2 ring-blue-600 ring-offset-2 dark:bg-blue-500 dark:ring-blue-300 dark:ring-offset-slate-800';
+                  }
                   return (
                     <button
                       key={i}

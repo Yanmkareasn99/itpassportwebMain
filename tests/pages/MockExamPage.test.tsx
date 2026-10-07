@@ -88,8 +88,37 @@ it('scrolls back to the selected question on mobile', async () => {
   await flush();
   fireEvent.click(screen.getByRole('button', { name: /Start Exam/i }));
   await flush();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Go to question list' }));
+  expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+  scrollIntoView.mockClear();
+
   fireEvent.click(screen.getByRole('button', { name: 'Question 2' }));
 
   expect(screen.getByText('Question 2 / 2')).toBeTruthy();
   expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+});
+
+it('keeps review colors per question and lets the user change or clear them', async () => {
+  render(<MockExamPage currentPage="mock-exam" onNavigate={() => {}} />);
+  await flush();
+  fireEvent.click(screen.getByRole('button', { name: /Start Exam/i }));
+  await flush();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Mark red' }));
+  const firstQuestionButton = screen.getByRole('button', { name: 'Question 1' });
+  expect(firstQuestionButton.className).toContain('bg-red-500');
+  expect(screen.getByRole('button', { name: 'Mark red' }).getAttribute('aria-pressed')).toBe('true');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+  expect(firstQuestionButton.className).toContain('bg-red-500');
+  fireEvent.click(screen.getByRole('button', { name: 'Previous' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Mark yellow' }));
+
+  expect(firstQuestionButton.className).toContain('bg-amber-300');
+  expect(firstQuestionButton.className).not.toContain('bg-red-500');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Clear review mark' }));
+  expect(firstQuestionButton.className).toContain('bg-blue-600');
+  expect(firstQuestionButton.className).not.toContain('bg-amber-300');
 });
