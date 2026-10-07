@@ -179,27 +179,27 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
                 </p>
               </div>
 
-              <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-                <div className="rounded-2xl border border-blue-100/70 bg-blue-50/70 px-4 py-5 text-center dark:border-blue-400/20 dark:bg-blue-500/10">
-                  <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm dark:bg-slate-700 dark:text-blue-300 dark:shadow-none">
-                    <CheckCircle className="h-5 w-5" />
+              <div className="mt-8 grid grid-cols-3 gap-2 sm:gap-4">
+                <div className="rounded-2xl border border-blue-100/70 bg-blue-50/70 px-2 py-3 text-center dark:border-blue-400/20 dark:bg-blue-500/10 sm:px-4 sm:py-5">
+                  <div className="mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-xl bg-white text-blue-600 shadow-sm dark:bg-slate-700 dark:text-blue-300 dark:shadow-none sm:mb-3 sm:h-10 sm:w-10">
+                    <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
                   </div>
-                  <p className="text-3xl font-bold text-slate-900 dark:text-slate-50">{settings?.question_count ?? '—'}</p>
-                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">{translate(language, 'mockExamPage.questions')}</p>
+                  <p className="text-xl font-bold leading-none text-slate-900 dark:text-slate-50 sm:text-3xl">{settings?.question_count ?? '—'}</p>
+                  <p className="mt-1 text-[10px] leading-tight text-slate-500 dark:text-slate-300 sm:text-sm">{translate(language, 'mockExamPage.questions')}</p>
                 </div>
-                <div className="rounded-2xl border border-violet-100/70 bg-violet-50/70 px-4 py-5 text-center dark:border-violet-400/20 dark:bg-violet-500/10">
-                  <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white text-violet-600 shadow-sm dark:bg-slate-700 dark:text-violet-300 dark:shadow-none">
-                    <Clock className="h-5 w-5" />
+                <div className="rounded-2xl border border-violet-100/70 bg-violet-50/70 px-2 py-3 text-center dark:border-violet-400/20 dark:bg-violet-500/10 sm:px-4 sm:py-5">
+                  <div className="mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-xl bg-white text-violet-600 shadow-sm dark:bg-slate-700 dark:text-violet-300 dark:shadow-none sm:mb-3 sm:h-10 sm:w-10">
+                    <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
                   </div>
-                  <p className="text-3xl font-bold text-slate-900 dark:text-slate-50">{settings?.duration_minutes ?? '—'}</p>
-                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">{translate(language, 'mockExamPage.timeLimitMin')}</p>
+                  <p className="text-xl font-bold leading-none text-slate-900 dark:text-slate-50 sm:text-3xl">{settings?.duration_minutes ?? '—'}</p>
+                  <p className="mt-1 text-[10px] leading-tight text-slate-500 dark:text-slate-300 sm:text-sm">{translate(language, 'mockExamPage.timeLimitMin')}</p>
                 </div>
-                <div className="rounded-2xl border border-emerald-100/70 bg-emerald-50/70 px-4 py-5 text-center dark:border-emerald-400/20 dark:bg-emerald-500/10">
-                  <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white text-emerald-600 shadow-sm dark:bg-slate-700 dark:text-emerald-300 dark:shadow-none">
-                    <BarChart2 className="h-5 w-5" />
+                <div className="rounded-2xl border border-emerald-100/70 bg-emerald-50/70 px-2 py-3 text-center dark:border-emerald-400/20 dark:bg-emerald-500/10 sm:px-4 sm:py-5">
+                  <div className="mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-xl bg-white text-emerald-600 shadow-sm dark:bg-slate-700 dark:text-emerald-300 dark:shadow-none sm:mb-3 sm:h-10 sm:w-10">
+                    <BarChart2 className="h-4 w-4 sm:h-5 sm:w-5" />
                   </div>
-                  <p className="text-3xl font-bold text-slate-900 dark:text-slate-50">{settings ? `${settings.passing_score_percent}%` : '—'}</p>
-                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">{translate(language, 'mockExamPage.passingScore')}</p>
+                  <p className="text-xl font-bold leading-none text-slate-900 dark:text-slate-50 sm:text-3xl">{settings ? `${settings.passing_score_percent}%` : '—'}</p>
+                  <p className="mt-1 text-[10px] leading-tight text-slate-500 dark:text-slate-300 sm:text-sm">{translate(language, 'mockExamPage.passingScore')}</p>
                 </div>
               </div>
 

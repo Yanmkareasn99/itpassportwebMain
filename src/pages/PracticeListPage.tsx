@@ -501,12 +501,12 @@ function SelectDropdown({
   onChange: (v: string) => void;
 }) {
   return (
-    <div className="relative">
+    <div className="relative w-full sm:w-auto">
       <select
         aria-label={label}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="appearance-none pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer min-w-36"
+        className="w-full appearance-none pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer sm:min-w-36"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -559,15 +559,15 @@ function MultiSelectDropdown({
   }
 
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} className="relative w-full sm:w-auto">
       <button
         type="button"
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
-        className="flex w-36 items-center justify-between gap-2 rounded-xl border border-gray-200 bg-white py-2 pl-3 pr-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="flex w-full items-center justify-between gap-2 rounded-xl border border-gray-200 bg-white py-2 pl-3 pr-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:w-36"
       >
-        <span className="max-w-48 truncate">
+        <span className="min-w-0 flex-1 truncate text-left sm:max-w-48">
           {label}: {summary}
         </span>
         {selectedLabels.length > 1 && (
@@ -585,7 +585,7 @@ function MultiSelectDropdown({
           role="listbox"
           aria-label={label}
           aria-multiselectable="true"
-          className="absolute left-0 top-full z-30 mt-2 max-h-72 min-w-64 overflow-y-auto rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl"
+          className="absolute left-0 right-0 top-full z-30 mt-2 max-h-72 overflow-y-auto rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl sm:right-auto sm:min-w-64"
         >
           <button
             type="button"
@@ -1064,9 +1064,10 @@ export default function PracticeListPage({
           />
         </div>
 
-        <div className="practice-filter-panel rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-          <div className="practice-filter-layout">
-            <div className="practice-filter-controls">
+        {/* Filter panel: stacked + full-width on mobile, inline on sm+ */}
+        <div className="relative z-10 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
               <span className="shrink-0 text-sm font-semibold text-gray-600">
                 {translate(currentLanguage, "practiceListPage.filterBy")}
               </span>
@@ -1140,7 +1141,7 @@ export default function PracticeListPage({
                 !!currentResult.error ||
                 matchingQuestions.length === 0
               }
-              className="flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 lg:w-auto"
             >
               <Play className="h-3.5 w-3.5 shrink-0" />
               {translate(
@@ -1174,7 +1175,6 @@ export default function PracticeListPage({
           )}
         </div>
 
-        {/* ▼▼▼ THAY NGUYÊN KHỐI NÀY: từ dòng grid-cols-2 gap-5 đến hết thẻ </div> tương ứng ▼▼▼ */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <div className="min-w-0 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none p-5">
             <h3 className="font-bold text-gray-800 dark:text-slate-50 mb-4 flex items-center gap-2">
@@ -1451,7 +1451,6 @@ export default function PracticeListPage({
             </div>
           </div>
         </div>
-        {/* ▲▲▲ HẾT KHỐI. Phía dưới vẫn là </div> (app-shell) và </Layout> như cũ ▲▲▲ */}
       </div>
     </Layout>
   );
