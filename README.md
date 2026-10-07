@@ -38,25 +38,23 @@ Website: [https://learnwithmanabi.com](https://learnwithmanabi.com)
 
 ## Screenshots
 
-![Login screen](docs/screenshots/manabi.login.png)
+![Login screen](docs/screenshots/screencapture-learnwithmanabi-login-2026-10-06-10_11_54.png)
 
-![Home dashboard](docs/screenshots/manabi.home.png)
+![Home dashboard](docs/screenshots/screencapture-learnwithmanabi-2026-10-06-10_12_02.png)
 
-![Practice question flow](docs/screenshots/manabi.practice-session.png)
+![Practice question flow](docs/screenshots/screencapture-learnwithmanabi-practice-2026-10-06-10_12_10.png)
 
-![Mock exam](docs/screenshots/manabi.mockexam.png)
+![Mock exam](docs/screenshots/screencapture-learnwithmanabi-mock-exam-2026-10-06-10_12_15.png)
 
-![Battle mode](docs/screenshots/manabi.battle.png)
+![Battle mode](docs/screenshots/screencapture-learnwithmanabi-battle-2026-10-06-10_12_19.png)
 
-![Learning materials](docs/screenshots/manabi.materials.png)
+![Learning materials](docs/screenshots/screencapture-learnwithmanabi-materials-2026-10-06-10_12_30.png)
 
-![AI chat assistant](docs/screenshots/manabi.aichat.png)
+![AI chat assistant](docs/screenshots/screencapture-learnwithmanabi-ai-chat-2026-10-06-10_12_25.png)
 
-![Settings](docs/screenshots/manabi.settings.png)
+![Settings](docs/screenshots/screencapture-learnwithmanabi-settings-2026-10-06-10_12_40.png)
 
-![Profile](docs/screenshots/manabi.profile.png)
-
-![Admin dashboard](docs/screenshots/manabi.admin.png)
+![Admin dashboard](docs/screenshots/screencapture-learnwithmanabi-admin-2026-10-06-10_12_35.png)
 
 ## Features
 
