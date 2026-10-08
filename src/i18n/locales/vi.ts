@@ -1,4 +1,4 @@
-export const vi = {
+﻿export const vi = {
   "ui.refreshPoints": "Cập nhật điểm",
   "ui.versus": "đấu với",
   "ui.settingsUnavailable":
@@ -550,19 +550,20 @@ export const vi = {
   "mockExamPage.passingScore": "Điểm đạt",
   "mockExamPage.perQuestionResults": "Kết quả từng câu",
   "mockExamPage.previous": "Trước",
-  "mockExamPage.questionList": "Danh sách câu",
+  "mockExamPage.questionList": "Danh sách câu hỏi",
+  "mockExamPage.goToQuestionList": "Đi tới danh sách câu hỏi",
   "mockExamPage.questions": "Số câu",
   "mockExamPage.retake": "Làm lại",
   "mockExamPage.startExam": "Bắt đầu thi",
-  "mockExamPage.studyMenu": "menu",
+  "mockExamPage.studyMenu": "Menu",
   "mockExamPage.submit": "Nộp bài",
   "mockExamPage.timeLimitMin": "Thời gian (phút)",
   "mockExamPage.youCannotPauseTheExamOnceItStarts":
     "Khi đã bắt đầu, bạn không thể dừng giữa chừng. Nhấn bắt đầu khi sẵn sàng.",
   "mockExamPage.unansweredWarningTitle":
-    "Bạn còn câu chưa trả lời. Bạn có chắc muốn nộp bài?",  
-   "mockExamPage.continueExam": "Tiếp tục",
-   "mockExamPage.submitAnyway": "nộp bài",
+    "Bạn còn câu chưa trả lời. Bạn có chắc muốn nộp bài?",
+  "mockExamPage.continueExam": "Tiếp tục",
+  "mockExamPage.submitAnyway": "Nộp bài",
   "practiceListPage.accuracy": "Độ chính xác",
   "practiceListPage.action": "Hành động",
   "practiceListPage.all": "Tất cả",
