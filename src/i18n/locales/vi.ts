@@ -549,7 +549,7 @@
   "mockExamPage.correct": "Đáp án đúng",
   "mockExamPage.examResults": "Kết quả thi",
   "mockExamPage.finishExam": "Kết thúc thi",
-  "mockExamPage.goToQuestionList": "Đi đến danh sách câu hỏi",
+  "mockExamPage.goToQuestionList": "danh sách câu hỏi",
   "mockExamPage.home": "Trang chủ",
   "mockExamPage.inProgress": "Đang thi",
   "mockExamPage.loadingQuestions": "Đang tải câu hỏi...",

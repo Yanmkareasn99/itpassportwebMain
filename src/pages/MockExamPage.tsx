@@ -172,6 +172,19 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
     questionListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [mobileQuestionListOpen]);
 
+  useEffect(() => {
+    if (!mobileQuestionListOpen) return;
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target as Node | null;
+      if (target && questionListRef.current?.contains(target)) return;
+      setMobileQuestionListOpen(false);
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [mobileQuestionListOpen]);
+
   function formatTime(s: number) {
     const m = Math.floor(s / 60);
     const sec = s % 60;
