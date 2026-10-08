@@ -954,7 +954,7 @@
   "adminPage.unknownAdmin": "Quản trị viên không xác định",
   "issuesPage.title": "Báo cáo sự cố",
   "issuesPage.subtitle": "Báo cáo vấn đề và theo dõi tiến độ mà không cần rời Manabi.",
-  "issuesPage.adminSubtitle": "Xem xét các vấn đề đã báo cáo và cập nhật trạng thái cho người dùng.",
+ 
   "issuesPage.backToSettings": "Quay lại cài đặt",
   "issuesPage.newIssue": "Sự cố mới",
   "issuesPage.newIssueHelp": "Mỗi báo cáo nên mô tả một vấn đề để dễ theo dõi.",

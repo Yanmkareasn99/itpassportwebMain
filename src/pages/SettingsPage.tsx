@@ -156,6 +156,10 @@ export default function SettingsPage({ currentPage, onNavigate, initialView }: S
   const inputClass = darkMode
     ? 'w-full px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-100 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition'
     : 'w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition';
+  
+  const dateInputClass = darkMode
+    ? 'w-full h-10 px-4 rounded-xl border border-slate-700 bg-slate-800 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition'
+    : 'w-full h-10 px-4 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition';
 
   async function saveProfile(e: React.FormEvent) {
     e.preventDefault();
@@ -644,7 +648,7 @@ export default function SettingsPage({ currentPage, onNavigate, initialView }: S
                   type="date"
                   value={targetDate}
                   onChange={e => setTargetDate(e.target.value)}
-                  className={inputClass}
+                  className={dateInputClass}
                   required
                 />
               </div>

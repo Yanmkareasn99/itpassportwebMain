@@ -215,7 +215,6 @@ export default function IssuesPage({ currentPage, onNavigate }: IssuesPageProps)
       currentPage={currentPage}
       onNavigate={onNavigate}
       title={translate(language, 'issuesPage.title')}
-      subtitle={translate(language, isAdmin ? 'issuesPage.adminSubtitle' : 'issuesPage.subtitle')}
     >
       <div className="app-shell space-y-6">
         <button
