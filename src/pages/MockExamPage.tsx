@@ -40,6 +40,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<Page | null>(null);
   const [reviewMarks, setReviewMarks] = useState<Record<string, ReviewMark>>({});
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const finishingRef = useRef(false);
@@ -92,6 +93,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
       setUserAnswers({});
       setReviewMarks({});
       setShowConfirm(false);
+      setPendingNavigation(null);
       setMobileQuestionListOpen(false);
       setCurrentIndex(0);
       setTimeLeft(config.duration_minutes * 60);
@@ -109,6 +111,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
     finishingRef.current = true;
     if (timerRef.current) clearInterval(timerRef.current);
     setShowConfirm(false);
+    setPendingNavigation(null);
     const timeTaken = examDuration - timeLeft;
     let correct = 0;
     for (const q of questions) {
@@ -165,6 +168,25 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
   useEffect(() => {
     if (stage === 'exam' && timeLeft === 0) void finishExam();
   }, [finishExam, stage, timeLeft]);
+
+  function handleNavigate(nextPage: Page) {
+    if (stage === 'exam' && nextPage !== 'mock-exam') {
+      setPendingNavigation(nextPage);
+      return;
+    }
+    onNavigate(nextPage);
+  }
+
+  function cancelLeaveExam() {
+    setPendingNavigation(null);
+  }
+
+  function confirmLeaveExam() {
+    if (!pendingNavigation) return;
+    setPendingNavigation(null);
+    setMobileQuestionListOpen(false);
+    void finishExam();
+  }
 
   // Khi mở danh sách câu hỏi (mobile) thì cuộn xuống để hiển thị
   useEffect(() => {
@@ -233,7 +255,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
 
   if (stage === 'intro') {
     return (
-      <Layout currentPage={currentPage} onNavigate={onNavigate} title={translate(language, 'mockExamPage.mockExam')} subtitle={translate(language, 'mockExamPage.studyMenu')}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} title={translate(language, 'mockExamPage.mockExam')} subtitle={translate(language, 'mockExamPage.studyMenu')}>
         <div className="min-h-full rounded-3xl bg-slate-50/80 px-4 py-6 dark:bg-slate-900/60 sm:px-8 sm:py-10">
           <div className="mx-auto max-w-4xl">
             <div className="rounded-3xl border border-blue-100/80 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:shadow-none sm:p-8 lg:p-10">
@@ -319,7 +341,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
     const timeTaken = examDuration - timeLeft;
 
     return (
-      <Layout currentPage={currentPage} onNavigate={onNavigate} title={translate(language, 'mockExamPage.examResults')} subtitle={translate(language, 'mockExamPage.mockExam')}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} title={translate(language, 'mockExamPage.examResults')} subtitle={translate(language, 'mockExamPage.mockExam')}>
         <div className="max-w-2xl mx-auto space-y-5">
           <div className={`rounded-2xl p-8 text-center border ${passed
             ? 'bg-emerald-50 border-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-400/30'
@@ -376,7 +398,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
   // Phòng trường hợp chưa có câu hỏi nào (tránh lỗi question.id của undefined)
   if (!question) {
     return (
-      <Layout currentPage={currentPage} onNavigate={onNavigate} title={translate(language, 'mockExamPage.mockExam')} subtitle={translate(language, 'mockExamPage.inProgress')}>
+      <Layout currentPage={currentPage} onNavigate={handleNavigate} title={translate(language, 'mockExamPage.mockExam')} subtitle={translate(language, 'mockExamPage.inProgress')}>
         <div className="mx-auto max-w-md p-6 text-center text-sm text-gray-500 dark:text-slate-300">
           {translate(language, 'mockExamPage.loadingQuestions')}
         </div>
@@ -385,7 +407,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
   }
 
   return (
-    <Layout currentPage={currentPage} onNavigate={onNavigate} title={translate(language, 'mockExamPage.mockExam')} subtitle={translate(language, 'mockExamPage.inProgress')}>
+    <Layout currentPage={currentPage} onNavigate={handleNavigate} title={translate(language, 'mockExamPage.mockExam')} subtitle={translate(language, 'mockExamPage.inProgress')}>
       <div className="max-w-7xl mx-auto">
         {/* Timer bar */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none p-4 mb-5">
@@ -599,6 +621,51 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
                 className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400"
               >
                 {translate(language, 'mockExamPage.submitAnyway')}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {pendingNavigation && createPortal(
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/75 p-4"
+          onClick={cancelLeaveExam}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="leave-exam-title"
+            aria-describedby="leave-exam-desc"
+            className="w-full max-w-md rounded-2xl border border-gray-100 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-800"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300">
+                <AlertCircle className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 id="leave-exam-title" className="text-base font-bold text-gray-800 dark:text-slate-50">
+                  {translate(language, 'mockExamPage.leaveExamTitle')}
+                </h3>
+                <p id="leave-exam-desc" className="mt-1 text-sm leading-6 text-gray-600 dark:text-slate-300">
+                  {translate(language, 'mockExamPage.leaveExamMessage')}
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={cancelLeaveExam}
+                className="rounded-xl bg-gray-100 px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600"
+              >
+                {translate(language, 'mockExamPage.stayInExam')}
+              </button>
+              <button
+                onClick={confirmLeaveExam}
+                className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400"
+              >
+                {translate(language, 'mockExamPage.leaveExamAnyway')}
               </button>
             </div>
           </div>
