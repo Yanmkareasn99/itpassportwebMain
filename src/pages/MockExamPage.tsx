@@ -45,6 +45,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
   const finishingRef = useRef(false);
   const questionCardRef = useRef<HTMLDivElement | null>(null);
   const questionListRef = useRef<HTMLDivElement | null>(null);
+  const [mobileQuestionListOpen, setMobileQuestionListOpen] = useState(false);
   const [randomizeAnswerChoices] = useState(getRandomizeAnswerChoicesPreference);
   const answerChoiceOrders = useMemo(
     () => createAnswerChoiceOrders(questions, randomizeAnswerChoices),
@@ -90,6 +91,8 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
       finishingRef.current = false;
       setUserAnswers({});
       setReviewMarks({});
+      setShowConfirm(false);
+      setMobileQuestionListOpen(false);
       setCurrentIndex(0);
       setTimeLeft(config.duration_minutes * 60);
       setSessionId(newSessionId);
@@ -105,6 +108,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
     if (finishingRef.current) return;
     finishingRef.current = true;
     if (timerRef.current) clearInterval(timerRef.current);
+    setShowConfirm(false);
     const timeTaken = examDuration - timeLeft;
     let correct = 0;
     for (const q of questions) {
@@ -119,19 +123,30 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
         completed_at: new Date().toISOString(),
       }).eq('id', sessionId);
       if (updateError) console.error('Failed to save exam result:', updateError.message);
+
+      const answerRows: {
+        exam_session_id: string;
+        question_id: string;
+        selected_choice_id: string;
+        is_correct: boolean;
+      }[] = [];
       for (const q of questions) {
         const chosen = userAnswers[q.id];
         if (!chosen) continue;
         const choices: AnswerChoice[] = (q.answer_choices ?? []) as AnswerChoice[];
         const isCorrect = choices.find(c => c.id === chosen)?.is_correct ?? false;
         if (user) await awardLocalAnswerPoints(user.id, isCorrect, 'mock');
-        const { error: answerError } = await supabase.from('exam_answers').insert({
+        answerRows.push({
           exam_session_id: sessionId,
           question_id: q.id,
           selected_choice_id: chosen,
           is_correct: isCorrect,
         });
-        if (answerError) console.error('Failed to save exam answer:', answerError.message);
+      }
+      // Lưu tất cả câu trả lời bằng 1 request thay vì insert từng câu
+      if (answerRows.length > 0) {
+        const { error: answerError } = await supabase.from('exam_answers').insert(answerRows);
+        if (answerError) console.error('Failed to save exam answers:', answerError.message);
       }
     }
     setStage('result');
@@ -150,6 +165,12 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
   useEffect(() => {
     if (stage === 'exam' && timeLeft === 0) void finishExam();
   }, [finishExam, stage, timeLeft]);
+
+  // Khi mở danh sách câu hỏi (mobile) thì cuộn xuống để hiển thị
+  useEffect(() => {
+    if (!mobileQuestionListOpen) return;
+    questionListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [mobileQuestionListOpen]);
 
   function formatTime(s: number) {
     const m = Math.floor(s / 60);
@@ -175,12 +196,14 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
   function selectQuestion(index: number) {
     setCurrentIndex(index);
     if (window.matchMedia('(max-width: 1023px)').matches) {
+      // Chọn câu xong thì ẩn danh sách và cuộn lên câu hỏi
+      setMobileQuestionListOpen(false);
       questionCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }
 
-  function scrollToQuestionList() {
-    questionListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  function toggleQuestionList() {
+    setMobileQuestionListOpen(open => !open);
   }
 
   function changeReviewMark(mark: ReviewMark | null) {
@@ -311,7 +334,9 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
                       : <XCircle className="w-5 h-5 text-red-500 dark:text-red-400 shrink-0 mt-0.5" />}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-700 dark:text-slate-100">{translate(language, 'mockExamPage.questionNumber', { number: i + 1 })}</p>
-                      <p className="text-xs text-gray-500 dark:text-slate-400 truncate">{q.question_text.slice(0, 60)}...</p>
+                      <p className="text-xs text-gray-500 dark:text-slate-400 truncate">
+                        {q.question_text.length > 60 ? `${q.question_text.slice(0, 60)}...` : q.question_text}
+                      </p>
                       {!isCorrect && correctChoice && (
                         <p className="text-xs text-emerald-600 dark:text-emerald-300 mt-0.5">{translate(language, 'mockExamPage.correct')}: {correctChoice.choice_text}</p>
                       )}
@@ -323,13 +348,24 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
           </div>
 
           <div className="flex gap-3 justify-center">
-            <button onClick={() => { finishingRef.current = false; setStage('intro'); setUserAnswers({}); setReviewMarks({}); setCurrentIndex(0); setTimeLeft(examDuration); setSessionId(null); }} className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600">
+            <button onClick={() => { finishingRef.current = false; setStage('intro'); setUserAnswers({}); setReviewMarks({}); setShowConfirm(false); setCurrentIndex(0); setTimeLeft(examDuration); setSessionId(null); }} className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600">
               {translate(language, 'mockExamPage.retake')}
             </button>
             <button onClick={() => onNavigate('home')} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition dark:bg-blue-500 dark:hover:bg-blue-400">
               {translate(language, 'mockExamPage.home')}
             </button>
           </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Phòng trường hợp chưa có câu hỏi nào (tránh lỗi question.id của undefined)
+  if (!question) {
+    return (
+      <Layout currentPage={currentPage} onNavigate={onNavigate} title={translate(language, 'mockExamPage.mockExam')} subtitle={translate(language, 'mockExamPage.inProgress')}>
+        <div className="mx-auto max-w-md p-6 text-center text-sm text-gray-500 dark:text-slate-300">
+          {translate(language, 'mockExamPage.loadingQuestions')}
         </div>
       </Layout>
     );
@@ -399,13 +435,13 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
                   )}
                 </div>
               </div>
-              <p className="text-gray-800 dark:text-slate-100 leading-relaxed text-sm whitespace-pre-line">{question?.question_text}</p>
+              <p className="text-gray-800 dark:text-slate-100 leading-relaxed text-sm whitespace-pre-line">{question.question_text}</p>
               <QuestionImage question={question} />
             </div>
 
             <div className="space-y-3">
               {choices.map((choice, idx) => {
-                const selected = userAnswers[question?.id] === choice.id;
+                const selected = userAnswers[question.id] === choice.id;
                 return (
                   <button
                     key={choice.id}
@@ -440,7 +476,9 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
 
               <button
                 type="button"
-                onClick={scrollToQuestionList}
+                onClick={toggleQuestionList}
+                aria-expanded={mobileQuestionListOpen}
+                aria-controls="exam-question-list"
                 className="flex min-w-0 flex-1 items-center justify-center gap-1 rounded-xl border border-blue-200 bg-white px-2 py-2.5 text-xs font-semibold text-blue-600 transition hover:bg-blue-50 dark:border-blue-400/40 dark:bg-slate-800 dark:text-blue-300 dark:hover:bg-slate-700 lg:hidden"
               >
                 <List className="h-4 w-4 shrink-0" />
@@ -466,7 +504,11 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
           </div>
 
           {/* Side panel */}
-          <div ref={questionListRef} className="scroll-mt-4 w-full shrink-0 lg:w-52 xl:w-72 2xl:w-96">
+          <div
+            id="exam-question-list"
+            ref={questionListRef}
+            className={`scroll-mt-4 w-full shrink-0 lg:block lg:w-52 xl:w-72 2xl:w-96 ${mobileQuestionListOpen ? 'block' : 'hidden'}`}
+          >
             <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none p-4">
               <p className="text-xs font-semibold text-gray-500 dark:text-slate-300 mb-3">{translate(language, 'mockExamPage.questionList')}</p>
               <div className="grid grid-cols-8 gap-1.5 sm:grid-cols-10 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8">
@@ -482,7 +524,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
                   }
                   return (
                     <button
-                      key={i}
+                      key={q.id}
                       onClick={() => selectQuestion(i)}
                       aria-label={translate(language, 'mockExamPage.questionNumber', { number: i + 1 })}
                       className={`h-8 rounded-lg text-xs font-bold transition ${cls}`}
@@ -515,6 +557,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="confirm-finish-title"
+            aria-describedby="confirm-finish-desc"
             className="w-full max-w-md rounded-2xl border border-gray-100 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-800"
             onClick={e => e.stopPropagation()}
           >
@@ -526,7 +569,9 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
                 <h3 id="confirm-finish-title" className="text-base font-bold text-gray-800 dark:text-slate-50">
                   {translate(language, 'mockExamPage.unansweredWarningTitle')}
                 </h3>
-                
+                <p id="confirm-finish-desc" className="mt-1 text-sm leading-6 text-gray-600 dark:text-slate-300">
+                  {translate(language, 'mockExamPage.unansweredWarningMessage', { count: unansweredCount })}
+                </p>
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-3">

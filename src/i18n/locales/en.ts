@@ -558,7 +558,6 @@ export const en = {
   "materialsPage.updated": "Updated",
   "mockExamPage.checkYourAbilityInTheSameFormatAs":
     "Check your ability in the same format as the real exam",
-  "mockExamPage.clearReviewMark": "Clear review mark",
   "mockExamPage.correct": "Correct",
   "mockExamPage.examResults": "Exam results",
   "mockExamPage.finishExam": "Finish exam",
@@ -566,9 +565,10 @@ export const en = {
   "mockExamPage.home": "Home",
   "mockExamPage.inProgress": "In progress",
   "mockExamPage.loadingQuestions": "Loading questions...",
-  "mockExamPage.markGreen": "Mark green",
-  "mockExamPage.markRed": "Mark red",
-  "mockExamPage.markYellow": "Mark yellow",
+  "mockExamPage.markRed": "Red",
+  "mockExamPage.markYellow": "Yellow",
+  "mockExamPage.markGreen": "Green",
+  "mockExamPage.clearReviewMark": "Clear review mark",
   "mockExamPage.mockExam": "Mock exam",
   "mockExamPage.next": "Next",
   "mockExamPage.notPassedTryAgain": "Not passed. Try again!",
@@ -586,10 +586,12 @@ export const en = {
   "mockExamPage.timeLimitMin": "Time limit (min)",
   "mockExamPage.youCannotPauseTheExamOnceItStarts":
     "You cannot pause the exam once it starts. Press start when ready.",
-     "mockExamPage.unansweredWarningTitle":
-    "You have unanswered questions. Are you sure you want to submit?",  
-   "mockExamPage.continueExam": "Continue",
-   "mockExamPage.submitAnyway": "Submit anyway",
+  "mockExamPage.unansweredWarningTitle":
+    "You have unanswered questions. Are you sure you want to submit?",
+  "mockExamPage.unansweredWarningMessage":
+    "You still have {count} unanswered questions. Do you still want to submit?",
+  "mockExamPage.continueExam": "Continue",
+  "mockExamPage.submitAnyway": "Submit anyway",
   "practiceListPage.accuracy": "Accuracy",
   "practiceListPage.action": "Action",
   "practiceListPage.all": "All",
