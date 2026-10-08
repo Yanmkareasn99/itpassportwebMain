@@ -962,7 +962,6 @@ export const en = {
   "adminPage.unknownAdmin": "Unknown admin",
   "issuesPage.title": "Issue reports",
   "issuesPage.subtitle": "Report a problem and follow its progress without leaving Manabi.",
-  "issuesPage.adminSubtitle": "Review reported problems and keep users informed of their status.",
   "issuesPage.backToSettings": "Back to settings",
   "issuesPage.newIssue": "New issue",
   "issuesPage.newIssueHelp": "Describe one problem per report so it can be tracked clearly.",

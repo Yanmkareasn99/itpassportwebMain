@@ -953,7 +953,6 @@ export const ja = {
   "adminPage.unknownAdmin": "不明な管理者",
   "issuesPage.title": "問題レポート",
   "issuesPage.subtitle": "Manabiを離れずに問題を報告し、対応状況を確認できます。",
-  "issuesPage.adminSubtitle": "報告された問題を確認し、対応状況をユーザーに知らせます。",
   "issuesPage.backToSettings": "設定に戻る",
   "issuesPage.newIssue": "新しい問題",
   "issuesPage.newIssueHelp": "追跡しやすいよう、1件のレポートにつき1つの問題を記載してください。",
