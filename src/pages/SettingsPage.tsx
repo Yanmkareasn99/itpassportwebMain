@@ -158,8 +158,8 @@ export default function SettingsPage({ currentPage, onNavigate, initialView }: S
     : 'w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition';
   
   const dateInputClass = darkMode
-    ? 'w-full h-10 px-4 rounded-xl border border-slate-700 bg-slate-800 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition'
-    : 'w-full h-10 px-4 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition';
+    ? 'w-full max-w-xs h-10 px-4 rounded-xl border border-slate-700 bg-slate-800 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition appearance-none'
+    : 'w-full max-w-xs h-10 px-4 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition appearance-none';
 
   async function saveProfile(e: React.FormEvent) {
     e.preventDefault();

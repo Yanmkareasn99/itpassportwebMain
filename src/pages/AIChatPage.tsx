@@ -1,6 +1,6 @@
 import { translate } from '../i18n';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Sparkles, Send, RotateCcw, Lightbulb, MessageCircle } from 'lucide-react';
+import { Sparkles, Send, RotateCcw, Lightbulb, MessageCircle, Plus } from 'lucide-react';
 import Layout from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { getChatReply, ChatMessage } from '../lib/aiChat';
@@ -57,9 +57,13 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
   ]);
   const [prompt, setPrompt] = useState('');
   const [sending, setSending] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [recentQuestions, setRecentQuestions] = useState<Question[]>([]);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const plusBtnRef = useRef<HTMLButtonElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const handoffRef = useRef<ReturnType<typeof takeAiChatHandoff> | undefined>(undefined);
   const handoffPersistedRef = useRef(false);
 
@@ -142,6 +146,41 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, sending]);
+
+  // auto-grow the textarea up to 160px
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    // beat any global (dark mode) textarea background rule
+    el.style.setProperty('background', 'transparent', 'important');
+    el.style.setProperty('box-shadow', 'none', 'important');
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  }, [prompt]);
+
+  // close the "+" menu when clicking / tapping outside of it
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handleOutside(e: MouseEvent | TouchEvent) {
+      const target = e.target as Node;
+      const insideMenu = menuRef.current?.contains(target);
+      const insidePlus = plusBtnRef.current?.contains(target);
+      if (!insideMenu && !insidePlus) {
+        setMenuOpen(false);
+      }
+    }
+    function handleEsc(e: KeyboardEvent) {
+      if (e.key === 'Escape') setMenuOpen(false);
+    }
+    document.addEventListener('mousedown', handleOutside);
+    document.addEventListener('touchstart', handleOutside);
+    document.addEventListener('keydown', handleEsc);
+    return () => {
+      document.removeEventListener('mousedown', handleOutside);
+      document.removeEventListener('touchstart', handleOutside);
+      document.removeEventListener('keydown', handleEsc);
+    };
+  }, [menuOpen]);
 
   const selectedSubject = useMemo(() => subjects[0] ?? null, [subjects]);
 
@@ -230,7 +269,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
       title={translate(language, 'aiChatPage.aiChat')}
       subtitle={translate(language, 'aiChatPage.studyAssistant')}
     >
-      <div className="max-w-5xl mx-auto grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
+      <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col min-h-[70vh] overflow-hidden">
           <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-violet-50 dark:border-blue-900 dark:from-blue-950 dark:to-blue-900">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -265,62 +304,82 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
             <div ref={bottomRef} />
           </div>
 
-          <div className="p-4 border-t border-gray-100 bg-white">
+          <div className="p-3 sm:p-4 border-t border-gray-100 bg-white">
             <form
-              className="flex items-end gap-3"
               onSubmit={e => {
                 e.preventDefault();
                 void sendMessage();
               }}
             >
-              <textarea
-                value={prompt}
-                onChange={e => setPrompt(e.target.value)}
-                onKeyDown={e => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      void sendMessage();
-                    }
-                  }}
-                placeholder={
-                  translate(language, 'aiChatPage.exampleExplainThisQuestionCreateAStudyPlan')
-                }
-                className="flex-1 resize-none min-h-[56px] max-h-40 px-4 py-3 rounded-2xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                rows={2}
-              />
-              <button
-                type="submit"
-                disabled={sending || !prompt.trim()}
-                className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                <Send className="w-4 h-4" />
-                {translate(language, 'aiChatPage.send')}
-              </button>
+              <div className="relative">
+                {/* Quick questions card (always white, even in dark mode) */}
+                {menuOpen && (
+                  <div ref={menuRef} className="absolute bottom-full left-0 mb-3 w-[calc(100vw-3rem)] max-w-sm rounded-2xl border border-gray-200 !bg-white p-2 shadow-xl z-20">
+                    <div className="flex items-center gap-2 px-3 pt-2 pb-1.5 text-xs font-semibold !text-gray-500">
+                      <Lightbulb className="w-4 h-4 text-amber-500" />
+                      {translate(language, 'aiChatPage.quickQuestions')}
+                    </div>
+                    <div className="space-y-0.5">
+                      {starterPrompts.map(item => (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() => {
+                            setMenuOpen(false);
+                            void sendMessage(item);
+                          }}
+                          className="w-full text-left px-3 py-2.5 rounded-xl text-sm !text-gray-700 hover:!bg-gray-100 transition-colors"
+                        >
+                          {item}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Input pill: + | text | send */}
+                <div className="flex items-end gap-1 rounded-3xl border border-gray-200 bg-white p-2 shadow-sm transition focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-100">
+                  <button
+                    ref={plusBtnRef}
+                    type="button"
+                    onClick={() => setMenuOpen(open => !open)}
+                    aria-label={translate(language, 'aiChatPage.quickQuestions')}
+                    aria-expanded={menuOpen}
+                    className={`shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-full transition-colors ${
+                      menuOpen ? 'text-blue-600' : 'text-gray-500 hover:text-blue-600'
+                    }`}
+                  >
+                    <Plus className={`w-5 h-5 transition-transform duration-200 ${menuOpen ? 'rotate-45' : ''}`} />
+                  </button>
+
+                  <textarea
+                    ref={textareaRef}
+                    onFocus={() => setMenuOpen(false)}
+                    value={prompt}
+                    onChange={e => setPrompt(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        void sendMessage();
+                      }
+                    }}
+                    placeholder={translate(language, 'aiChatPage.exampleExplainThisQuestionCreateAStudyPlan')}
+                    rows={1}
+                    className="flex-1 min-w-0 min-h-[40px] max-h-40 resize-none bg-transparent border-0 outline-none focus:outline-none focus:ring-0 focus:shadow-none px-1 py-2.5 text-sm leading-5 placeholder:text-gray-400"
+                  />
+
+                  <button
+                    type="submit"
+                    disabled={sending || !prompt.trim()}
+                    aria-label={translate(language, 'aiChatPage.send')}
+                    className="shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
             </form>
           </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <div className="flex items-center gap-2 mb-3 text-gray-700 font-semibold">
-              <Lightbulb className="w-4 h-4 text-amber-500" />
-              {translate(language, 'aiChatPage.quickQuestions')}
-            </div>
-            <div className="space-y-2">
-              {starterPrompts.map(item => (
-                <button
-                  key={item}
-                  onClick={() => void sendMessage(item)}
-                  className="w-full text-left px-3 py-2.5 rounded-xl bg-gray-50 text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition"
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          
-         
         </div>
       </div>
     </Layout>

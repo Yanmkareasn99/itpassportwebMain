@@ -143,7 +143,9 @@ describe('AIChatPage', () => {
       expect.any(Object),
     ));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Create a study plan for today' }));
+    // open the quick-questions menu (+ button), then pick a starter prompt
+    fireEvent.click(screen.getByRole('button', { name: /quick/i }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Create a study plan for today' }));
     await waitFor(() => expect(mocks.getChatReply).toHaveBeenCalledWith(
       'Create a study plan for today',
       expect.any(Object),
