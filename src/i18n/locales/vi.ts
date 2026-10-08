@@ -546,7 +546,6 @@
   "materialsPage.updated": "Cập nhật",
   "mockExamPage.checkYourAbilityInTheSameFormatAs":
     "Kiểm tra năng lực với định dạng giống thi thật",
-  "mockExamPage.clearReviewMark": "Xóa dấu xem lại",
   "mockExamPage.correct": "Đáp án đúng",
   "mockExamPage.examResults": "Kết quả thi",
   "mockExamPage.finishExam": "Kết thúc thi",
@@ -554,9 +553,13 @@
   "mockExamPage.home": "Trang chủ",
   "mockExamPage.inProgress": "Đang thi",
   "mockExamPage.loadingQuestions": "Đang tải câu hỏi...",
-  "mockExamPage.markGreen": "Đánh dấu xanh lá",
-  "mockExamPage.markRed": "Đánh dấu đỏ",
-  "mockExamPage.markYellow": "Đánh dấu vàng",
+
+  "mockExamPage.reviewMark": "Đánh dấu xem lại",
+  "mockExamPage.markRed": "Đỏ",
+  "mockExamPage.markYellow": "Vàng",
+  "mockExamPage.markGreen": "Xanh lá",
+  "mockExamPage.clearReviewMark": "Bỏ đánh dấu",
+
   "mockExamPage.mockExam": "Thi thử",
   "mockExamPage.next": "Tiếp",
   "mockExamPage.notPassedTryAgain": "Chưa đạt. Hãy thử lại!",
@@ -565,10 +568,8 @@
   "mockExamPage.perQuestionResults": "Kết quả từng câu",
   "mockExamPage.previous": "Trước",
   "mockExamPage.questionList": "Danh sách câu hỏi",
-  "mockExamPage.goToQuestionList": "Đi tới danh sách câu hỏi",
   "mockExamPage.questions": "Số câu",
   "mockExamPage.retake": "Làm lại",
-  "mockExamPage.reviewMark": "Dấu xem lại",
   "mockExamPage.startExam": "Bắt đầu thi",
   "mockExamPage.studyMenu": "Menu",
   "mockExamPage.submit": "Nộp bài",
@@ -577,6 +578,8 @@
     "Khi đã bắt đầu, bạn không thể dừng giữa chừng. Nhấn bắt đầu khi sẵn sàng.",
   "mockExamPage.unansweredWarningTitle":
     "Bạn còn câu chưa trả lời. Bạn có chắc muốn nộp bài?",
+  "mockExamPage.unansweredWarningMessage":
+    "Bạn còn {count} câu chưa trả lời. Bạn vẫn muốn nộp bài?",
   "mockExamPage.continueExam": "Tiếp tục",
   "mockExamPage.submitAnyway": "Nộp bài",
   "practiceListPage.accuracy": "Độ chính xác",
@@ -586,6 +589,7 @@
     "Kiểm tra trình độ bằng thi thử",
   "practiceListPage.chooseASubjectAndFiltersToBeginPractice":
     "Chọn chủ đề và bộ lọc để bắt đầu luyện tập.",
+     "practiceQuestionPage.profile": "Hồ sơ",
   "practiceListPage.difficulty": "Độ khó",
   "practiceListPage.easy": "Dễ",
   "practiceListPage.filterBy": "Lọc theo",
