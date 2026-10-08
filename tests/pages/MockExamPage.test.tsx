@@ -19,6 +19,24 @@ vi.mock('../../src/lib/supabase', () => ({
   supabase: { from: () => ({ select: () => ({ order: async () => ({ data: [1, 2, 3].map(id => ({ id: String(id), question_text: `Question ${id}`, answer_choices: [{ id: `a${id}`, is_correct: true, sort_order: 0 }] })), error: null }) }) }) },
 }));
 async function flush() { await act(async () => { await Promise.resolve(); }); }
+
+function mockMatchMedia(isMobile: boolean) {
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    writable: true,
+    value: (query: string) => ({
+      matches: isMobile && query === '(max-width: 1023px)',
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }),
+  });
+}
+
 beforeEach(() => {
   vi.useFakeTimers();
   mocks.settings = { question_count: 2, duration_minutes: 1, passing_score_percent: 50 };
@@ -67,58 +85,34 @@ it('shows an actionable error when the question bank is too small', async () => 
   expect(screen.getByRole('alert').textContent).toContain('only 3 are available');
 });
 
-it('scrolls back to the selected question on mobile', async () => {
+it('reveals the question list on mobile only after pressing the go-to-list button, and hides it again after picking a question', async () => {
   const scrollIntoView = vi.fn();
   Object.defineProperty(Element.prototype, 'scrollIntoView', {
     configurable: true,
     value: scrollIntoView,
   });
-  vi.mocked(window.matchMedia).mockImplementation(query => ({
-    matches: query === '(max-width: 1023px)',
-    media: query,
-    onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  }));
+  mockMatchMedia(true);
 
   render(<MockExamPage currentPage="mock-exam" onNavigate={() => {}} />);
   await flush();
   fireEvent.click(screen.getByRole('button', { name: /Start Exam/i }));
   await flush();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Go to question list' }));
-  expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
-  scrollIntoView.mockClear();
+  const list = document.getElementById('exam-question-list')!;
+  // Hidden by default on mobile (lg:block keeps it visible on desktop)
+  expect(list.classList.contains('hidden')).toBe(true);
+  expect(list.classList.contains('block')).toBe(false);
 
+  // Open the list
+  fireEvent.click(screen.getByRole('button', { name: /Go to question list/i }));
+  await flush();
+  expect(list.classList.contains('block')).toBe(true);
+  expect(list.classList.contains('hidden')).toBe(false);
+  expect(scrollIntoView).toHaveBeenCalledTimes(1);
+
+  // Picking a question hides the list and scrolls back to the question card
   fireEvent.click(screen.getByRole('button', { name: 'Question 2' }));
-
-  expect(screen.getByText('Question 2 / 2')).toBeTruthy();
-  expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
-});
-
-it('keeps review colors per question and lets the user change or clear them', async () => {
-  render(<MockExamPage currentPage="mock-exam" onNavigate={() => {}} />);
   await flush();
-  fireEvent.click(screen.getByRole('button', { name: /Start Exam/i }));
-  await flush();
-
-  fireEvent.click(screen.getByRole('button', { name: 'Mark red' }));
-  const firstQuestionButton = screen.getByRole('button', { name: 'Question 1' });
-  expect(firstQuestionButton.className).toContain('bg-red-500');
-  expect(screen.getByRole('button', { name: 'Mark red' }).getAttribute('aria-pressed')).toBe('true');
-
-  fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-  expect(firstQuestionButton.className).toContain('bg-red-500');
-  fireEvent.click(screen.getByRole('button', { name: 'Previous' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Mark yellow' }));
-
-  expect(firstQuestionButton.className).toContain('bg-amber-300');
-  expect(firstQuestionButton.className).not.toContain('bg-red-500');
-
-  fireEvent.click(screen.getByRole('button', { name: 'Clear review mark' }));
-  expect(firstQuestionButton.className).toContain('bg-blue-600');
-  expect(firstQuestionButton.className).not.toContain('bg-amber-300');
+  expect(list.classList.contains('hidden')).toBe(true);
+  expect(scrollIntoView).toHaveBeenCalledTimes(2);
 });

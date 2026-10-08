@@ -553,15 +553,20 @@ export const ja = {
     "本番と同じ形式で実力を確認しましょう",
   "mockExamPage.clearReviewMark": "復習マークを解除",
   "mockExamPage.correct": "正解",
+  
   "mockExamPage.examResults": "試験結果",
   "mockExamPage.finishExam": "試験を終了する",
-  "mockExamPage.goToQuestionList": "問題一覧へ移動",
+  "mockExamPage.goToQuestionList": "問題一覧へ",
   "mockExamPage.home": "ホームへ",
   "mockExamPage.inProgress": "試験中",
   "mockExamPage.loadingQuestions": "問題を読み込み中...",
+
   "mockExamPage.markGreen": "緑のマークを付ける",
   "mockExamPage.markRed": "赤のマークを付ける",
   "mockExamPage.markYellow": "黄色のマークを付ける",
+
+ 
+
   "mockExamPage.mockExam": "模擬試験",
   "mockExamPage.next": "次へ",
   "mockExamPage.notPassedTryAgain": "不合格。もう一度頑張りましょう！",
@@ -579,10 +584,13 @@ export const ja = {
   "mockExamPage.timeLimitMin": "制限時間（分）",
   "mockExamPage.youCannotPauseTheExamOnceItStarts":
     "試験中は途中で中断できません。準備ができたら開始ボタンを押してください。",
-   "mockExamPage.unansweredWarningTitle":
-    "未回答の問題があります。本当に提出しますか？",
-   "mockExamPage.continueExam": "続ける",
-   "mockExamPage.submitAnyway": "無視して提出",
+     "mockExamPage.unansweredWarningTitle": "未回答の問題があります",
+  "mockExamPage.unansweredWarningMessage":
+    "未回答の問題が{count}問あります。このまま提出しますか？",
+  "mockExamPage.continueExam": "試験を続ける",
+  "mockExamPage.submitAnyway": "このまま提出する",
+   
+   
   "practiceListPage.accuracy": "正答率",
   "practiceListPage.action": "アクション",
   "practiceListPage.all": "すべて",
@@ -620,6 +628,7 @@ export const ja = {
   "practiceListPage.subject": "分野",
   "practiceListPage.takeItUnderRealExamTiming": "本番形式で時間を計って挑戦",
   "practiceListPage.treeQuestion": "ツリー問題",
+    "practiceQuestionPage.profile": "プロフィール",
   "practiceQuestionPage.accuracy": "正答率",
   "practiceQuestionPage.answer": "答える",
   "practiceQuestionPage.backToSubjects": "科目選択へ戻る",
