@@ -624,7 +624,7 @@ export const en = {
   "practiceListPage.progressBySubject": "Progress by subject",
   "practiceListPage.questions": "Questions",
   "practiceListPage.questionType": "Question type",
-  "practiceListPage.recommendedNextActions": "Recommended next actions",
+  "practiceListPage.recommendedNextActions": "Recommended Next Steps",
   "practiceListPage.review": "Review",
   "practiceListPage.review2": "Review",
   "practiceListPage.reviewMissedQuestions": "Review missed questions",
