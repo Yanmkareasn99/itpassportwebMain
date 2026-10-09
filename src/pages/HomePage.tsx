@@ -265,30 +265,7 @@ function getFeatures(language: Language) {
   ];
 }
 
-type Pt = { x: number; y: number };
 
-function smoothPath(pts: Pt[]) {
-  if (pts.length < 2) return '';
-  let d = `M ${pts[0].x} ${pts[0].y}`;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[i - 1] ?? pts[i];
-    const p1 = pts[i];
-    const p2 = pts[i + 1];
-    const p3 = pts[i + 2] ?? p2;
-    const c1x = p1.x + (p2.x - p0.x) / 6;
-    const c1y = p1.y + (p2.y - p0.y) / 6;
-    const c2x = p2.x - (p3.x - p1.x) / 6;
-    const c2y = p2.y - (p3.y - p1.y) / 6;
-    d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`;
-  }
-  return d;
-}
-
-const chartLabels: Record<string, { avg: string; min: string; max: string }> = {
-  vi: { avg: 'TRUNG BÌNH', min: 'THẤP NHẤT', max: 'CAO NHẤT' },
-  ja: { avg: '平均', min: '最低', max: '最高' },
-  en: { avg: 'AVERAGE', min: 'MINIMUM', max: 'MAXIMUM' },
-};
 
 function RecentActivityChart({ sessions, language, onStart }: { sessions: PracticeProgressSession[]; language: Language; onStart: () => void }) {
   const locale = languageLocales[language];
