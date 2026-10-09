@@ -11,6 +11,7 @@ import { awardLocalAnswerPoints } from '../lib/points';
 import { Question, AnswerChoice, Page } from '../types';
 import { AnswerChoiceContent, QuestionImage } from '../components/QuestionMedia';
 import { createAnswerChoiceOrders, getRandomizeAnswerChoicesPreference, shuffleItems } from '../lib/questionRandomization';
+import { loadQuestionCatalog } from '../lib/practice';
 
 interface MockExamPageProps {
   currentPage: Page;
@@ -124,13 +125,11 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
     setError('');
     try {
       const config = await fetchMockExamSettings();
-      const { data, error: questionError } = await supabase
-        .from('questions').select('*, answer_choices(*)').order('question_number');
-      if (questionError) throw questionError;
-      if (!data || data.length < config.question_count) {
-        throw new Error(`This exam requires ${config.question_count} questions, but only ${data?.length ?? 0} are available. Please ask an administrator to add questions or reduce the exam question count.`);
+      const questionCatalog = await loadQuestionCatalog();
+      if (questionCatalog.length < config.question_count) {
+        throw new Error(`This exam requires ${config.question_count} questions, but only ${questionCatalog.length} are available. Please ask an administrator to add questions or reduce the exam question count.`);
       }
-      const selected = shuffleItems(data).slice(0, config.question_count) as Question[];
+      const selected = shuffleItems(questionCatalog).slice(0, config.question_count) as Question[];
       let newSessionId: string | null = null;
       if (user) {
         const { data: session, error: sessionError } = await supabase.from('exam_sessions')

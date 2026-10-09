@@ -16,6 +16,7 @@ import {
   submitOnlineBattleAnswer,
 } from '../lib/points';
 import { fetchBattleRankings, type BattleRankingRow } from '../lib/battleRanking';
+import { loadQuestionsByIds } from '../lib/practice';
 
 interface BattlePageProps {
   currentPage: Page;
@@ -258,13 +259,8 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     const questionIds = room.question_ids ?? [];
     if (questionIds.length === 0) throw new Error('This battle room has no questions.');
 
-    const { data, error: questionError } = await supabase
-      .from('questions')
-      .select('*, answer_choices(*)')
-      .in('id', questionIds);
-    if (questionError) throw questionError;
-
-    const byId = new Map((data ?? []).map(item => [item.id, item as Question]));
+    const loadedQuestions = await loadQuestionsByIds(questionIds);
+    const byId = new Map(loadedQuestions.map(question => [question.id, question]));
     if (questionIds.some(id => !byId.has(id))) throw new Error('Some battle questions are unavailable. Please retry.');
     if (currentRoomId.current === room.id) setQuestions(questionIds.map(id => byId.get(id) as Question));
   }, []);

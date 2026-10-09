@@ -14,9 +14,16 @@ vi.mock('../../src/lib/mockExamSettings', async importOriginal => ({
   ...await importOriginal<typeof import('../../src/lib/mockExamSettings')>(),
   fetchMockExamSettings: () => mocks.settingsPromise ?? Promise.resolve({ ...mocks.settings }),
 }));
+vi.mock('../../src/lib/practice', () => ({
+  loadQuestionCatalog: async () => [1, 2, 3].map(id => ({
+    id: String(id),
+    question_text: `Question ${id}`,
+    answer_choices: [{ id: `a${id}`, is_correct: true, sort_order: 0 }],
+  })),
+}));
 vi.mock('../../src/lib/supabase', () => ({
   isSupabaseEnabled: true,
-  supabase: { from: () => ({ select: () => ({ order: async () => ({ data: [1, 2, 3].map(id => ({ id: String(id), question_text: `Question ${id}`, answer_choices: [{ id: `a${id}`, is_correct: true, sort_order: 0 }] })), error: null }) }) }) },
+  supabase: { from: vi.fn() },
 }));
 async function flush() { await act(async () => { await Promise.resolve(); }); }
 

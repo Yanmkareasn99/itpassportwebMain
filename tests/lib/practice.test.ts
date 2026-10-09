@@ -4,7 +4,7 @@ vi.mock('../../src/lib/supabase', async importOriginal => {
   return importOriginal();
 });
 import { supabase } from '../../src/lib/supabase';
-import { createPracticeSession, fetchPracticeQuestions, invalidatePracticeQuestionCache, loadExamDates, loadLatestAnswerStatus, loadPracticeSession, loadPracticeProgress, practiceErrorMessage } from '../../src/lib/practice';
+import { createPracticeSession, fetchPracticeQuestions, invalidatePracticeQuestionCache, loadExamDates, loadLatestAnswerStatus, loadPracticeSession, loadPracticeProgress, loadQuestionCatalog, loadQuestionsByIds, practiceErrorMessage, preloadQuestionCatalog } from '../../src/lib/practice';
 
 beforeEach(() => {
   localStorage.clear();
@@ -12,6 +12,22 @@ beforeEach(() => {
 });
 
 describe('practice data', () => {
+  it('reuses one page-lifetime catalog for background preloading, filters, and ID lookups', async () => {
+    invalidatePracticeQuestionCache();
+    const fromSpy = vi.spyOn(supabase, 'from');
+
+    await preloadQuestionCatalog();
+    const catalog = await loadQuestionCatalog();
+    const questionQueriesAfterPreload = fromSpy.mock.calls.filter(([table]) => table === 'questions').length;
+    const selected = await loadQuestionsByIds([catalog[1].id, catalog[0].id, catalog[1].id]);
+    await fetchPracticeQuestions(null, 'all', 'all');
+
+    expect(selected.map(question => question.id)).toEqual([catalog[1].id, catalog[0].id, catalog[1].id]);
+    expect(fromSpy.mock.calls.filter(([table]) => table === 'questions')).toHaveLength(questionQueriesAfterPreload);
+    expect(await loadQuestionsByIds([])).toEqual([]);
+    fromSpy.mockRestore();
+  });
+
   it('restores the same questions and answers from a saved session without creating another session', async () => {
     const fromSpy = vi.spyOn(supabase, 'from');
     const questions = (await fetchPracticeQuestions(null, 'all', 'all')).slice(0, 3).reverse();
