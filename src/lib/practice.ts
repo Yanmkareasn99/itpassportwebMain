@@ -3,14 +3,53 @@ import type { Question, PracticeSession } from '../types';
 import { examPeriodKey, UNCATEGORIZED_EXAM_DATE } from './examDate';
 
 const QUESTION_CATALOG_TTL_MS = 5 * 60 * 1000;
+const SESSION_QUESTION_CACHE_TTL_MS = 10 * 60 * 1000;
+const MAX_CACHED_SESSION_QUESTION_SETS = 3;
+const QUESTION_FETCH_BATCH_SIZE = 100;
+const QUESTION_FETCH_CONCURRENCY = 4;
 let questionCatalogCache: { questions: Question[]; expiresAt: number } | null = null;
 let questionCatalogRequest: Promise<Question[]> | null = null;
 let questionCatalogGeneration = 0;
+const sessionQuestionCache = new Map<string, { questions: Question[]; expiresAt: number }>();
+
+function cacheSessionQuestions(sessionId: string, questions: Question[]) {
+  const now = Date.now();
+  for (const [cachedSessionId, cached] of sessionQuestionCache) {
+    if (cached.expiresAt <= now) sessionQuestionCache.delete(cachedSessionId);
+  }
+  sessionQuestionCache.delete(sessionId);
+  sessionQuestionCache.set(sessionId, {
+    questions,
+    expiresAt: now + SESSION_QUESTION_CACHE_TTL_MS,
+  });
+  while (sessionQuestionCache.size > MAX_CACHED_SESSION_QUESTION_SETS) {
+    const oldestSessionId = sessionQuestionCache.keys().next().value as string | undefined;
+    if (!oldestSessionId) break;
+    sessionQuestionCache.delete(oldestSessionId);
+  }
+}
+
+function readCachedSessionQuestions(sessionId: string, ids: string[]) {
+  const cached = sessionQuestionCache.get(sessionId);
+  if (!cached) return null;
+  if (cached.expiresAt <= Date.now()) {
+    sessionQuestionCache.delete(sessionId);
+    return null;
+  }
+  const isExactSession = cached.questions.length === ids.length
+    && cached.questions.every((question, index) => question.id === ids[index]);
+  if (!isExactSession) {
+    sessionQuestionCache.delete(sessionId);
+    return null;
+  }
+  return cached.questions;
+}
 
 export function invalidatePracticeQuestionCache() {
   questionCatalogGeneration += 1;
   questionCatalogCache = null;
   questionCatalogRequest = null;
+  sessionQuestionCache.clear();
 }
 
 async function loadPracticeQuestionCatalog() {
@@ -105,7 +144,9 @@ export async function createPracticeSession(userId: string, subjectId: string, q
   }).select().single();
   if (error) throw error;
   if (!data?.id) throw new Error('Unable to create practice session.');
-  return data.id as string;
+  const sessionId = data.id as string;
+  cacheSessionQuestions(sessionId, questions);
+  return sessionId;
 }
 
 export async function loadPracticeSession(userId: string, sessionId: string) {
@@ -115,11 +156,38 @@ export async function loadPracticeSession(userId: string, sessionId: string) {
   if (!session?.question_ids?.length) throw new Error('This practice session cannot be resumed. Please start a new session.');
   const ids = session.question_ids as string[];
   const questions = new Map<string, Question>();
-  for (let offset = 0; offset < ids.length; offset += 100) {
-    const { data, error: questionError } = await supabase.from('questions').select('*, answer_choices(*)')
-      .in('id', ids.slice(offset, offset + 100));
-    if (questionError) throw questionError;
-    for (const question of data ?? []) questions.set(question.id, question as Question);
+
+  const cachedSessionQuestions = readCachedSessionQuestions(sessionId, ids);
+  if (cachedSessionQuestions) {
+    for (const question of cachedSessionQuestions) questions.set(question.id, question);
+  } else {
+    const catalog = questionCatalogCache?.expiresAt && questionCatalogCache.expiresAt > Date.now()
+      ? new Map(questionCatalogCache.questions.map(question => [question.id, question]))
+      : null;
+    if (catalog && ids.every(id => catalog.has(id))) {
+      for (const id of ids) questions.set(id, catalog.get(id)!);
+    } else {
+      const batches: string[][] = [];
+      for (let offset = 0; offset < ids.length; offset += QUESTION_FETCH_BATCH_SIZE) {
+        batches.push(ids.slice(offset, offset + QUESTION_FETCH_BATCH_SIZE));
+      }
+      for (let offset = 0; offset < batches.length; offset += QUESTION_FETCH_CONCURRENCY) {
+        const results = await Promise.all(
+          batches.slice(offset, offset + QUESTION_FETCH_CONCURRENCY).map(async batch => {
+            const { data, error: questionError } = await supabase.from('questions')
+              .select('*, answer_choices(*)').in('id', batch);
+            if (questionError) throw questionError;
+            return (data ?? []) as Question[];
+          }),
+        );
+        for (const page of results) {
+          for (const question of page) questions.set(question.id, question);
+        }
+      }
+    }
+    if (!ids.some(id => !questions.has(id))) {
+      cacheSessionQuestions(sessionId, ids.map(id => questions.get(id)!));
+    }
   }
   if (ids.some(id => !questions.has(id))) throw new Error('Some questions in this session are no longer available. Please start a new session.');
   const answers = new Map<string, PracticeAnswer>();
