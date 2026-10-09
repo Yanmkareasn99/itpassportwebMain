@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import type { Question } from '../types';
+import { loadQuestionsByIds } from './practice';
 
 export const QUESTION_FLAG_LEVELS = ['green', 'orange', 'red'] as const;
 export type QuestionFlagLevel = (typeof QUESTION_FLAG_LEVELS)[number];
@@ -57,14 +58,8 @@ export async function loadFlaggedQuestions(
     .filter(flag => !level || flag.level === level);
   if (!flags.length) return [];
 
-  const byId = new Map<string, Question>();
-  for (let offset = 0; offset < flags.length; offset += 100) {
-    const ids = flags.slice(offset, offset + 100).map(flag => flag.question_id);
-    const { data, error } = await supabase.from('questions')
-      .select('*, answer_choices(*)').in('id', ids);
-    if (error) throw error;
-    for (const question of data ?? []) byId.set(question.id, question as Question);
-  }
+  const questions = await loadQuestionsByIds(flags.map(flag => flag.question_id));
+  const byId = new Map<string, Question>(questions.map(question => [question.id, question]));
 
   return flags.map(flag => byId.get(flag.question_id)).filter((question): question is Question => Boolean(question));
 }

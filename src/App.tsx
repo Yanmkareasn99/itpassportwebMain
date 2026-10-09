@@ -1,7 +1,7 @@
 import { translateMessage, translate } from './i18n';
 import { useLanguage } from './contexts/LanguageContext';
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { createPracticeSession, loadPracticeSession, practiceErrorMessage } from './lib/practice';
+import { createPracticeSession, loadPracticeSession, practiceErrorMessage, preloadQuestionCatalog } from './lib/practice';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import type { Page, Question } from './types';
@@ -180,6 +180,21 @@ function AppRoutes() {
   );
 }
 
+function QuestionCatalogPreloader() {
+  const { user } = useAuth();
+  const userId = user?.id;
+
+  useEffect(() => {
+    if (!userId) return;
+    const timer = window.setTimeout(() => {
+      void preloadQuestionCatalog().catch(() => undefined);
+    }, 750);
+    return () => window.clearTimeout(timer);
+  }, [userId]);
+
+  return null;
+}
+
 export default function App() {
   useEffect(() => {
     const savedTheme = window.localStorage.getItem('manabi-theme');
@@ -189,6 +204,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <QuestionCatalogPreloader />
         <AppRoutes />
       </AuthProvider>
     </BrowserRouter>

@@ -2,14 +2,14 @@ import { supabase } from './supabase';
 import type { Question, PracticeSession } from '../types';
 import { examPeriodKey, UNCATEGORIZED_EXAM_DATE } from './examDate';
 
-const QUESTION_CATALOG_TTL_MS = 5 * 60 * 1000;
 const SESSION_QUESTION_CACHE_TTL_MS = 10 * 60 * 1000;
 const MAX_CACHED_SESSION_QUESTION_SETS = 3;
 const QUESTION_FETCH_BATCH_SIZE = 100;
 const QUESTION_FETCH_CONCURRENCY = 4;
-let questionCatalogCache: { questions: Question[]; expiresAt: number } | null = null;
+let questionCatalogCache: Question[] | null = null;
 let questionCatalogRequest: Promise<Question[]> | null = null;
 let questionCatalogGeneration = 0;
+const questionByIdCache = new Map<string, Question>();
 const sessionQuestionCache = new Map<string, { questions: Question[]; expiresAt: number }>();
 
 function cacheSessionQuestions(sessionId: string, questions: Question[]) {
@@ -49,13 +49,12 @@ export function invalidatePracticeQuestionCache() {
   questionCatalogGeneration += 1;
   questionCatalogCache = null;
   questionCatalogRequest = null;
+  questionByIdCache.clear();
   sessionQuestionCache.clear();
 }
 
-async function loadPracticeQuestionCatalog() {
-  if (questionCatalogCache && questionCatalogCache.expiresAt > Date.now()) {
-    return questionCatalogCache.questions;
-  }
+export async function loadQuestionCatalog() {
+  if (questionCatalogCache) return questionCatalogCache;
   if (questionCatalogRequest) return questionCatalogRequest;
 
   const generation = questionCatalogGeneration;
@@ -71,13 +70,13 @@ async function loadPracticeQuestionCatalog() {
       if (error) throw error;
       const page = (data ?? []) as Question[];
       questions.push(...page);
+      if (generation === questionCatalogGeneration) {
+        for (const question of page) questionByIdCache.set(question.id, question);
+      }
       if (page.length < 500) break;
     }
     if (generation === questionCatalogGeneration) {
-      questionCatalogCache = {
-        questions,
-        expiresAt: Date.now() + QUESTION_CATALOG_TTL_MS,
-      };
+      questionCatalogCache = questions;
     }
     return questions;
   })();
@@ -88,6 +87,41 @@ async function loadPracticeQuestionCatalog() {
   } finally {
     if (questionCatalogRequest === request) questionCatalogRequest = null;
   }
+}
+
+export async function preloadQuestionCatalog() {
+  await loadQuestionCatalog();
+}
+
+export async function loadQuestionsByIds(ids: string[]) {
+  if (ids.length === 0) return [];
+
+  const generation = questionCatalogGeneration;
+  const missingIds = [...new Set(ids.filter(id => !questionByIdCache.has(id)))];
+  if (missingIds.length > 0) {
+    const batches: string[][] = [];
+    for (let offset = 0; offset < missingIds.length; offset += QUESTION_FETCH_BATCH_SIZE) {
+      batches.push(missingIds.slice(offset, offset + QUESTION_FETCH_BATCH_SIZE));
+    }
+    for (let offset = 0; offset < batches.length; offset += QUESTION_FETCH_CONCURRENCY) {
+      const results = await Promise.all(
+        batches.slice(offset, offset + QUESTION_FETCH_CONCURRENCY).map(async batch => {
+          const { data, error } = await supabase.from('questions')
+            .select('*, answer_choices(*)').in('id', batch);
+          if (error) throw error;
+          return (data ?? []) as Question[];
+        }),
+      );
+      if (generation === questionCatalogGeneration) {
+        for (const page of results) {
+          for (const question of page) questionByIdCache.set(question.id, question);
+        }
+      }
+    }
+  }
+
+  if (generation !== questionCatalogGeneration) return loadQuestionsByIds(ids);
+  return ids.map(id => questionByIdCache.get(id)).filter((question): question is Question => Boolean(question));
 }
 
 export interface PracticeAnswer {
@@ -161,30 +195,8 @@ export async function loadPracticeSession(userId: string, sessionId: string) {
   if (cachedSessionQuestions) {
     for (const question of cachedSessionQuestions) questions.set(question.id, question);
   } else {
-    const catalog = questionCatalogCache?.expiresAt && questionCatalogCache.expiresAt > Date.now()
-      ? new Map(questionCatalogCache.questions.map(question => [question.id, question]))
-      : null;
-    if (catalog && ids.every(id => catalog.has(id))) {
-      for (const id of ids) questions.set(id, catalog.get(id)!);
-    } else {
-      const batches: string[][] = [];
-      for (let offset = 0; offset < ids.length; offset += QUESTION_FETCH_BATCH_SIZE) {
-        batches.push(ids.slice(offset, offset + QUESTION_FETCH_BATCH_SIZE));
-      }
-      for (let offset = 0; offset < batches.length; offset += QUESTION_FETCH_CONCURRENCY) {
-        const results = await Promise.all(
-          batches.slice(offset, offset + QUESTION_FETCH_CONCURRENCY).map(async batch => {
-            const { data, error: questionError } = await supabase.from('questions')
-              .select('*, answer_choices(*)').in('id', batch);
-            if (questionError) throw questionError;
-            return (data ?? []) as Question[];
-          }),
-        );
-        for (const page of results) {
-          for (const question of page) questions.set(question.id, question);
-        }
-      }
-    }
+    const loadedQuestions = await loadQuestionsByIds(ids);
+    for (const question of loadedQuestions) questions.set(question.id, question);
     if (!ids.some(id => !questions.has(id))) {
       cacheSessionQuestions(sessionId, ids.map(id => questions.get(id)!));
     }
@@ -211,7 +223,7 @@ export async function fetchPracticeQuestions(
   examDateFilter: ExamDateFilter,
   formatFilter: FormatFilter,
 ): Promise<Question[]> {
-  const questions = await loadPracticeQuestionCatalog();
+  const questions = await loadQuestionCatalog();
   const selectedExamDates = examDateFilter === 'all'
     ? null
     : Array.isArray(examDateFilter)
@@ -227,7 +239,7 @@ export async function fetchPracticeQuestions(
 }
 
 export async function loadExamDates(): Promise<string[]> {
-  const questions = await loadPracticeQuestionCatalog();
+  const questions = await loadQuestionCatalog();
   const dates = new Set<string>();
   for (const question of questions) {
     dates.add(examPeriodKey(question.exam_year, question.exam_month));
