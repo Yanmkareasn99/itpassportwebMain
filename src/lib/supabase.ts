@@ -249,6 +249,12 @@ class LocalQuery {
     } else if (this.operation === 'delete') {
       result = existing.filter(row => this.matches(row));
       writeLocalTable(this.table, existing.filter(row => !this.matches(row)));
+      if (this.table === 'bug_reports' && result.length > 0) {
+        const deletedReportIds = new Set(result.map(row => row.id));
+        const remainingComments = readLocalTable('bug_report_comments')
+          .filter(comment => !deletedReportIds.has(comment.issue_id));
+        writeLocalTable('bug_report_comments', remainingComments);
+      }
     } else {
       result = this.applyFilters(scopeLocalRows(this.table, existing));
       if (this.orderBy) {

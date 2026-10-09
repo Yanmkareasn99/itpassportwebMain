@@ -1,6 +1,6 @@
 import { translate } from '../i18n';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Sparkles, Send, RotateCcw, Lightbulb, MessageCircle, Plus } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronDown, ChevronUp, Sparkles, Send, RotateCcw, Lightbulb, MessageCircle, Plus } from 'lucide-react';
 import Layout from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { getChatReply, ChatMessage } from '../lib/aiChat';
@@ -60,6 +60,9 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
   const [menuOpen, setMenuOpen] = useState(false);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [recentQuestions, setRecentQuestions] = useState<Question[]>([]);
+  const [canScrollUp, setCanScrollUp] = useState(false);
+  const [canScrollDown, setCanScrollDown] = useState(false);
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const plusBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -143,9 +146,51 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
     };
   }, [profileId]);
 
+  const updateScrollControls = useCallback(() => {
+    const container = chatScrollRef.current;
+    if (!container) return;
+
+    const edgeThreshold = 12;
+    const hasOverflow = container.scrollHeight > container.clientHeight + edgeThreshold;
+    setCanScrollUp(hasOverflow && container.scrollTop > edgeThreshold);
+    setCanScrollDown(
+      hasOverflow
+        && container.scrollTop + container.clientHeight < container.scrollHeight - edgeThreshold,
+    );
+  }, []);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, sending]);
+    const frame = window.requestAnimationFrame(updateScrollControls);
+    return () => window.cancelAnimationFrame(frame);
+  }, [messages, sending, updateScrollControls]);
+
+  useEffect(() => {
+    const container = chatScrollRef.current;
+    if (!container) return;
+
+    const resizeObserver = typeof ResizeObserver === 'undefined'
+      ? null
+      : new ResizeObserver(updateScrollControls);
+    resizeObserver?.observe(container);
+    window.addEventListener('resize', updateScrollControls);
+    updateScrollControls();
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener('resize', updateScrollControls);
+    };
+  }, [updateScrollControls]);
+
+  function scrollChatToTop() {
+    chatScrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function scrollChatToBottom() {
+    const container = chatScrollRef.current;
+    if (!container) return;
+    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+  }
 
   // auto-grow the textarea up to 160px
   useEffect(() => {
@@ -269,8 +314,8 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
       title={translate(language, 'aiChatPage.aiChat')}
       subtitle={translate(language, 'aiChatPage.studyAssistant')}
     >
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col min-h-[70vh] overflow-hidden">
+      <div className="w-full">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex h-[calc(100dvh-10rem)] min-h-[28rem] w-full flex-col overflow-hidden md:h-[calc(100dvh-8rem)]">
           <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-violet-50 dark:border-blue-900 dark:from-blue-950 dark:to-blue-900">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div className="min-w-0">
@@ -281,7 +326,7 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{translate(language, 'aiChatPage.heroTitle')}</h2>
                 <p className="text-sm text-gray-500 mt-1">{translate(language, 'aiChatPage.heroDescription')}</p>
               </div>
-              <button
+              <button type="button"
                 onClick={() => void resetChat()}
                 className="shrink-0 self-start inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition whitespace-nowrap"
               >
@@ -291,17 +336,53 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
             </div>
           </div>
 
-          <div className="flex-1 p-5 space-y-4 bg-gray-50 overflow-y-auto">
-            {messages.map(message => <ChatBubble key={message.id} message={message} />)}
-            {sending && (
-              <div className="flex justify-start">
-                <div className="bg-white border border-gray-100 rounded-2xl px-4 py-3 text-sm text-gray-400 flex items-center gap-2 shadow-sm">
-                  <MessageCircle className="w-4 h-4 animate-pulse" />
-                  {translate(language, 'aiChatPage.thinking')}
-                </div>
+          <div className="relative min-h-0 flex-1">
+            <div
+              ref={chatScrollRef}
+              role="log"
+              aria-label={translate(language, 'aiChatPage.chatHistory')}
+              onScroll={updateScrollControls}
+              className="h-full overflow-y-auto bg-gray-50 p-5"
+            >
+              <div className="space-y-4">
+                {messages.map(message => <ChatBubble key={message.id} message={message} />)}
+                {sending && (
+                  <div className="flex justify-start">
+                    <div className="bg-white border border-gray-100 rounded-2xl px-4 py-3 text-sm text-gray-400 flex items-center gap-2 shadow-sm">
+                      <MessageCircle className="w-4 h-4 animate-pulse" />
+                      {translate(language, 'aiChatPage.thinking')}
+                    </div>
+                  </div>
+                )}
+                <div ref={bottomRef} />
+              </div>
+            </div>
+
+            {canScrollUp && (
+              <div className="absolute left-1/2 top-3 z-10 -translate-x-1/2">
+                <button
+                  type="button"
+                  onClick={scrollChatToTop}
+                  aria-label={translate(language, 'aiChatPage.scrollToTop')}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white/95 text-gray-600 shadow-md backdrop-blur transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 active:!scale-95 active:shadow-sm motion-reduce:active:!scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                >
+                  <ChevronUp className="h-5 w-5" />
+                </button>
               </div>
             )}
-            <div ref={bottomRef} />
+
+            {canScrollDown && (
+              <div className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2">
+                <button
+                  type="button"
+                  onClick={scrollChatToBottom}
+                  aria-label={translate(language, 'aiChatPage.scrollToBottom')}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white/95 text-gray-600 shadow-md backdrop-blur transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 active:!scale-95 active:shadow-sm motion-reduce:active:!scale-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                >
+                  <ChevronDown className="h-5 w-5" />
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="p-3 sm:p-4 border-t border-gray-100 bg-white">

@@ -385,7 +385,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
           )}
 
           <div className="flex justify-center pt-1">
-            <button
+            <button type="button"
               onClick={startExam}
               disabled={loading || settingsLoading}
               className={`inline-flex min-h-12 min-w-44 items-center justify-center gap-2 rounded-full px-8 py-3 font-semibold shadow-sm transition focus:outline-none focus:ring-4 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:opacity-60 dark:focus:ring-[rgba(126,162,248,0.40)] ${BTN_PRIMARY}`}
@@ -466,13 +466,13 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
           </div>
 
           <div className="flex justify-center gap-3">
-            <button
+            <button type="button"
               onClick={() => { finishingRef.current = false; setStage('intro'); setUserAnswers({}); setReviewMarks({}); setShowConfirm(false); setCurrentIndex(0); setTimeLeft(examDuration); setSessionId(null); }}
               className={`rounded-full px-6 py-3 font-semibold transition ${BTN_GHOST}`}
             >
               {translate(language, 'mockExamPage.retake')}
             </button>
-            <button
+            <button type="button"
               onClick={() => onNavigate('home')}
               className={`rounded-full px-6 py-3 font-semibold transition ${BTN_PRIMARY}`}
             >
@@ -575,7 +575,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
               {choices.map((choice, idx) => {
                 const selected = userAnswers[question.id] === choice.id;
                 return (
-                  <button
+                  <button type="button"
                     key={choice.id}
                     onClick={() => setUserAnswers(prev => ({ ...prev, [question.id]: choice.id }))}
                     className={`flex w-full items-center gap-3 rounded-2xl border-2 p-4 text-left text-slate-800 transition-all dark:text-[#F8FAFC] ${
@@ -598,7 +598,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
             </div>
 
             <div className="flex items-center justify-between gap-2 pt-2">
-              <button
+              <button type="button"
                 disabled={currentIndex === 0}
                 onClick={() => setCurrentIndex(i => i - 1)}
                 className={`flex shrink-0 items-center gap-1 rounded-full px-3 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-40 sm:gap-2 sm:px-5 ${BTN_SECONDARY}`}
@@ -618,14 +618,14 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
               </button>
 
               {currentIndex + 1 < questions.length ? (
-                <button
+                <button type="button"
                   onClick={() => setCurrentIndex(i => i + 1)}
                   className={`flex shrink-0 items-center gap-1 rounded-full px-5 py-2.5 text-sm font-semibold transition sm:gap-2 sm:px-7 ${BTN_PRIMARY}`}
                 >
                   {translate(language, 'mockExamPage.next')} <ChevronRight className="h-4 w-4" />
                 </button>
               ) : (
-                <button
+                <button type="button"
                   onClick={requestFinish}
                   className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-semibold transition sm:px-7 ${BTN_SUCCESS}`}
                 >
@@ -656,7 +656,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
                         : 'bg-indigo-500 text-white ring-2 ring-indigo-500 ring-offset-2 dark:bg-[#7EA2F8] dark:text-slate-950 dark:ring-[#7EA2F8] dark:ring-offset-slate-900';
                     }
                     return (
-                      <button
+                      <button type="button"
                         key={q.id}
                         onClick={() => selectQuestion(i)}
                         aria-label={translate(language, 'mockExamPage.questionNumber', { number: i + 1 })}
@@ -671,7 +671,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
               <div className="mt-4 border-t border-gray-100 pt-4 text-center dark:border-[rgba(255,255,255,0.10)]">
                 <p className="text-xs text-gray-400 dark:text-[#94A3B8]">{translate(language, 'mockExamPage.answeredCount', { answered: answeredCount, total: questions.length })}</p>
               </div>
-              <button
+              <button type="button"
                 onClick={requestFinish}
                 className={`mt-3 w-full rounded-full py-2.5 text-xs font-semibold transition ${BTN_SUCCESS}`}
               >
@@ -709,13 +709,13 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-3">
-              <button
+              <button type="button"
                 onClick={() => setShowConfirm(false)}
                 className={`rounded-full px-5 py-2.5 text-sm font-semibold transition ${BTN_GHOST}`}
               >
                 {translate(language, 'mockExamPage.continueExam')}
               </button>
-              <button
+              <button type="button"
                 onClick={() => { setShowConfirm(false); void finishExam(); }}
                 className={`rounded-full px-5 py-2.5 text-sm font-semibold transition ${BTN_SUCCESS}`}
               >
@@ -754,13 +754,13 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-3">
-              <button
+              <button type="button"
                 onClick={cancelLeaveExam}
                 className={`rounded-full px-5 py-2.5 text-sm font-semibold transition ${BTN_GHOST}`}
               >
                 {translate(language, 'mockExamPage.stayInExam')}
               </button>
-              <button
+              <button type="button"
                 onClick={confirmLeaveExam}
                 className={`rounded-full px-5 py-2.5 text-sm font-semibold transition ${BTN_PRIMARY}`}
               >

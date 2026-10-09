@@ -65,7 +65,7 @@ export default function MobileTabBar({
               <span className="font-semibold text-gray-700">
                 {t('mobileTabBar.menu')}
               </span>
-              <button
+              <button type="button"
                 onClick={() => setMoreOpen(false)}
                 className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"
               >
@@ -75,7 +75,7 @@ export default function MobileTabBar({
 
             <div className="grid grid-cols-4 gap-2 mb-2">
               {moreItems.map(({ icon: Icon, label, page }) => (
-                <button
+                <button type="button"
                   key={page}
                   onClick={() => go(page)}
                   className={`flex flex-col items-center gap-1.5 py-3 rounded-xl transition ${
@@ -102,7 +102,7 @@ export default function MobileTabBar({
           {tabItems.map(({ icon: Icon, label, page }) => {
             const active = isActive(page);
             return (
-              <button
+              <button type="button"
                 key={page}
                 onClick={() => go(page)}
                 className={`flex flex-col items-center gap-1 py-2.5 transition ${
@@ -115,7 +115,7 @@ export default function MobileTabBar({
             );
           })}
 
-          <button
+          <button type="button"
             onClick={() => setMoreOpen(true)}
             className={`flex flex-col items-center gap-1 py-2.5 transition ${
               moreOpen || moreItems.some(item => isActive(item.page))

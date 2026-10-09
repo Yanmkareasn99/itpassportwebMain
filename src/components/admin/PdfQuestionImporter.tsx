@@ -589,7 +589,7 @@ export default function PdfQuestionImporter({
           </h2>
           <p className="mt-1 text-sm text-gray-500">{translate(language, 'adminPage.pdfImportDescription')}</p>
         </div>
-        <button onClick={onClose} className="rounded-xl p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600">
+        <button type="button" onClick={onClose} className="rounded-xl p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600">
           <X className="h-5 w-5" />
         </button>
       </div>
@@ -689,11 +689,11 @@ export default function PdfQuestionImporter({
                 setExamDate(year.length === 4 && examDate.includes('-') ? `${year}-${examDate.split('-')[1]}` : year);
               }}
               disabled={processing}
-              className="w-1/2 rounded-xl border border-gray-200 px-3 py-2 text-sm" />
+              className="w-1/2 rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-200" />
             <select value={examDate.length > 4 ? examDate.slice(5, 7) : ''}
               onChange={event => setExamDate(examDate.slice(0, 4) + (event.target.value && examDate.length >= 4 ? `-${event.target.value}` : ''))}
               disabled={processing}
-              className="w-1/2 rounded-xl border border-gray-200 px-3 py-2 text-sm">
+              className="w-1/2 rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-200">
               <option value="">{translate(language, 'adminPage.examMonthUnknown')}</option>
               {Array.from({ length: 12 }, (_, index) => <option key={index + 1} value={String(index + 1).padStart(2, '0')}>{index + 1}</option>)}
             </select>
@@ -738,7 +738,7 @@ export default function PdfQuestionImporter({
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <button
+        <button type="button"
           onClick={handleProcess}
           disabled={processing || importing}
           className="flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-violet-700 disabled:opacity-60"
@@ -780,7 +780,7 @@ export default function PdfQuestionImporter({
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <button
+              <button type="button"
                 onClick={() => void handleJsonDownload()}
                 disabled={exportingJson || !examKey.trim() || questions.length === 0}
                 className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
@@ -788,7 +788,7 @@ export default function PdfQuestionImporter({
                 {exportingJson ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                 {translate(language, 'adminPage.pdfJsonDownload')}
               </button>
-              <button
+              <button type="button"
                 onClick={handleImport}
                 disabled={importing || invalidCount > 0 || (importExam === 'it-passport' && !subjectRangesValid)}
                 className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
@@ -814,7 +814,7 @@ export default function PdfQuestionImporter({
                       : '';
               return (
                 <div key={question.sourceKey} className={`overflow-hidden rounded-xl border ${problem ? 'border-amber-200' : 'border-gray-200'}`}>
-                  <button
+                  <button type="button"
                     onClick={() => setExpandedIndex(expanded ? null : questionIndex)}
                     className="flex w-full items-center gap-3 bg-gray-50 px-4 py-3 text-left hover:bg-gray-100"
                   >
@@ -898,14 +898,14 @@ export default function PdfQuestionImporter({
                       <div>
                         <div className="mb-2 flex items-center justify-between">
                           <span className="text-xs font-semibold text-gray-600">{translate(language, 'adminPage.choices')}</span>
-                          <button onClick={() => addChoice(questionIndex)} className="flex items-center gap-1 text-xs font-semibold text-violet-600">
+                          <button type="button" onClick={() => addChoice(questionIndex)} className="flex items-center gap-1 text-xs font-semibold text-violet-600">
                             <Plus className="h-3.5 w-3.5" /> {translate(language, 'adminPage.add')}
                           </button>
                         </div>
                         <div className="space-y-2">
                           {question.choices.map((choice, choiceIndex) => (
                             <div key={`${choice.label}-${choiceIndex}`} className="flex items-center gap-2">
-                              <button
+                              <button type="button"
                                 onClick={() => patchQuestion(questionIndex, { correctChoice: choice.label })}
                                 title={translate(language, 'adminPage.pdfMarkCorrect')}
                                 className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold ${
@@ -928,7 +928,7 @@ export default function PdfQuestionImporter({
                                   className="h-16 w-28 shrink-0 rounded-lg border border-gray-200 bg-white object-contain"
                                 />
                               )}
-                              <button
+                              <button type="button"
                                 onClick={() => removeChoice(questionIndex, choiceIndex)}
                                 className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-500"
                               >

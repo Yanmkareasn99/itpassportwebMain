@@ -163,7 +163,7 @@ function CategoryCard({
   const categoryLabel = getCategoryLabel(category, language);
 
   return (
-    <button
+    <button type="button"
       onClick={onStart}
       disabled={loading || stats.questionCount === 0}
       className={`${category.cardClass} group relative flex min-h-[150px] w-full min-w-0 flex-col justify-between overflow-hidden rounded-3xl p-5 text-left text-slate-900 transition-all hover:-translate-y-0.5 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50`}
@@ -224,7 +224,7 @@ function ReviewCard({
   language: LanguageCode;
 }) {
   return (
-    <button
+    <button type="button"
       onClick={onStart}
       disabled={count === 0}
       className="group relative flex min-h-[150px] w-full min-w-0 flex-col justify-between overflow-hidden rounded-3xl bg-[#F4B0D0] p-5 text-left text-slate-900 transition-all hover:-translate-y-0.5 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
@@ -1180,7 +1180,7 @@ export default function PracticeListPage({
               />
             </div>
 
-            <button
+            <button type="button"
               onClick={() => void startFilteredPractice()}
               disabled={
                 !!starting ||

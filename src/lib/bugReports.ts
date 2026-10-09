@@ -53,6 +53,11 @@ export async function updateBugReportStatus(id: string, status: BugReportStatus)
   return data as BugReport;
 }
 
+export async function deleteBugReport(id: string): Promise<void> {
+  const { error } = await supabase.from('bug_reports').delete().eq('id', id);
+  if (error) throw error;
+}
+
 export async function loadBugReportComments(issueIds: string[]): Promise<BugReportComment[]> {
   if (issueIds.length === 0) return [];
   const comments: BugReportComment[] = [];

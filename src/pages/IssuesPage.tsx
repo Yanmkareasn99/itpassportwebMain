@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ComponentPropsWithoutRef, type FormEvent } from 'react';
 import { AlertCircle, Bug, Check, CheckCircle2, Clock3, MessageCircle, MoreHorizontal, Pencil, Plus, Send, Tag, Trash2, UserRound, X } from 'lucide-react';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,6 +9,7 @@ import {
   BUG_REPORT_STATUSES,
   createBugReport,
   createBugReportComment,
+  deleteBugReport,
   deleteBugReportComment,
   loadBugReportComments,
   loadBugReports,
@@ -20,6 +21,28 @@ import type { BugReport, BugReportComment, BugReportLabel, BugReportStatus, Page
 interface IssuesPageProps {
   currentPage: Page;
   onNavigate: (page: Page) => void;
+}
+
+type AutoGrowingTextareaProps = ComponentPropsWithoutRef<'textarea'>;
+
+function AutoGrowingTextarea({ className = '', value, ...props }: AutoGrowingTextareaProps) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useLayoutEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    if (textarea.scrollHeight > 0) textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [value]);
+
+  return (
+    <textarea
+      {...props}
+      ref={textareaRef}
+      value={value}
+      className={`resize-none overflow-hidden ${className}`}
+    />
+  );
 }
 
 function statusText(language: 'ja' | 'en' | 'vi', status: BugReportStatus) {
@@ -70,6 +93,7 @@ export default function IssuesPage({ currentPage, onNavigate }: IssuesPageProps)
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [savingStatus, setSavingStatus] = useState<string | null>(null);
+  const [deletingReport, setDeletingReport] = useState<string | null>(null);
   const [submittingComment, setSubmittingComment] = useState<string | null>(null);
   const [savingComment, setSavingComment] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -139,6 +163,41 @@ export default function IssuesPage({ currentPage, onNavigate }: IssuesPageProps)
       setError(statusError instanceof Error ? statusError.message : 'Unable to update issue status.');
     } finally {
       setSavingStatus(null);
+    }
+  }
+
+  async function removeReport(report: BugReport) {
+    if (!user || deletingReport || (!isAdmin && report.reporter_id !== user.id)) return;
+    if (!window.confirm(translate(language, 'issuesPage.deleteReportConfirm', { title: report.title }))) return;
+    setDeletingReport(report.id);
+    setError('');
+    setSuccess('');
+    try {
+      await deleteBugReport(report.id);
+      const deletedCommentIds = new Set(
+        comments.filter(comment => comment.issue_id === report.id).map(comment => comment.id),
+      );
+      setReports(current => current.filter(value => value.id !== report.id));
+      setComments(current => current.filter(comment => comment.issue_id !== report.id));
+      setCommentDrafts(current => {
+        const next = { ...current };
+        delete next[report.id];
+        return next;
+      });
+      if (editingComment && deletedCommentIds.has(editingComment)) {
+        setEditingComment(null);
+        setEditCommentBody('');
+      }
+      if (openCommentMenu && deletedCommentIds.has(openCommentMenu)) {
+        setOpenCommentMenu(null);
+      }
+      setSuccess(translate(language, 'issuesPage.reportDeleted'));
+    } catch (deleteError) {
+      setError(deleteError instanceof Error
+        ? deleteError.message
+        : translate(language, 'issuesPage.deleteReportFailed'));
+    } finally {
+      setDeletingReport(null);
     }
   }
 
@@ -280,15 +339,15 @@ export default function IssuesPage({ currentPage, onNavigate }: IssuesPageProps)
               <label htmlFor="issue-details" className="mb-1.5 block text-sm font-semibold text-gray-700 dark:text-slate-200">
                 {translate(language, 'issuesPage.details')}
               </label>
-              <textarea
+              <AutoGrowingTextarea
                 id="issue-details"
                 value={details}
                 onChange={event => setDetails(event.target.value)}
                 maxLength={10000}
                 required
-                rows={8}
+                rows={1}
                 placeholder={translate(language, 'issuesPage.detailsPlaceholder')}
-                className="w-full resize-y rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:ring-blue-900"
+                className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:ring-blue-900"
               />
             </div>
 
@@ -338,7 +397,7 @@ export default function IssuesPage({ currentPage, onNavigate }: IssuesPageProps)
                 aria-label={translate(language, 'issuesPage.filterStatus')}
                 value={statusFilter}
                 onChange={event => setStatusFilter(event.target.value as 'all' | BugReportStatus)}
-                className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:focus:ring-blue-900"
               >
                 <option value="all">{translate(language, 'issuesPage.allStatuses')}</option>
                 {BUG_REPORT_STATUSES.map(status => <option key={status} value={status}>{statusText(language, status)}</option>)}
@@ -373,17 +432,31 @@ export default function IssuesPage({ currentPage, onNavigate }: IssuesPageProps)
                         </div>
                         <h3 className="break-words font-bold text-gray-900 dark:text-white">{report.title}</h3>
                       </div>
-                      {isAdmin && (
-                        <select
-                          aria-label={translate(language, 'issuesPage.changeStatus', { title: report.title })}
-                          value={report.status}
-                          disabled={savingStatus === report.id}
-                          onChange={event => void changeStatus(report.id, event.target.value as BugReportStatus)}
-                          className="shrink-0 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                        >
-                          {BUG_REPORT_STATUSES.map(status => <option key={status} value={status}>{statusText(language, status)}</option>)}
-                        </select>
-                      )}
+                      <div className="flex shrink-0 items-center gap-2">
+                        {isAdmin && (
+                          <select
+                            aria-label={translate(language, 'issuesPage.changeStatus', { title: report.title })}
+                            value={report.status}
+                            disabled={savingStatus === report.id}
+                            onChange={event => void changeStatus(report.id, event.target.value as BugReportStatus)}
+                            className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:focus:ring-blue-900"
+                          >
+                            {BUG_REPORT_STATUSES.map(status => <option key={status} value={status}>{statusText(language, status)}</option>)}
+                          </select>
+                        )}
+                        {(report.reporter_id === user?.id || isAdmin) && (
+                          <button
+                            type="button"
+                            aria-label={translate(language, 'issuesPage.deleteReportLabel', { title: report.title })}
+                            disabled={deletingReport === report.id}
+                            onClick={() => void removeReport(report)}
+                            className="flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900 dark:bg-slate-900 dark:text-red-300 dark:hover:bg-red-950/30"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            {translate(language, 'issuesPage.deleteReport')}
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-relaxed text-gray-600 dark:text-slate-300">{report.details}</p>
                     <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-gray-100 pt-3 text-xs text-gray-400 dark:border-slate-800 dark:text-slate-500">
@@ -454,14 +527,14 @@ export default function IssuesPage({ currentPage, onNavigate }: IssuesPageProps)
                             </div>
                             {editingComment === comment.id ? (
                               <form onSubmit={event => void saveEditedComment(event, comment.id)} className="space-y-2">
-                                <textarea
+                                <AutoGrowingTextarea
                                   aria-label={translate(language, 'issuesPage.editComment')}
                                   value={editCommentBody}
                                   onChange={event => setEditCommentBody(event.target.value)}
                                   maxLength={5000}
-                                  rows={3}
+                                  rows={1}
                                   required
-                                  className="w-full resize-y rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:ring-blue-900"
+                                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:focus:ring-blue-900"
                                 />
                                 <div className="flex justify-end gap-2">
                                   <button
@@ -474,7 +547,7 @@ export default function IssuesPage({ currentPage, onNavigate }: IssuesPageProps)
                                   <button
                                     type="submit"
                                     disabled={savingComment === comment.id || !editCommentBody.trim()}
-                                    className="flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+                                    className="flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
                                   >
                                     <Check className="h-3.5 w-3.5" /> {translate(language, 'issuesPage.saveComment')}
                                   </button>
@@ -490,15 +563,15 @@ export default function IssuesPage({ currentPage, onNavigate }: IssuesPageProps)
                       <form onSubmit={event => void submitComment(event, report.id)} className="mt-3 flex items-end gap-2">
                         <div className="min-w-0 flex-1">
                           <label htmlFor={`comment-${report.id}`} className="sr-only">{translate(language, 'issuesPage.addComment')}</label>
-                          <textarea
+                          <AutoGrowingTextarea
                             id={`comment-${report.id}`}
                             value={commentDrafts[report.id] ?? ''}
                             onChange={event => setCommentDrafts(current => ({ ...current, [report.id]: event.target.value }))}
                             maxLength={5000}
-                            rows={2}
+                            rows={1}
                             required
                             placeholder={translate(language, 'issuesPage.commentPlaceholder')}
-                            className="w-full resize-y rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:ring-blue-900"
+                            className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:focus:ring-blue-900"
                           />
                         </div>
                         <button

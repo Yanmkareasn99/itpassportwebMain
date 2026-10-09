@@ -94,7 +94,7 @@ function CalendarWidget({ daysLeft, language, sessions = [], examTargetDate, onS
             {translate(language, 'homePage.setExamDate')}
           </button>
         )}
-        <button
+        <button type="button"
           onClick={() => setViewDate(new Date(today.getFullYear(), today.getMonth(), 1))}
           className="ml-auto h-10 rounded-full bg-blue-50 px-4 text-sm font-semibold text-blue-600 hover:bg-blue-100 active:bg-blue-200 transition cursor-pointer dark:bg-[rgba(126,162,248,0.12)] dark:text-[#7EA2F8] dark:hover:bg-[rgba(126,162,248,0.18)]"
           title={translate(language, 'homePage.today')}
@@ -105,13 +105,13 @@ function CalendarWidget({ daysLeft, language, sessions = [], examTargetDate, onS
 
       {/* Calendar nav */}
       <div className="flex items-center justify-between mb-3">
-        <button onClick={() => setViewDate(new Date(year, month - 1, 1))} className="p-2 -m-1 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition dark:hover:bg-slate-800">
+        <button type="button" onClick={() => setViewDate(new Date(year, month - 1, 1))} className="p-2 -m-1 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition dark:hover:bg-slate-800">
           <ChevronLeft className="w-4 h-4 text-gray-500 dark:text-slate-300" />
         </button>
         <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">
           {new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'long' }).format(viewDate)}
         </span>
-        <button onClick={() => setViewDate(new Date(year, month + 1, 1))} className="p-2 -m-1 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition dark:hover:bg-slate-800">
+        <button type="button" onClick={() => setViewDate(new Date(year, month + 1, 1))} className="p-2 -m-1 hover:bg-gray-100 active:bg-gray-200 rounded-lg transition dark:hover:bg-slate-800">
           <ChevronRight className="w-4 h-4 text-gray-500 dark:text-slate-300" />
         </button>
       </div>

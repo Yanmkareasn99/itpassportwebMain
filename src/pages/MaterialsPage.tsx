@@ -221,7 +221,7 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-lg font-bold text-indigo-950 dark:text-slate-100">{t('materialsPage.sharedFiles')}</h3>
               <div className="flex items-center gap-3">
-                <button onClick={refresh} disabled={loading} className="flex items-center gap-1 text-sm font-semibold text-indigo-600 dark:text-indigo-300 disabled:opacity-50"><RefreshCw className="w-4 h-4" />{t('materialsPage.refresh')}</button>
+                <button type="button" onClick={refresh} disabled={loading} className="flex items-center gap-1 text-sm font-semibold text-indigo-600 dark:text-indigo-300 disabled:opacity-50"><RefreshCw className="w-4 h-4" />{t('materialsPage.refresh')}</button>
                 <button
                   type="button"
                   onClick={() => setShowUploadForm(current => !current)}
@@ -281,9 +281,10 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
                   <p className="relative mt-4 break-all text-xs text-slate-600">{isExternal ? linkHost(material.external_url!) : `${material.file_name} · ${fileSize(material.file_size!)}`}</p>
                   <p className="relative mt-1 text-xs text-slate-600">{new Date(material.created_at).toLocaleDateString(languageLocales[language])}</p>
                   <div className="relative mt-4 grid grid-cols-2 gap-2">
-                    <button onClick={() => openMaterial(material, false)} className={`${isExternal ? 'col-span-2 bg-indigo-500 text-white hover:bg-indigo-600' : 'bg-white/60 text-slate-800 hover:bg-white/80'} flex items-center justify-center gap-1 rounded-full px-3 py-2 text-xs font-semibold`}>{isExternal && <ExternalLink className="h-3.5 w-3.5" />}{t(isExternal ? 'materialsPage.openLink' : 'materialsPage.open')}</button>
-                    {!isExternal && <button onClick={() => openMaterial(material, true)} className="flex items-center justify-center gap-1 rounded-full bg-indigo-500 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-600"><Download className="w-3.5 h-3.5" />{t('materialsPage.download')}</button>}
+                    <button type="button" onClick={() => openMaterial(material, false)} className={`${isExternal ? 'col-span-2 bg-indigo-500 text-white hover:bg-indigo-600' : 'bg-white/60 text-slate-800 hover:bg-white/80'} flex items-center justify-center gap-1 rounded-full px-3 py-2 text-xs font-semibold`}>{isExternal && <ExternalLink className="h-3.5 w-3.5" />}{t(isExternal ? 'materialsPage.openLink' : 'materialsPage.open')}</button>
+                    {!isExternal && <button type="button" onClick={() => openMaterial(material, true)} className="flex items-center justify-center gap-1 rounded-full bg-indigo-500 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-600"><Download className="w-3.5 h-3.5" />{t('materialsPage.download')}</button>}
                     {(user?.id === material.uploader_id || isAdmin) && <button
+                      type="button"
                       onClick={() => setPendingDelete(material)}
                       disabled={deletingId !== null}
                       className="col-span-2 flex items-center justify-center gap-1 rounded-full bg-white/50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-white/80 disabled:opacity-50"

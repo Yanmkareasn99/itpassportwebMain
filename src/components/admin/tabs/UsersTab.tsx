@@ -46,7 +46,7 @@ export default function UsersTab() {
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
         <span className="text-sm font-semibold text-gray-700">{loading ? translate(language, 'adminPage.loading') : translate(language, 'adminPage.userCount', { count: users.length })}</span>
-        <button onClick={load} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition"><RefreshCw className="w-4 h-4" /></button>
+        <button type="button" onClick={load} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition"><RefreshCw className="w-4 h-4" /></button>
       </div>
       {error && <p className="px-5 py-3 text-sm text-red-600 bg-red-50">{error}</p>}
       {loading ? (
@@ -74,7 +74,7 @@ export default function UsersTab() {
                     <ShieldCheck className="w-3 h-3" />{translate(language, 'adminPage.administrator')}
                   </span>
                 )}
-                <button
+                <button type="button"
                   onClick={() => toggleAdmin(u)}
                   disabled={saving === u.id}
                   className={`text-xs font-medium px-3 py-1.5 rounded-lg transition ${
