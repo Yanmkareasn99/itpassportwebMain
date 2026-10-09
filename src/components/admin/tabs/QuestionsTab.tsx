@@ -1258,7 +1258,7 @@ export default function QuestionsTab({ active = true }: QuestionsTabProps) {
                 ? translate(language, "adminPage.addQuestion")
                 : translate(language, "adminPage.editQuestion")}
             </h2>
-            <button
+            <button type="button"
               onClick={() => setEditingId(null)}
               className="p-2 hover:bg-gray-100 rounded-xl transition"
             >
@@ -1396,14 +1396,14 @@ export default function QuestionsTab({ active = true }: QuestionsTabProps) {
                   onChange={(e) =>
                     setForm((f) => ({ ...f, exam_year: e.target.value }))
                   }
-                  className="w-1/2 border border-gray-200 rounded-xl px-3 py-2 text-sm"
+                  className="w-1/2 rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
                 />
                 <select
                   value={form.exam_month}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, exam_month: e.target.value }))
                   }
-                  className="w-1/2 border border-gray-200 rounded-xl px-3 py-2 text-sm"
+                  className="w-1/2 rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
                 >
                   <option value="">
                     {translate(language, "adminPage.examMonthUnknown")}
@@ -1661,8 +1661,40 @@ export default function QuestionsTab({ active = true }: QuestionsTabProps) {
                         "adminPage.choicePlaceholder",
                         { number: i + 1 },
                       )}
-                      className="flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      className="min-w-0 flex-1 rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
                     />
+
+                    {/* Choice image upload */}
+                    <label
+                      className={`flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-600 transition hover:bg-blue-100 ${
+                        uploadingChoiceImageIndex === i
+                          ? "pointer-events-none opacity-50"
+                          : ""
+                      }`}
+                    >
+                      <ImagePlus className="h-3.5 w-3.5" />
+
+                      {uploadingChoiceImageIndex === i
+                        ? translate(language, "adminPage.imageUploading")
+                        : c.image_url
+                          ? translate(language, "adminPage.replaceChoiceImage")
+                          : translate(language, "adminPage.uploadChoiceImage")}
+
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        className="hidden"
+                        disabled={uploadingChoiceImageIndex === i}
+                        onChange={(event) => {
+                          void handleChoiceImageUpload(
+                            i,
+                            event.target.files?.[0],
+                          );
+
+                          event.target.value = "";
+                        }}
+                      />
+                    </label>
 
                     {/* Delete choice */}
                     {form.choices.length > 2 && (
@@ -1676,67 +1708,27 @@ export default function QuestionsTab({ active = true }: QuestionsTabProps) {
                     )}
                   </div>
 
-                  {/* Choice image */}
-                  <div className="mt-3 flex flex-wrap items-center gap-3 pl-8">
-                    {c.image_url ? (
+                  {/* Choice image preview */}
+                  {c.image_url && (
+                    <div className="mt-3 flex flex-wrap items-center gap-3 pl-8">
                       <img
                         src={c.image_url}
                         alt={`Choice ${i + 1}`}
                         className="h-20 w-28 rounded-lg border border-gray-200 bg-gray-50 object-contain p-1"
                       />
-                    ) : (
-                      <div className="flex h-20 w-28 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 text-gray-400">
-                        <ImagePlus className="h-5 w-5" />
-                      </div>
-                    )}
-
-                    <div className="flex flex-wrap items-center gap-2">
-                      <label
-                        className={`flex cursor-pointer items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-600 transition hover:bg-blue-100 ${
-                          uploadingChoiceImageIndex === i
-                            ? "pointer-events-none opacity-50"
-                            : ""
-                        }`}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setChoice(i, {
+                            image_url: "",
+                          })
+                        }
+                        className="rounded-lg px-3 py-2 text-xs font-semibold text-red-500 transition hover:bg-red-50"
                       >
-                        <ImagePlus className="h-3.5 w-3.5" />
-
-                        {uploadingChoiceImageIndex === i
-                          ? translate(language, "adminPage.imageUploading")
-                          : c.image_url
-                            ? translate(language, "adminPage.replaceChoiceImage")
-                            : translate(language, "adminPage.uploadChoiceImage")}
-
-                        <input
-                          type="file"
-                          accept="image/png,image/jpeg,image/webp,image/gif"
-                          className="hidden"
-                          disabled={uploadingChoiceImageIndex === i}
-                          onChange={(event) => {
-                            void handleChoiceImageUpload(
-                              i,
-                              event.target.files?.[0],
-                            );
-
-                            event.target.value = "";
-                          }}
-                        />
-                      </label>
-
-                      {c.image_url && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setChoice(i, {
-                              image_url: "",
-                            })
-                          }
-                          className="rounded-lg px-3 py-2 text-xs font-semibold text-red-500 transition hover:bg-red-50"
-                        >
-                          {translate(language, "adminPage.removeChoiceImage")}
-                        </button>
-                      )}
+                        {translate(language, "adminPage.removeChoiceImage")}
+                      </button>
                     </div>
-                  </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -1917,7 +1909,7 @@ export default function QuestionsTab({ active = true }: QuestionsTabProps) {
             </div>
           )}
         </div>
-        <button
+        <button type="button"
           onClick={() => void load(true)}
           className="p-2 hover:bg-gray-100 rounded-xl transition text-gray-500"
         >
@@ -1992,6 +1984,8 @@ export default function QuestionsTab({ active = true }: QuestionsTabProps) {
                 role="menuitem"
                 onClick={() => {
                   setShowQuestionInputMenu(false);
+                  if (showCsvImportModal) resetCsvImport();
+                  setShowPdfImporter(false);
                   startNew();
                 }}
                 className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-gray-700 transition hover:bg-blue-50 hover:text-blue-700"
@@ -2011,6 +2005,7 @@ export default function QuestionsTab({ active = true }: QuestionsTabProps) {
                 role="menuitem"
                 onClick={() => {
                   setShowQuestionInputMenu(false);
+                  setShowPdfImporter(false);
                   setShowCsvImportModal(true);
                 }}
                 className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50"
@@ -2030,6 +2025,7 @@ export default function QuestionsTab({ active = true }: QuestionsTabProps) {
                 role="menuitem"
                 onClick={() => {
                   setShowQuestionInputMenu(false);
+                  if (showCsvImportModal) resetCsvImport();
                   setShowPdfImporter((current) => !current);
                 }}
                 className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-violet-700 transition hover:bg-violet-50"
@@ -2186,7 +2182,11 @@ export default function QuestionsTab({ active = true }: QuestionsTabProps) {
 
       {showCsvImportModal && (
         <div className="w-full mb-4">
-          <div className="w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <div
+            role="region"
+            aria-labelledby="csv-import-title"
+            className="w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
+          >
             {/* Header */}
             <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
               <div className="flex items-center gap-3">
@@ -2195,7 +2195,7 @@ export default function QuestionsTab({ active = true }: QuestionsTabProps) {
                 </div>
 
                 <div>
-                  <h2 className="text-sm font-bold text-gray-800">
+                  <h2 id="csv-import-title" className="text-sm font-bold text-gray-800">
                     {translate(language, "adminPage.csvModalTitle")}
                   </h2>
                   <p className="mt-0.5 text-xs text-gray-400">
@@ -2208,7 +2208,7 @@ export default function QuestionsTab({ active = true }: QuestionsTabProps) {
                 type="button"
                 onClick={resetCsvImport}
                 className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
-                aria-label="Đóng"
+                aria-label={translate(language, "ui.dismiss")}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -2482,7 +2482,10 @@ export default function QuestionsTab({ active = true }: QuestionsTabProps) {
               )}
 
               {/* Status */}
-              <div className="mt-4 flex flex-col gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div
+                aria-live="polite"
+                className="mt-4 flex flex-col gap-3 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+              >
                 <div>
                   <p className="text-xs font-semibold text-gray-700">
                     {translate(language, "adminPage.csvStatus")}
@@ -2537,7 +2540,8 @@ export default function QuestionsTab({ active = true }: QuestionsTabProps) {
             </div>
 
             {/* Footer */}
-<div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">              <div className="text-xs">
+            <div className="flex flex-col gap-3 border-t border-gray-100 bg-gray-50/50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-xs">
                 {importData?.questions.length && importData?.choices.length ? (
                   <span className="flex items-center gap-1.5 font-medium text-emerald-600">
                     <CheckCircle className="h-3.5 w-3.5" />
@@ -2550,13 +2554,13 @@ export default function QuestionsTab({ active = true }: QuestionsTabProps) {
                 )}
               </div>
 
-              <div className="flex items-center justify-end gap-2">
+              <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
                 <button
                   type="button"
                   onClick={resetCsvImport}
-                  className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100"
+                  className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 sm:flex-none"
                 >
-                  Hủy
+                  {translate(language, "adminPage.cancel")}
                 </button>
 
                 <button
@@ -2567,7 +2571,7 @@ export default function QuestionsTab({ active = true }: QuestionsTabProps) {
                     !importData?.questions.length ||
                     !importData?.choices.length
                   }
-                  className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 sm:flex-none"
                 >
                   {importing ? (
                     <RefreshCw className="h-4 w-4 animate-spin" />
@@ -2614,13 +2618,13 @@ export default function QuestionsTab({ active = true }: QuestionsTabProps) {
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <button
+              <button type="button"
                 onClick={() => setImportData(null)}
                 className="px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-100 rounded-lg"
               >
                 {translate(language, "adminPage.cancel")}
               </button>
-              <button
+              <button type="button"
                 onClick={importCsv}
                 disabled={
                   importing ||
@@ -2787,7 +2791,7 @@ export default function QuestionsTab({ active = true }: QuestionsTabProps) {
                           className={`h-4 w-4 transition-transform ${isExpanded ? "rotate-180" : ""}`}
                         />
                       </button>
-                      <button
+                      <button type="button"
                         onClick={() => void startEdit(q)}
                         disabled={choicesLoading}
                         title={translate(language, "adminPage.editQuestion")}
@@ -2799,7 +2803,7 @@ export default function QuestionsTab({ active = true }: QuestionsTabProps) {
                           <Edit2 className="w-4 h-4" />
                         )}
                       </button>
-                      <button
+                      <button type="button"
                         onClick={() => void startDuplicate(q)}
                         disabled={choicesLoading}
                         title={translate(
@@ -2810,7 +2814,7 @@ export default function QuestionsTab({ active = true }: QuestionsTabProps) {
                       >
                         <Copy className="w-4 h-4" />
                       </button>
-                      <button
+                      <button type="button"
                         onClick={() => handleDelete(q.id)}
                         title={translate(language, "adminPage.deleteQuestion")}
                         className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"

@@ -497,13 +497,13 @@ export default function PracticeQuestionPage({
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <button
+              <button type="button"
                 onClick={() => onNavigate("practice-list")}
                 className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition"
               >
                 {label.backToSubjects}
               </button>
-              <button
+              <button type="button"
                 onClick={() => onNavigate("home")}
                 className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition"
               >
@@ -531,7 +531,7 @@ export default function PracticeQuestionPage({
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-5">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
-              <button
+              <button type="button"
                 onClick={() => onNavigate("practice-list")}
                 className="p-1.5 hover:bg-gray-100 rounded-lg transition"
               >
@@ -626,7 +626,7 @@ export default function PracticeQuestionPage({
                 }
 
                 return (
-                  <button
+                  <button type="button"
                     key={choice.id}
                     onClick={() => setSelectedChoiceId(choice.id)}
                     disabled={answered || saving}
@@ -656,7 +656,7 @@ export default function PracticeQuestionPage({
             {/* AI Explanation */}
             {answered && (
               <div>
-                <button
+                <button type="button"
                   onClick={handleAIExplanation}
                   disabled={isLoadingAI}
                   className="flex items-center gap-2 text-sm text-purple-600 font-medium hover:underline mb-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -691,7 +691,7 @@ export default function PracticeQuestionPage({
 
             {/* Navigation */}
             <div className="flex items-center justify-between gap-3 pt-2">
-              <button
+              <button type="button"
                 onClick={() => goToQuestion(Math.max(0, currentIndex - 1))}
                 disabled={currentIndex === 0}
                 className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
@@ -701,7 +701,7 @@ export default function PracticeQuestionPage({
               </button>
               <div className="flex gap-2">
                 {!answered && (
-                  <button
+                  <button type="button"
                     disabled={!selectedChoiceId || saving}
                     onClick={() =>
                       selectedChoiceId && handleAnswer(selectedChoiceId)
@@ -712,7 +712,7 @@ export default function PracticeQuestionPage({
                   </button>
                 )}
                 {answered && (
-                  <button
+                  <button type="button"
                     onClick={handleNext}
                     className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition"
                   >

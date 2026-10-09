@@ -84,6 +84,38 @@ describe('AIChatPage', () => {
     expect(fromMock).toHaveBeenCalledWith('ai_chat_messages');
   });
 
+  it('shows one-click scroll controls only when chat history overflows', async () => {
+    render(<AIChatPage currentPage="ai-chat" onNavigate={vi.fn()} />);
+
+    const history = await screen.findByRole('log', { name: 'Chat history' });
+    Object.defineProperties(history, {
+      clientHeight: { configurable: true, value: 200 },
+      scrollHeight: { configurable: true, value: 800 },
+      scrollTop: { configurable: true, writable: true, value: 300 },
+    });
+    const scrollTo = vi.fn();
+    Object.defineProperty(history, 'scrollTo', { configurable: true, value: scrollTo });
+
+    fireEvent.scroll(history);
+    expect(await screen.findByRole('button', { name: 'Scroll to top' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Scroll to bottom' })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Scroll to top' }));
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+    fireEvent.click(screen.getByRole('button', { name: 'Scroll to bottom' }));
+    expect(scrollTo).toHaveBeenCalledWith({ top: 800, behavior: 'smooth' });
+
+    history.scrollTop = 0;
+    fireEvent.scroll(history);
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Scroll to top' })).toBeNull());
+    expect(screen.getByRole('button', { name: 'Scroll to bottom' })).toBeTruthy();
+
+    history.scrollTop = 600;
+    fireEvent.scroll(history);
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Scroll to bottom' })).toBeNull());
+    expect(screen.getByRole('button', { name: 'Scroll to top' })).toBeTruthy();
+  });
+
   it('loads and persists a queued practice-question handoff', async () => {
     queueAiChatHandoff('Handed-off question context', 'Handed-off explanation');
 
