@@ -265,34 +265,10 @@ function getFeatures(language: Language) {
   ];
 }
 
-type Pt = { x: number; y: number };
 
-function smoothPath(pts: Pt[]) {
-  if (pts.length < 2) return '';
-  let d = `M ${pts[0].x} ${pts[0].y}`;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const p0 = pts[i - 1] ?? pts[i];
-    const p1 = pts[i];
-    const p2 = pts[i + 1];
-    const p3 = pts[i + 2] ?? p2;
-    const c1x = p1.x + (p2.x - p0.x) / 6;
-    const c1y = p1.y + (p2.y - p0.y) / 6;
-    const c2x = p2.x - (p3.x - p1.x) / 6;
-    const c2y = p2.y - (p3.y - p1.y) / 6;
-    d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`;
-  }
-  return d;
-}
-
-const chartLabels: Record<string, { avg: string; min: string; max: string }> = {
-  vi: { avg: 'TRUNG BÌNH', min: 'THẤP NHẤT', max: 'CAO NHẤT' },
-  ja: { avg: '平均', min: '最低', max: '最高' },
-  en: { avg: 'AVERAGE', min: 'MINIMUM', max: 'MAXIMUM' },
-};
 
 function RecentActivityChart({ sessions, language, onStart }: { sessions: PracticeProgressSession[]; language: Language; onStart: () => void }) {
   const locale = languageLocales[language];
-  const labels = chartLabels[language as string] ?? chartLabels.en;
 
   // oldest -> newest
   const data = [...sessions]
@@ -303,25 +279,7 @@ function RecentActivityChart({ sessions, language, onStart }: { sessions: Practi
       pct: s.answered_count > 0 ? Math.round((s.correct_answers / s.answered_count) * 100) : 0,
     }));
 
-  const W = 300;
-  const H = 100;
-  const padX = 10;
-  const padTop = 10;
-  const padBottom = 8;
   const n = data.length;
-
-  const pts: Pt[] = data.map((d, i) => ({
-    x: n === 1 ? W / 2 : padX + (i * (W - padX * 2)) / (n - 1),
-    y: padTop + (1 - d.pct / 100) * (H - padTop - padBottom),
-  }));
-  const last = pts[n - 1];
-
-  const values = data.map(d => d.pct);
-  const avg = n > 0 ? Math.round(values.reduce((a, b) => a + b, 0) / n) : 0;
-  const min = n > 0 ? Math.min(...values) : 0;
-  const max = n > 0 ? Math.max(...values) : 0;
-
-  const labelIdx = n <= 4 ? data.map((_, i) => i) : [0, Math.round((n - 1) / 3), Math.round(((n - 1) * 2) / 3), n - 1];
   const fmt = (d: Date) => new Intl.DateTimeFormat(locale, { month: 'numeric', day: 'numeric' }).format(d);
 
   return (
@@ -340,49 +298,36 @@ function RecentActivityChart({ sessions, language, onStart }: { sessions: Practi
             </button>
           </div>
         ) : (
-          <>
-            <div className="flex gap-5">
-              <div>
-                <p className="text-base font-bold leading-none text-slate-800 dark:text-[#F8FAFC]">{avg}%</p>
-                <p className="mt-1 text-[9px] font-semibold tracking-wide text-gray-400 dark:text-[#94A3B8]">{labels.avg}</p>
-              </div>
-              <div>
-                <p className="text-base font-bold leading-none text-slate-800 dark:text-[#F8FAFC]">{min}%</p>
-                <p className="mt-1 text-[9px] font-semibold tracking-wide text-gray-400 dark:text-[#94A3B8]">{labels.min}</p>
-              </div>
-              <div>
-                <p className="text-base font-bold leading-none text-slate-800 dark:text-[#F8FAFC]">{max}%</p>
-                <p className="mt-1 text-[9px] font-semibold tracking-wide text-gray-400 dark:text-[#94A3B8]">{labels.max}</p>
-              </div>
-            </div>
-
-            <div className="mt-3">
-              <div className="relative h-16 w-full">
-                <svg
-                  viewBox={`0 0 ${W} ${H}`}
-                  preserveAspectRatio="none"
-                  className="absolute inset-0 h-full w-full text-blue-500 dark:text-[#7EA2F8]"
-                  role="img"
-                  aria-label={translate(language, 'homePage.recentActivity')}
-                >
-                  {n > 1 && (
-                    <path d={smoothPath(pts)} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-                  )}
-                  <line x1={last.x} y1={last.y} x2={last.x} y2={H} stroke="currentColor" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
-                </svg>
-                <span
-                  aria-hidden="true"
-                  className="absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-blue-500 bg-white dark:border-[#7EA2F8] dark:bg-slate-900"
-                  style={{ left: `${(last.x / W) * 100}%`, top: `${(last.y / H) * 100}%` }}
-                />
-              </div>
-              <div className="mt-1.5 flex justify-between text-[9px] text-gray-400 dark:text-[#94A3B8]">
-                {labelIdx.map(i => (
-                  <span key={i}>{fmt(data[i].date)}</span>
-                ))}
-              </div>
-            </div>
-          </>
+          <div
+            className="flex items-end gap-1.5 sm:gap-2"
+            role="img"
+            aria-label={translate(language, 'homePage.recentActivity')}
+          >
+            {data.map((d, i) => {
+              const isLast = i === n - 1;
+              return (
+                <div key={i} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
+                  {/* Track */}
+                  <div className="relative h-24 w-full rounded-lg bg-blue-50 dark:bg-white/5" title={`${fmt(d.date)}: ${d.pct}%`}>
+                    <span
+                      className="absolute left-1/2 -translate-x-1/2 pb-0.5 text-[9px] font-semibold text-gray-500 dark:text-[#94A3B8]"
+                      style={{ bottom: `${Math.max(d.pct, 4)}%` }}
+                    >
+                      {d.pct}
+                    </span>
+                    {/* Bar */}
+                    <div
+                      className={`absolute bottom-0 left-0 right-0 rounded-lg transition-all ${
+                        isLast ? 'bg-blue-600 dark:bg-[#7EA2F8]' : 'bg-blue-300 dark:bg-[rgba(126,162,248,0.45)]'
+                      }`}
+                      style={{ height: `${Math.max(d.pct, 4)}%` }}
+                    />
+                  </div>
+                  <span className="text-[9px] text-gray-400 dark:text-[#94A3B8]">{fmt(d.date)}</span>
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>
