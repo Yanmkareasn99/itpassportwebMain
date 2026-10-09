@@ -618,7 +618,7 @@
   "practiceListPage.progressBySubject": "Tiến độ theo chủ đề",
   "practiceListPage.questions": "Số câu",
   "practiceListPage.questionType": "Dạng câu hỏi",
-  "practiceListPage.recommendedNextActions": "Hành động tiếp theo",
+  "practiceListPage.recommendedNextActions": "Gợi ý học tập",
   "practiceListPage.review": "Ôn tập",
   "practiceListPage.review2": "Ôn tập",
   "practiceListPage.reviewMissedQuestions": "Ôn lại câu sai",

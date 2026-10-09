@@ -619,7 +619,7 @@ export const ja = {
   "practiceListPage.progressBySubject": "分野別 学習進捗サマリー",
   "practiceListPage.questions": "問題数",
   "practiceListPage.questionType": "出題形式",
-  "practiceListPage.recommendedNextActions": "おすすめの次のアクション",
+  "practiceListPage.recommendedNextActions": "次の学習",
   "practiceListPage.review": "復習",
   "practiceListPage.review2": "復習する",
   "practiceListPage.reviewMissedQuestions": "間違えた問題を復習する",

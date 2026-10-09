@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+﻿import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertTriangle, BookOpen, ChevronDown, Download, ExternalLink, FileText, Image, Link, PlayCircle, RefreshCw, Trash2, Upload, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, BookOpen, Download, ExternalLink, FileText, Image, Link, PlayCircle, Plus, RefreshCw, Sparkles, Star, Trash2, Upload, X } from 'lucide-react';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -12,6 +12,19 @@ import { Page } from '../types';
 interface MaterialsPageProps {
   currentPage: Page;
   onNavigate: (page: Page) => void;
+}
+
+// Pastel card tones taken from the mock-exam screen: periwinkle blue, soft yellow, olive green.
+const cardTones = [
+  { card: 'bg-[#a9bfea]', shape: 'diamond' },
+  { card: 'bg-[#f9e17d]', shape: 'star' },
+  { card: 'bg-[#b9c47f]', shape: 'triangle' },
+] as const;
+
+function CardDecoration({ shape }: { shape: (typeof cardTones)[number]['shape'] }) {
+  if (shape === 'diamond') return <span aria-hidden className="pointer-events-none absolute -right-4 -top-4 h-12 w-12 rotate-45 rounded-md bg-[#88a6de]" />;
+  if (shape === 'star') return <Star aria-hidden className="pointer-events-none absolute -right-2 -top-2 h-12 w-12 rotate-12 fill-[#f2d24f] text-[#f2d24f]" />;
+  return <span aria-hidden className="pointer-events-none absolute right-0 top-0 h-12 w-12 bg-[#97a65a] [clip-path:polygon(0_0,100%_0,60%_100%)]" />;
 }
 
 function fileSize(bytes: number) {
@@ -181,94 +194,100 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
     }
   }
 
+  const inputClass = 'w-full rounded-xl border border-indigo-100 bg-white px-3 py-2 text-gray-900 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-slate-600 dark:bg-slate-800 dark:text-white';
+
   return (
     <Layout currentPage={currentPage} onNavigate={onNavigate} title={t('materialsPage.materials')} subtitle={t('materialsPage.studyMenu')}>
       <div className="app-shell space-y-6">
-        <section className="bg-gradient-to-r from-sky-50 to-blue-100/60 dark:from-slate-900 dark:to-slate-800 rounded-2xl border border-sky-100 dark:border-slate-700 p-5 sm:p-7">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-sky-600 text-white flex items-center justify-center shrink-0"><BookOpen className="w-6 h-6" /></div>
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-slate-100 mb-2">{t('materialsPage.materials')}</h2>
-              <p className="text-sm text-gray-600 dark:text-slate-300 leading-6 max-w-2xl">{t('materialsPage.studentsCanCheckMaterialsAnytimeMakingInformationSharing')}</p>
-            </div>
+        {/* Hero banner: lavender gradient, inline icon title, big faint icon + sparkle, notice inside */}
+        <section className="relative overflow-hidden rounded-3xl border border-indigo-100 bg-gradient-to-br from-[#E9E6FF] via-[#F0EEFF] to-[#FAFAFF] p-6 dark:border-slate-700 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 sm:p-8">
+          <BookOpen aria-hidden strokeWidth={3} className="pointer-events-none absolute -right-8 -top-6 h-52 w-52 rotate-[18deg] text-indigo-300/30 sm:-right-4 sm:h-64 sm:w-64 dark:text-white/10" />
+          <Sparkles aria-hidden strokeWidth={1.75} className="pointer-events-none absolute right-5 top-5 h-6 w-6 text-violet-400 dark:text-indigo-300" />
+          <div className="relative">
+            <h2 className="flex items-center gap-3 text-2xl font-extrabold uppercase tracking-tight text-indigo-600 dark:text-indigo-300 sm:text-3xl">
+              <BookOpen className="h-7 w-7 shrink-0 sm:h-8 sm:w-8" strokeWidth={2.2} />
+              {t('materialsPage.materials')}
+            </h2>
+            <p className="mt-3 max-w-md text-sm leading-6 text-slate-500 dark:text-slate-300">{t('materialsPage.studentsCanCheckMaterialsAnytimeMakingInformationSharing')}</p>
+            {!isSupabaseEnabled && <p role="status" className="mt-5 flex items-start gap-3 rounded-2xl border border-amber-200 bg-white/70 px-4 py-3 text-sm leading-6 text-amber-700 dark:border-amber-400/30 dark:bg-amber-500/10 dark:text-amber-100"><AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-500 dark:text-amber-300" />{t('materialsPage.requiresSupabase')}</p>}
           </div>
         </section>
 
-        {!isSupabaseEnabled ? <p role="status" className="rounded-xl bg-amber-50 dark:bg-amber-900/30 p-5 text-sm text-amber-900 dark:text-amber-200">{t('materialsPage.requiresSupabase')}</p> : <>
-          <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
-            <button
-              type="button"
-              onClick={() => setShowUploadForm(current => !current)}
-              aria-expanded={showUploadForm}
-              aria-controls="material-upload-form"
-              className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition hover:bg-gray-50 dark:hover:bg-slate-800"
-            >
-              <span className="flex items-center gap-2 font-bold text-gray-800 dark:text-slate-100">
-                <Upload className="h-5 w-5" />
-                {t('materialsPage.shareMaterial')}
-              </span>
-              <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform ${showUploadForm ? 'rotate-180' : ''}`} />
-            </button>
-            {showUploadForm && (
-              <form id="material-upload-form" onSubmit={shareMode === 'file' ? handleUpload : handleLinkShare} className="space-y-4 border-t border-gray-100 px-5 pb-5 pt-4 dark:border-slate-700">
-                <div className="grid grid-cols-2 gap-2 rounded-xl bg-gray-100 p-1 dark:bg-slate-800" role="group" aria-label={t('materialsPage.shareType')}>
-                  <button type="button" onClick={() => setShareMode('file')} aria-pressed={shareMode === 'file'} className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold ${shareMode === 'file' ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-700 dark:text-blue-300' : 'text-gray-600 dark:text-slate-300'}`}><Upload className="h-4 w-4" />{t('materialsPage.uploadFile')}</button>
-                  <button type="button" onClick={() => setShareMode('link')} aria-pressed={shareMode === 'link'} className={`flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold ${shareMode === 'link' ? 'bg-white text-blue-700 shadow-sm dark:bg-slate-700 dark:text-blue-300' : 'text-gray-600 dark:text-slate-300'}`}><Link className="h-4 w-4" />{t('materialsPage.shareLink')}</button>
-                </div>
-                <p className="text-sm text-gray-500 dark:text-slate-300">{t(shareMode === 'file' ? 'materialsPage.fileHelp' : 'materialsPage.linkHelp')}</p>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <label className="space-y-2 text-sm font-medium text-gray-700 dark:text-slate-200">
-                    <span>{t('materialsPage.title')}</span>
-                    <input required maxLength={120} value={title} onChange={event => setTitle(event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-gray-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:focus:ring-blue-900" />
-                  </label>
-                  {shareMode === 'file' ? <label key="file" className="space-y-2 text-sm font-medium text-gray-700 dark:text-slate-200">
-                    <span>{t('materialsPage.file')}</span>
-                    <input id="material-file" required={shareMode === 'file'} type="file" accept=".pdf,.png,.jpg,.jpeg,.docx,.pptx,.xlsx" onChange={event => {
-                      const selected = event.target.files?.[0] ?? null;
-                      setFile(selected);
-                      if (selected && !title) setTitle(selected.name.replace(/\.[^.]+$/, ''));
-                    }} className="block w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-600 transition file:mr-3 file:rounded-lg file:border-0 file:bg-blue-50 file:px-3 file:py-2 file:font-semibold file:text-blue-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300" />
-                  </label> : <label key="link" className="space-y-2 text-sm font-medium text-gray-700 dark:text-slate-200">
-                    <span>{t('materialsPage.link')}</span>
-                    <input required={shareMode === 'link'} type="url" inputMode="url" maxLength={2048} placeholder="https://drive.google.com/..." value={externalUrl} onChange={event => setExternalUrl(event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-gray-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:focus:ring-blue-900" />
-                  </label>}
-                </div>
-                <label className="block space-y-2 text-sm font-medium text-gray-700 dark:text-slate-200">
-                  <span>{t('materialsPage.description')}</span>
-                  <textarea maxLength={500} rows={2} value={description} onChange={event => setDescription(event.target.value)} className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-gray-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:focus:ring-blue-900" />
-                </label>
-                <button type="submit" disabled={busy || (shareMode === 'file' ? !file : !externalUrl.trim())} className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50">{busy ? t(shareMode === 'file' ? 'materialsPage.uploading' : 'materialsPage.sharing') : t(shareMode === 'file' ? 'materialsPage.upload' : 'materialsPage.shareLink')}</button>
-              </form>
-            )}
-          </section>
-
-          {error && <p role="alert" className="rounded-xl bg-red-50 dark:bg-red-900/30 p-4 text-sm text-red-700 dark:text-red-200">{error}</p>}
-          {message && <p role="status" className="rounded-xl bg-emerald-50 dark:bg-emerald-900/30 p-4 text-sm text-emerald-700 dark:text-emerald-200">{message}</p>}
+        {isSupabaseEnabled && <>
+          {error && <p role="alert" className="rounded-2xl bg-red-50 dark:bg-red-900/30 p-4 text-sm text-red-700 dark:text-red-200">{error}</p>}
+          {message && <p role="status" className="rounded-2xl bg-emerald-50 dark:bg-emerald-900/30 p-4 text-sm text-emerald-700 dark:text-emerald-200">{message}</p>}
 
           <section aria-label={t('materialsPage.materials')} className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-gray-800 dark:text-slate-100">{t('materialsPage.sharedFiles')}</h3>
-              <button type="button" onClick={refresh} disabled={loading} className="flex items-center gap-1 text-sm text-blue-600 dark:text-blue-300 disabled:opacity-50"><RefreshCw className="w-4 h-4" />{t('materialsPage.refresh')}</button>
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-lg font-bold text-indigo-950 dark:text-slate-100">{t('materialsPage.sharedFiles')}</h3>
+              <div className="flex items-center gap-3">
+                <button type="button" onClick={refresh} disabled={loading} className="flex items-center gap-1 text-sm font-semibold text-indigo-600 dark:text-indigo-300 disabled:opacity-50"><RefreshCw className="w-4 h-4" />{t('materialsPage.refresh')}</button>
+                <button
+                  type="button"
+                  onClick={() => setShowUploadForm(current => !current)}
+                  aria-expanded={showUploadForm}
+                  aria-controls="material-upload-form"
+                  aria-label={t('materialsPage.shareMaterial')}
+                  title={t('materialsPage.shareMaterial')}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-indigo-500 text-white shadow-sm shadow-indigo-200 transition hover:bg-indigo-600 dark:shadow-none"
+                >
+                  <Plus className={`h-5 w-5 transition-transform ${showUploadForm ? 'rotate-45' : ''}`} />
+                </button>
+              </div>
             </div>
-            {loading ? <p className="text-sm text-gray-500 dark:text-slate-300">{t('ui.loading')}</p> : materials.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-gray-200 dark:border-slate-700 p-6 text-sm text-gray-500 dark:text-slate-300">{t('materialsPage.empty')}</p>
+            {showUploadForm && (
+            <form id="material-upload-form" onSubmit={shareMode === 'file' ? handleUpload : handleLinkShare} className="space-y-4 rounded-3xl border border-indigo-100 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+              <div className="grid grid-cols-2 gap-2 rounded-full bg-indigo-50 p-1 dark:bg-slate-800" role="group" aria-label={t('materialsPage.shareType')}>
+                <button type="button" onClick={() => setShareMode('file')} aria-pressed={shareMode === 'file'} className={`flex items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-semibold ${shareMode === 'file' ? 'bg-white text-indigo-600 shadow-sm dark:bg-slate-700 dark:text-indigo-300' : 'text-indigo-900/70 dark:text-slate-300'}`}><Upload className="h-4 w-4" />{t('materialsPage.uploadFile')}</button>
+                <button type="button" onClick={() => setShareMode('link')} aria-pressed={shareMode === 'link'} className={`flex items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-semibold ${shareMode === 'link' ? 'bg-white text-indigo-600 shadow-sm dark:bg-slate-700 dark:text-indigo-300' : 'text-indigo-900/70 dark:text-slate-300'}`}><Link className="h-4 w-4" />{t('materialsPage.shareLink')}</button>
+              </div>
+              <p className="text-sm text-indigo-900/70 dark:text-slate-300">{t(shareMode === 'file' ? 'materialsPage.fileHelp' : 'materialsPage.linkHelp')}</p>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <label className="space-y-2 text-sm font-medium text-indigo-950 dark:text-slate-200">
+                  <span>{t('materialsPage.title')}</span>
+                  <input required maxLength={120} value={title} onChange={event => setTitle(event.target.value)} className={inputClass} />
+                </label>
+                {shareMode === 'file' ? <label key="file" className="space-y-2 text-sm font-medium text-indigo-950 dark:text-slate-200">
+                  <span>{t('materialsPage.file')}</span>
+                  <input id="material-file" required={shareMode === 'file'} type="file" accept=".pdf,.png,.jpg,.jpeg,.docx,.pptx,.xlsx" onChange={event => {
+                    const selected = event.target.files?.[0] ?? null;
+                    setFile(selected);
+                    if (selected && !title) setTitle(selected.name.replace(/\.[^.]+$/, ''));
+                  }} className="block w-full text-sm text-gray-600 file:mr-3 file:rounded-full file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:font-semibold file:text-indigo-600 dark:text-slate-300" />
+                </label> : <label key="link" className="space-y-2 text-sm font-medium text-indigo-950 dark:text-slate-200">
+                  <span>{t('materialsPage.link')}</span>
+                  <input required={shareMode === 'link'} type="url" inputMode="url" maxLength={2048} placeholder="https://drive.google.com/..." value={externalUrl} onChange={event => setExternalUrl(event.target.value)} className={inputClass} />
+                </label>}
+              </div>
+              <label className="block space-y-2 text-sm font-medium text-indigo-950 dark:text-slate-200">
+                <span>{t('materialsPage.description')}</span>
+                <textarea maxLength={500} rows={2} value={description} onChange={event => setDescription(event.target.value)} className={inputClass} />
+              </label>
+              <button type="submit" disabled={busy || (shareMode === 'file' ? !file : !externalUrl.trim())} className="rounded-full bg-indigo-500 px-6 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo-200 hover:bg-indigo-600 disabled:opacity-50 dark:shadow-none">{busy ? t(shareMode === 'file' ? 'materialsPage.uploading' : 'materialsPage.sharing') : t(shareMode === 'file' ? 'materialsPage.upload' : 'materialsPage.shareLink')}</button>
+            </form>
+            )}
+            {loading ? <p className="text-sm text-indigo-900/70 dark:text-slate-300">{t('ui.loading')}</p> : materials.length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-indigo-200 dark:border-slate-700 p-6 text-sm text-indigo-900/70 dark:text-slate-300">{t('materialsPage.empty')}</p>
             ) : <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {materials.map(material => {
+              {materials.map((material, index) => {
                 const isExternal = Boolean(material.external_url);
                 const Icon = isExternal ? ExternalLink : material.mime_type?.startsWith('image/') ? Image : material.mime_type?.startsWith('video/') ? PlayCircle : FileText;
-                return <article key={material.id} className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm p-5 flex flex-col min-h-[220px]">
-                  <div className="w-11 h-11 rounded-xl border bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700 flex items-center justify-center mb-4"><Icon className="w-5 h-5" /></div>
-                  <h4 className="font-bold text-gray-800 dark:text-slate-100 mb-2 break-words">{material.title}</h4>
-                  {material.description && <p className="text-sm text-gray-500 dark:text-slate-300 leading-6 flex-1 break-words">{material.description}</p>}
-                  <p className="text-xs text-gray-400 dark:text-slate-400 mt-4 break-all">{isExternal ? linkHost(material.external_url!) : `${material.file_name} · ${fileSize(material.file_size!)}`}</p>
-                  <p className="text-xs text-gray-400 dark:text-slate-400 mt-1">{new Date(material.created_at).toLocaleDateString(languageLocales[language])}</p>
-                  <div className="grid grid-cols-2 gap-2 mt-4">
-                    <button type="button" onClick={() => openMaterial(material, false)} className={`${isExternal ? 'col-span-2 bg-blue-600 text-white hover:bg-blue-700' : 'border border-transparent bg-gray-100 text-gray-700 hover:bg-gray-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700'} px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center gap-1`}>{isExternal && <ExternalLink className="h-3.5 w-3.5" />}{t(isExternal ? 'materialsPage.openLink' : 'materialsPage.open')}</button>
-                    {!isExternal && <button type="button" onClick={() => openMaterial(material, true)} className="px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 flex items-center justify-center gap-1"><Download className="w-3.5 h-3.5" />{t('materialsPage.download')}</button>}
-                    {(user?.id === material.uploader_id || isAdmin) && <button type="button"
+                const tone = cardTones[index % cardTones.length];
+                return <article key={material.id} className={`${tone.card} relative flex min-h-[220px] flex-col overflow-hidden rounded-3xl p-5 text-slate-900`}>
+                  <CardDecoration shape={tone.shape} />
+                  <div className="relative mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-white/60 text-slate-900"><Icon className="w-5 h-5" /></div>
+                  <h4 className="relative mb-2 break-words text-lg font-bold text-slate-900">{material.title}</h4>
+                  {material.description && <p className="relative flex-1 break-words text-sm leading-6 text-slate-700">{material.description}</p>}
+                  <p className="relative mt-4 break-all text-xs text-slate-600">{isExternal ? linkHost(material.external_url!) : `${material.file_name} · ${fileSize(material.file_size!)}`}</p>
+                  <p className="relative mt-1 text-xs text-slate-600">{new Date(material.created_at).toLocaleDateString(languageLocales[language])}</p>
+                  <div className="relative mt-4 grid grid-cols-2 gap-2">
+                    <button type="button" onClick={() => openMaterial(material, false)} className={`${isExternal ? 'col-span-2 bg-indigo-500 text-white hover:bg-indigo-600' : 'bg-white/60 text-slate-800 hover:bg-white/80'} flex items-center justify-center gap-1 rounded-full px-3 py-2 text-xs font-semibold`}>{isExternal && <ExternalLink className="h-3.5 w-3.5" />}{t(isExternal ? 'materialsPage.openLink' : 'materialsPage.open')}</button>
+                    {!isExternal && <button type="button" onClick={() => openMaterial(material, true)} className="flex items-center justify-center gap-1 rounded-full bg-indigo-500 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-600"><Download className="w-3.5 h-3.5" />{t('materialsPage.download')}</button>}
+                    {(user?.id === material.uploader_id || isAdmin) && <button
+                      type="button"
                       onClick={() => setPendingDelete(material)}
                       disabled={deletingId !== null}
-                      className="col-span-2 px-3 py-2 rounded-xl border border-transparent bg-red-50 dark:border-red-800 dark:bg-red-950/40 text-red-700 dark:text-red-300 text-xs font-semibold hover:bg-red-100 dark:hover:bg-red-900/50 disabled:opacity-50 flex items-center justify-center gap-1"
+                      className="col-span-2 flex items-center justify-center gap-1 rounded-full bg-white/50 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-white/80 disabled:opacity-50"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       {deletingId === material.id ? t('materialsPage.deleting') : t('materialsPage.delete')}
@@ -306,7 +325,7 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
               }
             }
           }}
-          className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900"
+          className="w-full max-w-md rounded-3xl border border-indigo-100 bg-white p-6 shadow-2xl dark:border-slate-700 dark:bg-slate-900"
         >
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-3">
@@ -314,8 +333,8 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
                 <AlertTriangle className="h-5 w-5" />
               </div>
               <div>
-                <h2 id="delete-material-title" className="text-lg font-bold text-gray-900 dark:text-slate-100">{t('materialsPage.deleteDialogTitle')}</h2>
-                <p id="delete-material-description" className="mt-1 text-sm leading-6 text-gray-600 dark:text-slate-300">{t('materialsPage.deleteConfirm')}</p>
+                <h2 id="delete-material-title" className="text-lg font-bold text-indigo-950 dark:text-slate-100">{t('materialsPage.deleteDialogTitle')}</h2>
+                <p id="delete-material-description" className="mt-1 text-sm leading-6 text-indigo-900/80 dark:text-slate-300">{t('materialsPage.deleteConfirm')}</p>
               </div>
             </div>
             <button
@@ -323,14 +342,14 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
               onClick={() => setPendingDelete(null)}
               disabled={deletingId !== null}
               aria-label={t('materialsPage.cancel')}
-              className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+              className="rounded-lg p-1.5 text-indigo-300 hover:bg-indigo-50 hover:text-indigo-600 disabled:opacity-50 dark:hover:bg-slate-800 dark:hover:text-slate-200"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
-          <div className="mt-5 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-800">
-            <p className="break-words text-sm font-semibold text-gray-800 dark:text-slate-100">{pendingDelete.title}</p>
-            <p className="mt-1 break-all text-xs text-gray-500 dark:text-slate-400">{pendingDelete.external_url || pendingDelete.file_name}</p>
+          <div className="mt-5 rounded-2xl border border-indigo-100 bg-indigo-50/60 px-4 py-3 dark:border-slate-700 dark:bg-slate-800">
+            <p className="break-words text-sm font-semibold text-indigo-950 dark:text-slate-100">{pendingDelete.title}</p>
+            <p className="mt-1 break-all text-xs text-indigo-900/60 dark:text-slate-400">{pendingDelete.external_url || pendingDelete.file_name}</p>
           </div>
           <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button
@@ -338,7 +357,7 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
               type="button"
               onClick={() => setPendingDelete(null)}
               disabled={deletingId !== null}
-              className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              className="rounded-full border border-indigo-100 bg-white px-5 py-2.5 text-sm font-semibold text-indigo-900 hover:bg-indigo-50 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
             >
               {t('materialsPage.cancel')}
             </button>
@@ -346,7 +365,7 @@ export default function MaterialsPage({ currentPage, onNavigate }: MaterialsPage
               type="button"
               onClick={handleDelete}
               disabled={deletingId !== null}
-              className="flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+              className="flex items-center justify-center gap-2 rounded-full bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
             >
               <Trash2 className="h-4 w-4" />
               {deletingId ? t('materialsPage.deleting') : t('materialsPage.delete')}

@@ -53,18 +53,21 @@ export default function AdminPage({ currentPage, onNavigate }: AdminPageProps) {
     >
       <div className="app-shell">
         {!isAdmin ? (
-          <div className="bg-white rounded-2xl border border-red-100 shadow-sm p-6 text-sm text-red-600">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-red-100 dark:border-red-900/50 shadow-sm p-6 text-sm text-red-600 dark:text-red-300">
             {translate(language, 'adminPage.adminAccessRequired')}
           </div>
         ) : (
           <>
-            <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-2xl w-full sm:w-fit overflow-x-auto">
+            <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-slate-800 p-1 rounded-2xl w-full sm:w-fit overflow-x-auto">
               {tabs.map(({ id, labelKey, icon: Icon }) => (
                 <button type="button"
                   key={id}
                   onClick={() => openTab(id)}
+                  aria-pressed={tab === id}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition shrink-0 whitespace-nowrap ${
-                    tab === id ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                    tab === id
+                      ? 'bg-white text-gray-800 shadow-sm dark:bg-slate-600 dark:text-slate-50 dark:shadow-none'
+                      : 'text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200'
                   }`}
                 >
                   <Icon className="w-4 h-4" />

@@ -45,6 +45,16 @@ interface PracticeListPageProps {
 
 type LanguageCode = Language;
 
+/* ---------- Shared style tokens (same look as the home page) ---------- */
+const CARD =
+  "rounded-3xl border border-gray-100 bg-white shadow-sm dark:border-[rgba(255,255,255,0.10)] dark:bg-[rgba(255,255,255,0.055)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.15)] dark:[backdrop-filter:blur(16px)] dark:[-webkit-backdrop-filter:blur(16px)]";
+const BTN_PRIMARY =
+  "bg-indigo-500 text-white hover:bg-indigo-600 dark:bg-[#7EA2F8] dark:text-slate-950 dark:hover:bg-blue-300";
+const FIELD =
+  "rounded-full border border-gray-200 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:border-[rgba(255,255,255,0.10)] dark:bg-[rgba(255,255,255,0.06)] dark:text-[#F8FAFC]";
+const PANEL =
+  "rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-slate-600 dark:bg-slate-900";
+
 const MAIN_CATEGORIES = [
   {
     id: "strategy",
@@ -57,6 +67,9 @@ const MAIN_CATEGORIES = [
     labelColor: "text-blue-600",
     dotColor: "bg-blue-500",
     borderless: true,
+    cardClass: "bg-[#A9C0EA]",
+    shapeClass:
+      "bg-[#7F9FD6] [clip-path:polygon(50%_0%,100%_50%,50%_100%,0%_50%)]",
     subjectIds: [IT_PASSPORT_SUBJECT_IDS.strategy],
   },
   {
@@ -70,6 +83,8 @@ const MAIN_CATEGORIES = [
     labelColor: "text-emerald-600",
     dotColor: "bg-emerald-500",
     borderless: true,
+    cardClass: "bg-[#B9C27E]",
+    shapeClass: "bg-[#8F9B4A] [clip-path:polygon(0_0,100%_0,50%_100%)]",
     subjectIds: [IT_PASSPORT_SUBJECT_IDS.management],
   },
   {
@@ -83,6 +98,9 @@ const MAIN_CATEGORIES = [
     labelColor: "text-amber-600",
     dotColor: "bg-amber-500",
     borderless: true,
+    cardClass: "bg-[#F9E27D]",
+    shapeClass:
+      "bg-[#F2C94C] [clip-path:polygon(50%_0%,61%_35%,98%_35%,68%_57%,79%_91%,50%_70%,21%_91%,32%_57%,2%_35%,39%_35%)]",
 
     subjectIds: [IT_PASSPORT_SUBJECT_IDS.technology],
 
@@ -111,6 +129,8 @@ interface PracticeCategory {
   labelColor: string;
   borderless?: boolean;
   dotColor: string;
+  cardClass: string;
+  shapeClass: string;
   subjectIds: string[];
 }
 
@@ -146,54 +166,50 @@ function CategoryCard({
     <button type="button"
       onClick={onStart}
       disabled={loading || stats.questionCount === 0}
-      className={`w-full min-w-0 ${category.bgColor} ${
-        category.borderless
-          ? "border border-slate-200/80 shadow-sm dark:border-slate-600/80 dark:bg-slate-900/40"
-          : `border-2 ${category.borderColor} hover:shadow-md dark:border-slate-700 dark:bg-slate-900/40`
-      } rounded-2xl p-4 sm:p-5 xl:p-6 text-left transition-all group disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-0.5 hover:shadow-lg hover:border-slate-300 dark:hover:border-slate-500 dark:hover:bg-slate-900/60`}
+      className={`${category.cardClass} group relative flex min-h-[150px] w-full min-w-0 flex-col justify-between overflow-hidden rounded-3xl p-5 text-left text-slate-900 transition-all hover:-translate-y-0.5 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50`}
     >
-      <div className="flex items-center gap-2.5 mb-3">
-        <div
-          className={`w-8 h-8 shrink-0 rounded-full ${category.dotColor} flex items-center justify-center`}
-        >
-          <Icon className="w-4 h-4 text-white" />
-        </div>
-        <span
-          className={`font-bold text-base ${category.labelColor} min-w-0 truncate`}
-        >
+      <span
+        aria-hidden="true"
+        className={`${category.shapeClass} pointer-events-none absolute -right-4 -top-4 h-24 w-24 opacity-70 transition group-hover:scale-110`}
+      />
+
+      <div className="relative flex items-center gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/60">
+          <Icon className="h-5 w-5" />
+        </span>
+        <span className="min-w-0 truncate text-lg font-bold">
           {categoryLabel}
         </span>
       </div>
 
-      <p className="text-xs text-gray-500 dark:text-slate-300">
-        {translate(language, "practiceListPage.progress")}{" "}
-        <span className="font-semibold text-gray-700 dark:text-slate-100">
-          {stats.progress}%
-        </span>{" "}
-        ／ {translate(language, "practiceListPage.questions")}{" "}
-        <span className="font-semibold text-gray-700 dark:text-slate-100">
-          {stats.questionCount}
-          {translate(language, "practiceListPage.questionCountSuffix")}
-        </span>
-      </p>
-
-      {stats.questionCount > 0 && (
-        <div className="mt-2.5 h-1.5 bg-white/60 rounded-full overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all"
-            style={{
-              width: `${stats.progress}%`,
-              backgroundColor: category.color,
-            }}
-          />
-        </div>
-      )}
-
-      {loading && (
-        <p className="text-xs text-gray-400 mt-1">
-          {translate(language, "practiceListPage.loading")}
+      <div className="relative mt-4">
+        <p className="text-xs text-slate-800/70">
+          {translate(language, "practiceListPage.progress")}{" "}
+          <span className="font-semibold text-slate-900">
+            {stats.progress}%
+          </span>{" "}
+          ／ {translate(language, "practiceListPage.questions")}{" "}
+          <span className="font-semibold text-slate-900">
+            {stats.questionCount}
+            {translate(language, "practiceListPage.questionCountSuffix")}
+          </span>
         </p>
-      )}
+
+        {stats.questionCount > 0 && (
+          <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/50">
+            <div
+              className="h-full rounded-full bg-slate-900/70 transition-all"
+              style={{ width: `${stats.progress}%` }}
+            />
+          </div>
+        )}
+
+        {loading && (
+          <p className="mt-1 text-xs text-slate-800/60">
+            {translate(language, "practiceListPage.loading")}
+          </p>
+        )}
+      </div>
     </button>
   );
 }
@@ -211,20 +227,25 @@ function ReviewCard({
     <button type="button"
       onClick={onStart}
       disabled={count === 0}
-      className="w-full min-w-0 bg-purple-50 border border-slate-200 shadow-sm rounded-2xl p-4 sm:p-5 xl:p-6 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg hover:border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-slate-900/40 dark:border-slate-600/80 dark:shadow-slate-900/30 dark:hover:border-slate-500 dark:hover:bg-slate-900/60"
+      className="group relative flex min-h-[150px] w-full min-w-0 flex-col justify-between overflow-hidden rounded-3xl bg-[#F4B0D0] p-5 text-left text-slate-900 transition-all hover:-translate-y-0.5 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
     >
-      <div className="flex items-center gap-2.5 mb-3">
-        <div className="w-8 h-8 shrink-0 rounded-full bg-purple-500 flex items-center justify-center">
-          <RefreshCw className="w-4 h-4 text-white" />
-        </div>
-        <span className="font-bold text-base text-purple-600 dark:text-purple-300 min-w-0 truncate">
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-4 -top-4 h-24 w-24 rounded-full bg-[#E88BB8] opacity-70 transition group-hover:scale-110"
+      />
+
+      <div className="relative flex items-center gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/60">
+          <RefreshCw className="h-5 w-5" />
+        </span>
+        <span className="min-w-0 truncate text-lg font-bold">
           {translate(language, "practiceListPage.reviewMistakes")}
         </span>
       </div>
 
-      <p className="text-xs text-gray-500 dark:text-slate-300">
+      <p className="relative mt-4 text-xs text-slate-800/70">
         {translate(language, "practiceListPage.notReviewed")}{" "}
-        <span className="font-semibold text-gray-700 dark:text-slate-100">
+        <span className="font-semibold text-slate-900">
           {count}
           {translate(language, "practiceListPage.questionCountSuffix")}
         </span>
@@ -288,34 +309,16 @@ export function FlaggedQuestionsCard({
   return (
     <div
       ref={cardRef}
-      className={`
-        relative
-        w-full
-        min-w-0
-        rounded-2xl
-        border
-        border-slate-200
-        bg-slate-50
-        p-4
-        text-left
-        shadow-sm
-        transition-all
-
-        hover:-translate-y-0.5
-        hover:border-slate-300
-        hover:shadow-lg
-
-        dark:border-slate-600/80
-        dark:bg-slate-900/40
-        dark:hover:border-slate-500
-        dark:hover:bg-slate-900/60
-
-        sm:p-5
-        xl:p-6
-
-        ${expanded ? "z-20" : ""}
-      `}
+      className={`group relative flex min-h-[150px] w-full min-w-0 flex-col justify-between rounded-3xl bg-[#F5D9C4] p-5 text-left text-slate-900 transition-all hover:-translate-y-0.5 hover:shadow-lg ${expanded ? "z-20" : ""}`}
     >
+      {/* Decorative shape (clipped to the card) */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 overflow-hidden rounded-3xl"
+      >
+        <span className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-[#EBBF9F] opacity-70 transition group-hover:scale-110" />
+      </div>
+
       {/* Full-card clickable button */}
       <button
         type="button"
@@ -331,26 +334,26 @@ export function FlaggedQuestionsCard({
           absolute
           inset-0
           z-0
-          rounded-2xl
+          rounded-3xl
           bg-transparent
           hover:bg-transparent
           focus:bg-transparent
           focus:outline-none
           focus-visible:ring-2
-          focus-visible:ring-blue-500
+          focus-visible:ring-indigo-500
           focus-visible:ring-offset-2
           disabled:cursor-not-allowed
         "
       />
 
       {/* Visible card content */}
-      <div className="pointer-events-none relative z-10">
-        <div className="mb-3 flex min-w-0 items-center gap-2.5">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-600 text-white">
-            <Flag className="h-4 w-4 fill-current" />
+      <div className="pointer-events-none relative z-10 flex flex-1 flex-col justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/60">
+            <Flag className="h-5 w-5 fill-current" />
           </span>
 
-          <span className="min-w-0 flex-1 truncate text-base font-bold text-slate-700 dark:text-slate-200">
+          <span className="min-w-0 flex-1 truncate text-lg font-bold">
             {translate(
               language,
               "practiceListPage.flaggedQuestions",
@@ -358,18 +361,11 @@ export function FlaggedQuestionsCard({
           </span>
 
           <ChevronDown
-            className={`
-              h-4
-              w-4
-              shrink-0
-              text-slate-500
-              transition-transform
-              ${expanded ? "rotate-180" : ""}
-            `}
+            className={`h-4 w-4 shrink-0 transition-transform ${expanded ? "rotate-180" : ""}`}
           />
         </div>
 
-        <span className="block text-xs text-gray-500 dark:text-slate-300">
+        <span className="block text-xs text-slate-800/70">
           {translate(
             language,
             "practiceListPage.flaggedCount",
@@ -381,23 +377,7 @@ export function FlaggedQuestionsCard({
       {expanded && (
         <div
           id="flagged-question-actions"
-          className="
-            absolute
-            left-0
-            top-full
-            z-30
-            mt-2
-            w-full
-            space-y-2
-            rounded-2xl
-            border
-            border-slate-200
-            bg-white
-            p-3
-            shadow-xl
-            dark:border-slate-600
-            dark:bg-slate-900
-          "
+          className={`absolute left-0 top-full z-30 mt-2 w-full space-y-2 p-3 ${PANEL}`}
         >
           <button
             type="button"
@@ -412,15 +392,15 @@ export function FlaggedQuestionsCard({
               items-center
               justify-center
               gap-2
-              rounded-lg
-              bg-slate-700
+              rounded-full
+              bg-slate-900
               px-3
               py-2
               text-sm
               font-semibold
               text-white
               transition-colors
-              hover:bg-slate-800
+              hover:bg-slate-700
               disabled:cursor-not-allowed
               disabled:opacity-50
               dark:bg-slate-600
@@ -460,7 +440,7 @@ export function FlaggedQuestionsCard({
                   aria-label={`${label}: ${counts[level]}`}
                   className={`
                     min-w-0
-                    rounded-lg
+                    rounded-2xl
                     border
                     px-1.5
                     py-2
@@ -500,21 +480,75 @@ function SelectDropdown({
   options: { value: string; label: string }[];
   onChange: (v: string) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const selectedLabel =
+    options.find((option) => option.value === value)?.label ?? "";
+
+  useEffect(() => {
+    if (!open) return;
+    function closeOnOutsideClick(event: PointerEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
   return (
-    <div className="relative w-full sm:w-auto">
-      <select
-        aria-label={label}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full appearance-none pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer sm:min-w-36"
+    <div ref={rootRef} className="relative w-full sm:w-auto">
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        className={`flex w-full items-center justify-between gap-2 py-2 pl-4 pr-3 sm:w-36 ${FIELD}`}
       >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {label}：{o.label}
-          </option>
-        ))}
-      </select>
-      <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+        <span className="min-w-0 flex-1 truncate text-left sm:max-w-48">
+          {label}: {selectedLabel}
+        </span>
+        <ChevronDown
+          className={`h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open && (
+        <div
+          role="listbox"
+          aria-label={label}
+          className={`absolute left-0 right-0 top-full z-30 mt-2 max-h-72 overflow-y-auto p-1.5 sm:right-auto sm:min-w-64 ${PANEL}`}
+        >
+          {options.map((option) => {
+            const selected = option.value === value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                onClick={() => {
+                  onChange(option.value);
+                  setOpen(false);
+                }}
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-gray-700 hover:bg-indigo-50 dark:text-[#F8FAFC] dark:hover:bg-white/10"
+              >
+                <span
+                  className={`flex h-4 w-4 items-center justify-center rounded-full border ${selected ? "border-indigo-500 bg-indigo-500 text-white" : "border-gray-300 dark:border-slate-500"}`}
+                >
+                  {selected && <Check className="h-3 w-3" />}
+                </span>
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -565,13 +599,13 @@ function MultiSelectDropdown({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
-        className="flex w-full items-center justify-between gap-2 rounded-xl border border-gray-200 bg-white py-2 pl-3 pr-2.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:w-36"
+        className={`flex w-full items-center justify-between gap-2 py-2 pl-4 pr-3 sm:w-36 ${FIELD}`}
       >
         <span className="min-w-0 flex-1 truncate text-left sm:max-w-48">
           {label}: {summary}
         </span>
         {selectedLabels.length > 1 && (
-          <span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
+          <span className="rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] font-bold text-indigo-700 dark:bg-[rgba(126,162,248,0.20)] dark:text-[#7EA2F8]">
             {selectedLabels.length}
           </span>
         )}
@@ -585,17 +619,17 @@ function MultiSelectDropdown({
           role="listbox"
           aria-label={label}
           aria-multiselectable="true"
-          className="absolute left-0 right-0 top-full z-30 mt-2 max-h-72 overflow-y-auto rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl sm:right-auto sm:min-w-64"
+          className={`absolute left-0 right-0 top-full z-30 mt-2 max-h-72 overflow-y-auto p-1.5 sm:right-auto sm:min-w-64 ${PANEL}`}
         >
           <button
             type="button"
             role="option"
             aria-selected={selectedValues.length === 0}
             onClick={() => onChange([])}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50"
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-gray-700 hover:bg-indigo-50 dark:text-[#F8FAFC] dark:hover:bg-white/10"
           >
             <span
-              className={`flex h-4 w-4 items-center justify-center rounded border ${selectedValues.length === 0 ? "border-blue-600 bg-blue-600 text-white" : "border-gray-300"}`}
+              className={`flex h-4 w-4 items-center justify-center rounded-full border ${selectedValues.length === 0 ? "border-indigo-500 bg-indigo-500 text-white" : "border-gray-300 dark:border-slate-500"}`}
             >
               {selectedValues.length === 0 && <Check className="h-3 w-3" />}
             </span>
@@ -610,10 +644,10 @@ function MultiSelectDropdown({
                 role="option"
                 aria-selected={selected}
                 onClick={() => toggleValue(option.value)}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-blue-50"
+                className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-gray-700 hover:bg-indigo-50 dark:text-[#F8FAFC] dark:hover:bg-white/10"
               >
                 <span
-                  className={`flex h-4 w-4 items-center justify-center rounded border ${selected ? "border-blue-600 bg-blue-600 text-white" : "border-gray-300"}`}
+                  className={`flex h-4 w-4 items-center justify-center rounded-full border ${selected ? "border-indigo-500 bg-indigo-500 text-white" : "border-gray-300 dark:border-slate-500"}`}
                 >
                   {selected && <Check className="h-3 w-3" />}
                 </span>
@@ -805,6 +839,8 @@ export default function PracticeListPage({
               iconColor: "text-violet-500",
               labelColor: "text-violet-600",
               dotColor: "bg-violet-500",
+              cardClass: "bg-[#C9C4F5]",
+              shapeClass: "bg-[#A9A2EB] rounded-full",
               subjectIds: [subject.id],
             })),
         );
@@ -1012,6 +1048,9 @@ export default function PracticeListPage({
     return { ...cat, stats };
   });
 
+  const rowHover =
+    "transition-colors group-hover:bg-gray-50 dark:group-hover:bg-white/5";
+
   return (
     <Layout
       currentPage={currentPage}
@@ -1019,27 +1058,35 @@ export default function PracticeListPage({
       title={translate(currentLanguage, "practiceListPage.practice")}
       subtitle={translate(currentLanguage, "practiceListPage.studyMenu")}
     >
-      <div className="app-shell space-y-6">
-        <p className="text-sm text-gray-500">
-          {translate(
-            currentLanguage,
-            "practiceListPage.chooseASubjectAndFiltersToBeginPractice",
-          )}
-        </p>
+      <div className="app-shell space-y-5">
+        {/* Intro banner */}
+        <div className="relative overflow-hidden rounded-3xl border border-indigo-100 bg-gradient-to-r from-[#E4E6FF] to-[#EFEDFF] p-5 sm:p-6 dark:border-[rgba(255,255,255,0.10)] dark:from-[rgba(126,162,248,0.16)] dark:to-[rgba(170,166,248,0.10)]">
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-10 top-0 h-full w-1/3 rounded-l-full bg-white/40 dark:bg-white/5"
+          />
+          <p className="relative text-base font-semibold text-indigo-950 sm:text-lg dark:text-[#F8FAFC]">
+            {translate(
+              currentLanguage,
+              "practiceListPage.chooseASubjectAndFiltersToBeginPractice",
+            )}
+          </p>
+        </div>
+
         {error && (
-          <div className="bg-red-50 border border-red-100 rounded-2xl p-4 text-sm text-red-600">
+          <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-600 dark:border-red-900/50 dark:bg-red-900/30 dark:text-[#F87171]">
             {error}
           </div>
         )}
         {progressWarning && (
-          <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 text-sm text-amber-700">
+          <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-700 dark:border-amber-900/50 dark:bg-amber-900/30 dark:text-[#FFB84D]">
             {translate(language, "ui.progressWarning", {
               error: translateMessage(language, progressWarning),
             })}
           </div>
         )}
 
-        <div className="motion-stagger grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
+        <div className="motion-stagger grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {categories.map((cat) => (
             <CategoryCard
               key={cat.id}
@@ -1065,10 +1112,10 @@ export default function PracticeListPage({
         </div>
 
         {/* Filter panel: stacked + full-width on mobile, inline on sm+ */}
-        <div className="relative z-10 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+        <div className={`relative z-10 p-4 sm:p-5 ${CARD}`}>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
-              <span className="shrink-0 text-sm font-semibold text-gray-600">
+              <span className="shrink-0 text-sm font-semibold text-gray-600 dark:text-[#CBD5E1]">
                 {translate(currentLanguage, "practiceListPage.filterBy")}
               </span>
 
@@ -1141,7 +1188,7 @@ export default function PracticeListPage({
                 !!currentResult.error ||
                 matchingQuestions.length === 0
               }
-              className="flex w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 lg:w-auto"
+              className={`flex w-full shrink-0 items-center justify-center gap-2 rounded-full px-6 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 lg:w-auto ${BTN_PRIMARY}`}
             >
               <Play className="h-3.5 w-3.5 shrink-0" />
               {translate(
@@ -1169,16 +1216,16 @@ export default function PracticeListPage({
                   )}
           </span>
           {currentResult?.error && (
-            <p role="alert" className="mt-3 text-center text-sm text-red-600">
+            <p role="alert" className="mt-3 text-center text-sm text-red-600 dark:text-[#F87171]">
               {translateMessage(language, currentResult.error)}
             </p>
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <div className="min-w-0 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none p-5">
-            <h3 className="font-bold text-gray-800 dark:text-slate-50 mb-4 flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <div className={`min-w-0 p-5 sm:p-6 ${CARD}`}>
+            <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-[#F8FAFC]">
+              <TrendingUp className="h-4 w-4 text-blue-500 dark:text-[#7EA2F8]" />
               {translate(currentLanguage, "practiceListPage.progressBySubject")}
             </h3>
 
@@ -1187,115 +1234,114 @@ export default function PracticeListPage({
                 {[1, 2, 3].map((i) => (
                   <div
                     key={i}
-                    className="h-8 bg-gray-100 dark:bg-slate-700 rounded-lg animate-pulse"
+                    className="h-8 animate-pulse rounded-xl bg-gray-100 dark:bg-white/10"
                   />
                 ))}
               </div>
             ) : (
-              <div className="w-full min-w-0 overflow-hidden">
-                <table className="w-full table-fixed text-sm">
-                  <colgroup>
-                    <col className="w-[46%]" />
-                    <col className="w-[18%]" />
-                    <col className="w-[18%]" />
-                    <col className="w-[18%]" />
-                  </colgroup>
-                  <thead>
-                    <tr className="text-[10px] sm:text-xs text-gray-400 dark:text-slate-300 border-b border-gray-100 dark:border-slate-700">
-                      <th className="pb-2 pl-3 pr-2 text-left font-semibold truncate">
-                        {translate(currentLanguage, "practiceListPage.subject")}
-                      </th>
-                      <th className="pb-2 text-center font-semibold truncate">
-                        {translate(
-                          currentLanguage,
-                          "practiceListPage.progress2",
-                        )}
-                      </th>
-                      <th className="pb-2 text-center font-semibold truncate">
-                        {translate(
-                          currentLanguage,
-                          "practiceListPage.accuracy",
-                        )}
-                      </th>
-                      <th className="pb-2 pr-3 text-right font-semibold truncate">
-                        {translate(
-                          currentLanguage,
-                          "practiceListPage.questions",
-                        )}
-                      </th>
-                    </tr>
-                  </thead>
+              <div className="w-full min-w-0">
+                {/* Legend */}
+                <div className="mb-4 flex flex-wrap items-center gap-4 text-[11px] text-gray-500 dark:text-[#94A3B8]">
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-full bg-indigo-500 dark:bg-[#7EA2F8]" />
+                    {translate(currentLanguage, "practiceListPage.progress2")}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 dark:bg-[#4CC9B0]" />
+                    {translate(currentLanguage, "practiceListPage.accuracy")}
+                  </span>
+                </div>
 
-                  <tbody className="divide-y divide-gray-50 dark:divide-slate-700/70">
-                    {summaryRows.map((row) => (
-                      <tr
-                        key={row.id}
-                        className="group"
-                      >
-                        <td className="min-w-0 rounded-l-xl py-3 pl-3 pr-2 transition-colors group-hover:bg-gray-50 dark:group-hover:bg-slate-700/40">
+                <ul className="space-y-5">
+                  {summaryRows.map((row) => {
+                    const noAnswers = row.stats.answeredCount === 0;
+                    const accBar =
+                      row.stats.accuracy >= 70
+                        ? "bg-emerald-500 dark:bg-[#4CC9B0]"
+                        : row.stats.accuracy >= 50
+                          ? "bg-amber-500 dark:bg-[#FFB84D]"
+                          : "bg-red-500 dark:bg-[#F87171]";
+                    const accText =
+                      row.stats.accuracy >= 70
+                        ? "text-emerald-600 dark:text-[#4CC9B0]"
+                        : row.stats.accuracy >= 50
+                          ? "text-amber-500 dark:text-[#FFB84D]"
+                          : "text-red-500 dark:text-[#F87171]";
+                    return (
+                      <li key={row.id}>
+                        <div className="mb-2 flex items-center justify-between gap-2">
                           <div className="flex min-w-0 items-center gap-2">
-                            <div
-                              className={`w-2.5 h-2.5 shrink-0 rounded-full ${row.dotColor}`}
+                            <span
+                              className={`h-2.5 w-2.5 shrink-0 rounded-full ${row.dotColor}`}
                             />
                             <span
-                              className="block min-w-0 truncate font-medium text-gray-700 dark:text-slate-100"
+                              className="block min-w-0 truncate text-sm font-medium text-gray-700 dark:text-[#F8FAFC]"
                               title={getCategoryLabel(row, currentLanguage)}
                             >
                               {getCategoryLabel(row, currentLanguage)}
                             </span>
                           </div>
-                        </td>
-
-                        <td className="py-3 text-center whitespace-nowrap transition-colors group-hover:bg-gray-50 dark:group-hover:bg-slate-700/40">
-                          <span
-                            className={`font-bold ${
-                              row.stats.progress >= 70
-                                ? "text-emerald-600 dark:text-emerald-400"
-                                : row.stats.progress >= 40
-                                  ? "text-amber-500 dark:text-amber-400"
-                                  : "text-gray-500 dark:text-slate-300"
-                            }`}
-                          >
-                            {row.stats.progress}%
+                          <span className="shrink-0 text-xs text-gray-400 dark:text-[#94A3B8]">
+                            {row.stats.questionCount}
+                            {translate(
+                              currentLanguage,
+                              "practiceListPage.questionCountSuffix",
+                            )}
                           </span>
-                        </td>
+                        </div>
 
-                        <td className="py-3 text-center whitespace-nowrap transition-colors group-hover:bg-gray-50 dark:group-hover:bg-slate-700/40">
-                          <span
-                            className={`font-bold ${
-                              row.stats.accuracy >= 70
-                                ? "text-emerald-600 dark:text-emerald-400"
-                                : row.stats.accuracy >= 50
-                                  ? "text-amber-500 dark:text-amber-400"
-                                  : row.stats.answeredCount === 0
-                                    ? "text-gray-300 dark:text-slate-500"
-                                    : "text-red-500 dark:text-red-400"
-                            }`}
-                          >
-                            {row.stats.answeredCount === 0
-                              ? "—"
-                              : `${row.stats.accuracy}%`}
-                          </span>
-                        </td>
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <div
+                              role="progressbar"
+                              aria-label={translate(currentLanguage, "practiceListPage.progress2")}
+                              aria-valuemin={0}
+                              aria-valuemax={100}
+                              aria-valuenow={row.stats.progress}
+                              className="h-2.5 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-white/10"
+                            >
+                              <div
+                                className="h-full rounded-full bg-indigo-500 transition-all duration-500 dark:bg-[#7EA2F8]"
+                                style={{ width: `${row.stats.progress}%` }}
+                              />
+                            </div>
+                            <span className="w-10 text-right text-xs font-bold text-indigo-600 dark:text-[#7EA2F8]">
+                              {row.stats.progress}%
+                            </span>
+                          </div>
 
-                        <td className="rounded-r-xl py-3 pr-3 text-right text-gray-500 dark:text-slate-300 whitespace-nowrap transition-colors group-hover:bg-gray-50 dark:group-hover:bg-slate-700/40">
-                          {row.stats.questionCount}
-                          {translate(
-                            currentLanguage,
-                            "practiceListPage.questionCountSuffix",
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          <div className="flex items-center gap-2">
+                            <div
+                              role="progressbar"
+                              aria-label={translate(currentLanguage, "practiceListPage.accuracy")}
+                              aria-valuemin={0}
+                              aria-valuemax={100}
+                              aria-valuenow={noAnswers ? 0 : row.stats.accuracy}
+                              className="h-2.5 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-white/10"
+                            >
+                              <div
+                                className={`h-full rounded-full transition-all duration-500 ${accBar}`}
+                                style={{ width: `${noAnswers ? 0 : row.stats.accuracy}%` }}
+                              />
+                            </div>
+                            <span
+                              className={`w-10 text-right text-xs font-bold ${noAnswers ? "text-gray-300 dark:text-slate-500" : accText}`}
+                            >
+                              {noAnswers ? "—" : `${row.stats.accuracy}%`}
+                            </span>
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
             )}
           </div>
 
-          <div className="min-w-0 bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 shadow-sm dark:shadow-none p-5">
-            <h3 className="font-bold text-gray-800 dark:text-slate-50 mb-4 flex items-center gap-2">
-              <ChevronRight className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+          <div className={`min-w-0 p-5 sm:p-6 ${CARD}`}>
+            <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-[#F8FAFC]">
+              <ChevronRight className="h-4 w-4 text-blue-500 dark:text-[#7EA2F8]" />
               {translate(
                 currentLanguage,
                 "practiceListPage.recommendedNextActions",
@@ -1309,17 +1355,17 @@ export default function PracticeListPage({
                   <col className="w-[28%]" />
                 </colgroup>
                 <thead>
-                  <tr className="text-xs text-gray-400 dark:text-slate-300 border-b border-gray-100 dark:border-slate-700">
-                    <th className="pb-2 pl-3 pr-2 text-left font-semibold truncate">
+                  <tr className="border-b border-gray-100 text-xs text-gray-400 dark:border-[rgba(255,255,255,0.10)] dark:text-[#94A3B8]">
+                    <th className="truncate pb-2 pl-3 pr-2 text-left font-semibold">
                       {translate(currentLanguage, "practiceListPage.item")}
                     </th>
-                    <th className="pb-2 pr-3 text-right font-semibold truncate">
+                    <th className="truncate pb-2 pr-3 text-right font-semibold">
                       {translate(currentLanguage, "practiceListPage.action")}
                     </th>
                   </tr>
                 </thead>
 
-                <tbody className="divide-y divide-gray-50 dark:divide-slate-700/70">
+                <tbody className="divide-y divide-gray-50 dark:divide-[rgba(255,255,255,0.08)]">
                   {[...summaryRows]
                     .sort(
                       (a, b) =>
@@ -1332,9 +1378,9 @@ export default function PracticeListPage({
                         key={row.id}
                         className="group"
                       >
-                        <td className="min-w-0 rounded-l-xl py-3 pl-3 pr-2 transition-colors group-hover:bg-gray-50 dark:group-hover:bg-slate-700/40">
+                        <td className={`min-w-0 rounded-l-2xl py-3 pl-3 pr-2 ${rowHover}`}>
                           <p
-                            className="truncate font-semibold text-gray-700 dark:text-slate-100"
+                            className="truncate font-semibold text-gray-700 dark:text-[#F8FAFC]"
                             title={`${getCategoryLabel(row, currentLanguage)}${translate(currentLanguage, "practiceListPage.fundamentals")}`}
                           >
                             {getCategoryLabel(row, currentLanguage)}
@@ -1344,7 +1390,7 @@ export default function PracticeListPage({
                             )}
                           </p>
 
-                          <p className="truncate text-xs text-gray-400 dark:text-slate-300">
+                          <p className="truncate text-xs text-gray-400 dark:text-[#94A3B8]">
                             {row.stats.answeredCount === 0
                               ? translate(
                                   currentLanguage,
@@ -1357,12 +1403,12 @@ export default function PracticeListPage({
                           </p>
                         </td>
 
-                        <td className="min-w-0 rounded-r-xl py-3 pl-2 pr-3 text-right transition-colors group-hover:bg-gray-50 dark:group-hover:bg-slate-700/40">
-                          <button type="button"
+                        <td className={`min-w-0 rounded-r-2xl py-3 pl-2 pr-3 text-right ${rowHover}`}>
+                          <button
                             onClick={() =>
                               startCategory(row.subjectIds, row.id)
                             }
-                            className="ml-auto block max-w-full truncate rounded-md !border-0 !bg-transparent !p-0 !shadow-none !translate-y-0 hover:!bg-transparent hover:!shadow-none hover:!translate-y-0 focus:!bg-transparent text-right text-xs font-semibold text-blue-600 transition hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                            className="ml-auto block max-w-full truncate rounded-md !border-0 !bg-transparent !p-0 !shadow-none !translate-y-0 hover:!bg-transparent hover:!shadow-none hover:!translate-y-0 focus:!bg-transparent text-right text-xs font-semibold text-indigo-600 transition hover:text-indigo-700 hover:underline dark:text-[#7EA2F8] dark:hover:text-blue-300"
                           >
                             {translate(
                               currentLanguage,
@@ -1374,9 +1420,9 @@ export default function PracticeListPage({
                     ))}
 
                   <tr className="group">
-                    <td className="min-w-0 rounded-l-xl py-3 pl-3 pr-2 transition-colors group-hover:bg-gray-50 dark:group-hover:bg-slate-700/40">
+                    <td className={`min-w-0 rounded-l-2xl py-3 pl-3 pr-2 ${rowHover}`}>
                       <p
-                        className="truncate font-semibold text-gray-700 dark:text-slate-100"
+                        className="truncate font-semibold text-gray-700 dark:text-[#F8FAFC]"
                         title={translate(
                           currentLanguage,
                           "practiceListPage.checkYourLevelWithAMockExam",
@@ -1387,7 +1433,7 @@ export default function PracticeListPage({
                           "practiceListPage.checkYourLevelWithAMockExam",
                         )}
                       </p>
-                      <p className="truncate text-xs text-gray-400 dark:text-slate-300">
+                      <p className="truncate text-xs text-gray-400 dark:text-[#94A3B8]">
                         {translate(
                           currentLanguage,
                           "practiceListPage.takeItUnderRealExamTiming",
@@ -1395,10 +1441,10 @@ export default function PracticeListPage({
                       </p>
                     </td>
 
-                    <td className="min-w-0 rounded-r-xl py-3 pl-2 pr-3 text-right transition-colors group-hover:bg-gray-50 dark:group-hover:bg-slate-700/40">
-                      <button type="button"
+                    <td className={`min-w-0 rounded-r-2xl py-3 pl-2 pr-3 text-right ${rowHover}`}>
+                      <button
                         onClick={() => onNavigate("mock-exam")}
-                        className="ml-auto block max-w-full truncate rounded-md !border-0 !bg-transparent !p-0 !shadow-none !translate-y-0 hover:!bg-transparent hover:!shadow-none hover:!translate-y-0 focus:!bg-transparent text-right text-xs font-semibold text-blue-600 transition hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                        className="ml-auto block max-w-full truncate rounded-md !border-0 !bg-transparent !p-0 !shadow-none !translate-y-0 hover:!bg-transparent hover:!shadow-none hover:!translate-y-0 focus:!bg-transparent text-right text-xs font-semibold text-indigo-600 transition hover:text-indigo-700 hover:underline dark:text-[#7EA2F8] dark:hover:text-blue-300"
                       >
                         {translate(
                           currentLanguage,
@@ -1410,9 +1456,9 @@ export default function PracticeListPage({
 
                   {incorrectCount > 0 && (
                     <tr className="group">
-                      <td className="min-w-0 rounded-l-xl py-3 pl-3 pr-2 transition-colors group-hover:bg-gray-50 dark:group-hover:bg-slate-700/40">
+                      <td className={`min-w-0 rounded-l-2xl py-3 pl-3 pr-2 ${rowHover}`}>
                         <p
-                          className="truncate font-semibold text-gray-700 dark:text-slate-100"
+                          className="truncate font-semibold text-gray-700 dark:text-[#F8FAFC]"
                           title={translate(
                             currentLanguage,
                             "practiceListPage.reviewMissedQuestions",
@@ -1424,7 +1470,7 @@ export default function PracticeListPage({
                           )}
                         </p>
 
-                        <p className="truncate text-xs text-gray-400 dark:text-slate-300">
+                        <p className="truncate text-xs text-gray-400 dark:text-[#94A3B8]">
                           {translate(
                             currentLanguage,
                             "practiceListPage.unreviewedCount",
@@ -1433,10 +1479,10 @@ export default function PracticeListPage({
                         </p>
                       </td>
 
-                      <td className="min-w-0 rounded-r-xl py-3 pl-2 pr-3 text-right transition-colors group-hover:bg-gray-50 dark:group-hover:bg-slate-700/40">
-                        <button type="button"
+                      <td className={`min-w-0 rounded-r-2xl py-3 pl-2 pr-3 text-right ${rowHover}`}>
+                        <button
                           onClick={startReview}
-                          className="ml-auto block max-w-full truncate rounded-md !border-0 !bg-transparent !p-0 !shadow-none !translate-y-0 hover:!bg-transparent hover:!shadow-none hover:!translate-y-0 focus:!bg-transparent text-right text-xs font-semibold text-purple-600 transition hover:text-purple-700 hover:underline dark:text-purple-400 dark:hover:text-purple-300"
+                          className="ml-auto block max-w-full truncate rounded-md !border-0 !bg-transparent !p-0 !shadow-none !translate-y-0 hover:!bg-transparent hover:!shadow-none hover:!translate-y-0 focus:!bg-transparent text-right text-xs font-semibold text-pink-600 transition hover:text-pink-700 hover:underline dark:text-[#F4B0D0] dark:hover:text-pink-200"
                         >
                           {translate(
                             currentLanguage,
