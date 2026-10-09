@@ -143,7 +143,7 @@ function CategoryCard({
   const categoryLabel = getCategoryLabel(category, language);
 
   return (
-    <button
+    <button type="button"
       onClick={onStart}
       disabled={loading || stats.questionCount === 0}
       className={`w-full min-w-0 ${category.bgColor} ${
@@ -208,7 +208,7 @@ function ReviewCard({
   language: LanguageCode;
 }) {
   return (
-    <button
+    <button type="button"
       onClick={onStart}
       disabled={count === 0}
       className="w-full min-w-0 bg-purple-50 border border-slate-200 shadow-sm rounded-2xl p-4 sm:p-5 xl:p-6 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg hover:border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-slate-900/40 dark:border-slate-600/80 dark:shadow-slate-900/30 dark:hover:border-slate-500 dark:hover:bg-slate-900/60"
@@ -1133,7 +1133,7 @@ export default function PracticeListPage({
               />
             </div>
 
-            <button
+            <button type="button"
               onClick={() => void startFilteredPractice()}
               disabled={
                 !!starting ||
@@ -1358,7 +1358,7 @@ export default function PracticeListPage({
                         </td>
 
                         <td className="min-w-0 rounded-r-xl py-3 pl-2 pr-3 text-right transition-colors group-hover:bg-gray-50 dark:group-hover:bg-slate-700/40">
-                          <button
+                          <button type="button"
                             onClick={() =>
                               startCategory(row.subjectIds, row.id)
                             }
@@ -1396,7 +1396,7 @@ export default function PracticeListPage({
                     </td>
 
                     <td className="min-w-0 rounded-r-xl py-3 pl-2 pr-3 text-right transition-colors group-hover:bg-gray-50 dark:group-hover:bg-slate-700/40">
-                      <button
+                      <button type="button"
                         onClick={() => onNavigate("mock-exam")}
                         className="ml-auto block max-w-full truncate rounded-md !border-0 !bg-transparent !p-0 !shadow-none !translate-y-0 hover:!bg-transparent hover:!shadow-none hover:!translate-y-0 focus:!bg-transparent text-right text-xs font-semibold text-blue-600 transition hover:text-blue-700 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
                       >
@@ -1434,7 +1434,7 @@ export default function PracticeListPage({
                       </td>
 
                       <td className="min-w-0 rounded-r-xl py-3 pl-2 pr-3 text-right transition-colors group-hover:bg-gray-50 dark:group-hover:bg-slate-700/40">
-                        <button
+                        <button type="button"
                           onClick={startReview}
                           className="ml-auto block max-w-full truncate rounded-md !border-0 !bg-transparent !p-0 !shadow-none !translate-y-0 hover:!bg-transparent hover:!shadow-none hover:!translate-y-0 focus:!bg-transparent text-right text-xs font-semibold text-purple-600 transition hover:text-purple-700 hover:underline dark:text-purple-400 dark:hover:text-purple-300"
                         >

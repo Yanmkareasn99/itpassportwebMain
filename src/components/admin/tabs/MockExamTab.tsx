@@ -51,11 +51,11 @@ export default function MockExamTab() {
             {label}
             <input type="number" required min={min} max={max} step={1} value={Number.isNaN(settings[key]) ? '' : settings[key]}
               onChange={event => { setSaved(false); setSettings(current => ({ ...current, [key]: event.target.valueAsNumber })); }}
-              className="block w-full mt-1 rounded-xl border border-gray-200 px-3 py-2" />
+              className="mt-1 block w-full rounded-xl border border-gray-200 px-3 py-2 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200" />
           </label>
         ))}
         <p className="text-xs text-gray-500">{translate(language, 'ui.questionBankHelp')}</p>
-        <button type="submit" className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-semibold">{saving ? translate(language, 'ui.saving') : translate(language, 'ui.saveSettings')}</button>
+        <button type="submit" className="rounded-xl bg-blue-600 px-5 py-2.5 font-semibold text-white transition hover:bg-blue-700">{saving ? translate(language, 'ui.saving') : translate(language, 'ui.saveSettings')}</button>
       </fieldset>
     </form>
   );

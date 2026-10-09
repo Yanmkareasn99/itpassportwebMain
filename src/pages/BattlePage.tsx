@@ -643,7 +643,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
               {hasInsufficientBalance && (
                 <p className="mt-2 text-xs font-semibold text-rose-600 dark:text-rose-200">{translate(language, 'ui.insufficientPoints')}</p>
               )}
-              <button
+              <button type="button"
                 onClick={() => void createRoom()}
                 disabled={loading || !isSupabaseEnabled || !isValidWager || !Number.isInteger(questionCount) || questionCount < 1 || questionCount > 20 || !Number.isInteger(secondsPerQuestion) || secondsPerQuestion < 5 || secondsPerQuestion > 300}
                 className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-white py-3 text-sm font-extrabold uppercase text-indigo-600 shadow-sm transition hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-600 disabled:opacity-50"
@@ -671,7 +671,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                   className="w-full appearance-none border-0 !bg-transparent p-0 text-sm font-semibold text-slate-800 shadow-none outline-none ring-0 placeholder:text-slate-400 focus:!bg-transparent focus:shadow-none focus:outline-none focus:ring-0 [-webkit-tap-highlight-color:transparent] [&:-webkit-autofill]:[transition:background-color_9999s_ease-in-out_0s] [&:-webkit-autofill]:[-webkit-text-fill-color:inherit] dark:text-white dark:placeholder:text-slate-500"
                 />
               </label>
-              <button
+              <button type="button"
                 onClick={joinByCode}
                 disabled={loading || !joinCode.trim()}
                 className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-sky-400 to-violet-400 py-3 text-sm font-extrabold uppercase text-white transition hover:from-sky-300 hover:to-violet-300 dark:from-sky-300 dark:to-blue-400 dark:hover:from-sky-200 dark:hover:to-blue-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 disabled:opacity-50 dark:text-slate-900 dark:focus-visible:ring-offset-[#0f1530]"
@@ -722,7 +722,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                         <span className="flex items-center gap-1.5"><Coins className="h-4 w-4 text-amber-500" />{room.wager_points.toLocaleString(locale)}</span>
                       </div>
                     </div>
-                    <button
+                    <button type="button"
                       onClick={() => {
                         if (mine) {
                           setActiveRoom(room);
@@ -743,7 +743,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                 <li className="rounded-2xl border border-dashed border-indigo-200 px-4 py-8 text-center dark:border-indigo-300/20">
                   <Users className="mx-auto mb-2 h-8 w-8 text-indigo-400" />
                   <p className={`text-sm font-bold ${strong}`}>{translate(language, 'ui.noRooms')}</p>
-                  <button
+                  <button type="button"
                     onClick={() => createCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
                     className="mt-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-indigo-500 px-5 py-2.5 text-sm font-extrabold uppercase text-white transition hover:from-violet-500 hover:to-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0f1530]"
                   >
@@ -847,7 +847,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
           <p className={`mt-5 text-sm ${mute}`}>{translate(language, 'ui.keepOpen')}</p>
           {error && <p role="alert" className="mt-4 text-sm font-medium text-rose-500">{translateMessage(language, error)}</p>}
           <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
-            <button
+            <button type="button"
               onClick={() => {
                 setActiveRoom(null);
                 setStage('lobby');
@@ -858,7 +858,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
             >
               {translate(language, 'ui.checkRooms')}
             </button>
-            <button onClick={() => void cancelRoom()} disabled={loading} className={secondaryBtn}>
+            <button type="button" onClick={() => void cancelRoom()} disabled={loading} className={secondaryBtn}>
               {translate(language, 'ui.cancelRefund')}
             </button>
           </div>
@@ -915,11 +915,11 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
 
             <p className={`relative mt-4 text-xs font-medium ${mute}`}>{translate(language, 'ui.balance', { count: balance.toLocaleString(locale) })}</p>
             <div className="relative mt-4 grid grid-cols-2 gap-3">
-              <button onClick={backToLobby} className="inline-flex items-center justify-center gap-2 rounded-full bg-transparent px-4 py-3.5 text-sm font-bold text-indigo-600 ring-2 ring-indigo-300 transition hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-violet-500 dark:text-indigo-200 dark:ring-indigo-400/40 dark:hover:bg-white/5">
+              <button type="button" onClick={backToLobby} className="inline-flex items-center justify-center gap-2 rounded-full bg-transparent px-4 py-3.5 text-sm font-bold text-indigo-600 ring-2 ring-indigo-300 transition hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-violet-500 dark:text-indigo-200 dark:ring-indigo-400/40 dark:hover:bg-white/5">
                 <ArrowLeft className="h-4 w-4" />
                 {translate(language, 'ui.backLobby')}
               </button>
-              <button onClick={replay} disabled={loading || wagerPoints > balance} className={`${primaryBtn} px-4 py-3.5`}>
+              <button type="button" onClick={replay} disabled={loading || wagerPoints > balance} className={`${primaryBtn} px-4 py-3.5`}>
                 <RotateCcw className="h-4 w-4" />
                 {localText.playNext}
               </button>
@@ -964,11 +964,11 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
 
           <p className={`text-xs font-medium ${mute}`}>{translate(language, 'ui.balance', { count: balance.toLocaleString(locale) })}</p>
           <div className="grid grid-cols-2 gap-3">
-            <button onClick={backToLobby} className="inline-flex items-center justify-center gap-2 rounded-full bg-transparent px-6 py-3.5 text-sm font-bold text-indigo-600 ring-2 ring-indigo-300 transition hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-violet-500 dark:text-indigo-200 dark:ring-indigo-400/40 dark:hover:bg-white/5">
+            <button type="button" onClick={backToLobby} className="inline-flex items-center justify-center gap-2 rounded-full bg-transparent px-6 py-3.5 text-sm font-bold text-indigo-600 ring-2 ring-indigo-300 transition hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-violet-500 dark:text-indigo-200 dark:ring-indigo-400/40 dark:hover:bg-white/5">
               <ArrowLeft className="h-4 w-4" />
               {translate(language, 'ui.backLobby')}
             </button>
-            <button onClick={replay} disabled={loading || wagerPoints > balance} className={`${primaryBtn} py-3.5`}>
+            <button type="button" onClick={replay} disabled={loading || wagerPoints > balance} className={`${primaryBtn} py-3.5`}>
               <RotateCcw className="h-4 w-4" />
               {localText.replay}
             </button>
@@ -1038,7 +1038,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                   else { cls = 'bg-[#f8f7ff] ring-1 ring-indigo-50 opacity-50 dark:bg-white/5 dark:ring-white/5'; }
                 }
                 return (
-                  <button
+                  <button type="button"
                     key={choice.id}
                     onClick={() => void handleAnswer(choice.id)}
                     disabled={answered}

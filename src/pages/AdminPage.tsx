@@ -60,7 +60,7 @@ export default function AdminPage({ currentPage, onNavigate }: AdminPageProps) {
           <>
             <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-2xl w-full sm:w-fit overflow-x-auto">
               {tabs.map(({ id, labelKey, icon: Icon }) => (
-                <button
+                <button type="button"
                   key={id}
                   onClick={() => openTab(id)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition shrink-0 whitespace-nowrap ${

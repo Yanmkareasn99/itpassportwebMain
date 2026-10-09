@@ -141,8 +141,8 @@ function PracticeSessionRoute() {
   if (error) return (
     <div className="max-w-lg mx-auto p-8 space-y-4">
       <p role="alert">{translateMessage(language, error)}</p>
-      <button className="mr-4 text-blue-600" onClick={() => setAttempt(value => value + 1)}>{translate(language, 'ui.retry')}</button>
-      <button className="text-blue-600" onClick={() => onNavigate('practice-list')}>{translate(language, 'ui.backPractice')}</button>
+      <button type="button" className="mr-4 text-blue-600" onClick={() => setAttempt(value => value + 1)}>{translate(language, 'ui.retry')}</button>
+      <button type="button" className="text-blue-600" onClick={() => onNavigate('practice-list')}>{translate(language, 'ui.backPractice')}</button>
     </div>
   );
   if (!loaded || loaded.id !== sessionId) return <LoadingScreen />;

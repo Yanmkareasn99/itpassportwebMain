@@ -89,7 +89,7 @@ export default function Sidebar({
               currentPage === "practice-question");
 
           return (
-            <button
+            <button type="button"
               key={page}
               onClick={() => onNavigate(page)}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition
@@ -118,7 +118,7 @@ export default function Sidebar({
       <div className="border-t p-3 space-y-1 dark:border-slate-700">
 
         {isAdmin && (
-          <button
+          <button type="button"
             onClick={() => onNavigate("admin")}
             aria-current={adminActive ? "page" : undefined}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${
@@ -133,7 +133,7 @@ export default function Sidebar({
           </button>
         )}
 
-        <button
+        <button type="button"
           onClick={() => onNavigate("settings")}
           aria-current={settingsActive ? "page" : undefined}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition ${

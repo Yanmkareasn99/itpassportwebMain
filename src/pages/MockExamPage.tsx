@@ -310,7 +310,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
               )}
 
               <div className="mt-7 flex justify-center">
-                <button
+                <button type="button"
                   onClick={startExam}
                   disabled={loading || settingsLoading}
                   className="inline-flex min-h-12 min-w-44 items-center justify-center gap-2 rounded-full bg-blue-600 px-8 py-3 font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-200 dark:bg-blue-500 dark:shadow-none dark:hover:bg-blue-400 dark:focus:ring-blue-400/40 disabled:cursor-not-allowed disabled:opacity-60"
@@ -383,10 +383,10 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
           </div>
 
           <div className="flex gap-3 justify-center">
-            <button onClick={() => { finishingRef.current = false; setStage('intro'); setUserAnswers({}); setReviewMarks({}); setShowConfirm(false); setCurrentIndex(0); setTimeLeft(examDuration); setSessionId(null); }} className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600">
+            <button type="button" onClick={() => { finishingRef.current = false; setStage('intro'); setUserAnswers({}); setReviewMarks({}); setShowConfirm(false); setCurrentIndex(0); setTimeLeft(examDuration); setSessionId(null); }} className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600">
               {translate(language, 'mockExamPage.retake')}
             </button>
-            <button onClick={() => onNavigate('home')} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition dark:bg-blue-500 dark:hover:bg-blue-400">
+            <button type="button" onClick={() => onNavigate('home')} className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition dark:bg-blue-500 dark:hover:bg-blue-400">
               {translate(language, 'mockExamPage.home')}
             </button>
           </div>
@@ -478,7 +478,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
               {choices.map((choice, idx) => {
                 const selected = userAnswers[question.id] === choice.id;
                 return (
-                  <button
+                  <button type="button"
                     key={choice.id}
                     onClick={() => setUserAnswers(prev => ({ ...prev, [question.id]: choice.id }))}
                     className={`w-full text-left p-4 rounded-xl border-2 transition-all flex items-center gap-3 text-gray-800 dark:text-slate-100 ${
@@ -501,7 +501,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
             </div>
 
             <div className="flex items-center justify-between gap-2 pt-2">
-              <button
+              <button type="button"
                 disabled={currentIndex === 0}
                 onClick={() => setCurrentIndex(i => i - 1)}
                 className="flex shrink-0 items-center gap-1 px-2.5 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition disabled:opacity-40 dark:bg-slate-800 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-700 sm:gap-2 sm:px-4"
@@ -521,14 +521,14 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
               </button>
 
               {currentIndex + 1 < questions.length ? (
-                <button
+                <button type="button"
                   onClick={() => setCurrentIndex(i => i + 1)}
                   className="flex shrink-0 items-center gap-1 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition dark:bg-blue-500 dark:hover:bg-blue-400 sm:gap-2 sm:px-6"
                 >
                   {translate(language, 'mockExamPage.next')} <ChevronRight className="w-4 h-4" />
                 </button>
               ) : (
-                <button
+                <button type="button"
                   onClick={requestFinish}
                   className="shrink-0 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition dark:bg-emerald-500 dark:hover:bg-emerald-400 sm:px-6"
                 >
@@ -558,7 +558,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
                       : 'bg-blue-600 text-white ring-2 ring-blue-600 ring-offset-2 dark:bg-blue-500 dark:ring-blue-300 dark:ring-offset-slate-800';
                   }
                   return (
-                    <button
+                    <button type="button"
                       key={q.id}
                       onClick={() => selectQuestion(i)}
                       aria-label={translate(language, 'mockExamPage.questionNumber', { number: i + 1 })}
@@ -572,7 +572,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
               <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700 text-center">
                 <p className="text-xs text-gray-400 dark:text-slate-300">{translate(language, 'mockExamPage.answeredCount', { answered: answeredCount, total: questions.length })}</p>
               </div>
-              <button
+              <button type="button"
                 onClick={requestFinish}
                 className="w-full mt-3 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-semibold hover:bg-emerald-700 transition dark:bg-emerald-500 dark:hover:bg-emerald-400"
               >
@@ -610,13 +610,13 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-3">
-              <button
+              <button type="button"
                 onClick={() => setShowConfirm(false)}
                 className="rounded-xl bg-gray-100 px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600"
               >
                 {translate(language, 'mockExamPage.continueExam')}
               </button>
-              <button
+              <button type="button"
                 onClick={() => { setShowConfirm(false); void finishExam(); }}
                 className="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400"
               >
@@ -655,13 +655,13 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
               </div>
             </div>
             <div className="mt-6 flex justify-end gap-3">
-              <button
+              <button type="button"
                 onClick={cancelLeaveExam}
                 className="rounded-xl bg-gray-100 px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600"
               >
                 {translate(language, 'mockExamPage.stayInExam')}
               </button>
-              <button
+              <button type="button"
                 onClick={confirmLeaveExam}
                 className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400"
               >

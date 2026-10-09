@@ -177,7 +177,7 @@ export default function AnnouncementsTab() {
                   <input
                     value={form[`title_${code}`]}
                     onChange={event => setForm(current => ({ ...current, [`title_${code}`]: event.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+                    className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
                   />
                 </label>
                 <label className="block text-xs font-semibold text-gray-600">
@@ -186,7 +186,7 @@ export default function AnnouncementsTab() {
                     rows={4}
                     value={form[`message_${code}`]}
                     onChange={event => setForm(current => ({ ...current, [`message_${code}`]: event.target.value }))}
-                    className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+                    className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
                   />
                 </label>
               </div>
@@ -197,7 +197,7 @@ export default function AnnouncementsTab() {
             <label className="text-xs font-semibold text-gray-600">
               {translate(language, 'adminPage.announcementSeverity')}
               <select value={form.severity} onChange={event => setForm(current => ({ ...current, severity: event.target.value as AnnouncementSeverity }))}
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm">
+                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200">
                 <option value="info">{translate(language, 'adminPage.announcementInfo')}</option>
                 <option value="warning">{translate(language, 'adminPage.announcementWarning')}</option>
                 <option value="urgent">{translate(language, 'adminPage.announcementUrgent')}</option>
@@ -207,19 +207,19 @@ export default function AnnouncementsTab() {
               {translate(language, 'adminPage.announcementPriority')}
               <input type="number" min={0} max={100} value={form.priority}
                 onChange={event => setForm(current => ({ ...current, priority: event.target.valueAsNumber }))}
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
+                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200" />
             </label>
             <label className="text-xs font-semibold text-gray-600">
               {translate(language, 'adminPage.announcementStarts')}
               <input type="datetime-local" required value={form.starts_at}
                 onChange={event => setForm(current => ({ ...current, starts_at: event.target.value }))}
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
+                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200" />
             </label>
             <label className="text-xs font-semibold text-gray-600">
               {translate(language, 'adminPage.announcementEnds')}
               <input type="datetime-local" value={form.ends_at ?? ''}
                 onChange={event => setForm(current => ({ ...current, ends_at: event.target.value || null }))}
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
+                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200" />
             </label>
           </div>
 
@@ -230,7 +230,7 @@ export default function AnnouncementsTab() {
                 className="h-4 w-4 rounded border-gray-300" />
               {translate(language, 'adminPage.announcementActive')}
             </label>
-            <button type="submit" className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
+            <button type="submit" className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700">
               {saving ? <RefreshCw className="h-4 w-4 animate-spin" /> : editingId ? <Pencil className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
               {saving ? translate(language, 'ui.saving') : translate(language, 'adminPage.save')}
             </button>

@@ -8,6 +8,7 @@ vi.mock('../../src/lib/supabase', async importOriginal => {
 import {
   createBugReport,
   createBugReportComment,
+  deleteBugReport,
   deleteBugReportComment,
   loadBugReportComments,
   loadBugReports,
@@ -50,6 +51,10 @@ describe('bug reports', () => {
         { id: 'own', reporter_id: 'reporter', reporter_name: 'Test Reporter', title: 'Own', details: 'Details', labels: [], status: 'open', created_at: '2026-10-01', updated_at: '2026-10-01' },
         { id: 'other', reporter_id: 'other-user', reporter_name: 'Other User', title: 'Other', details: 'Details', labels: ['content'], status: 'in_progress', created_at: '2026-10-02', updated_at: '2026-10-02' },
       ],
+      bug_report_comments: [
+        { id: 'own-comment', issue_id: 'own', author_id: 'reporter', author_name: 'Test Reporter', body: 'Own comment', created_at: '2026-10-01', updated_at: '2026-10-01' },
+        { id: 'other-comment', issue_id: 'other', author_id: 'other-user', author_name: 'Other User', body: 'Other comment', created_at: '2026-10-02', updated_at: '2026-10-02' },
+      ],
     }));
 
     expect((await loadBugReports('reporter', false)).map(report => report.id)).toEqual(['own']);
@@ -58,6 +63,11 @@ describe('bug reports', () => {
     const updated = await updateBugReportStatus('own', 'resolved');
     expect(updated.status).toBe('resolved');
     expect((await loadBugReports('reporter', false))[0].status).toBe('resolved');
+
+    await deleteBugReport('own');
+    expect(await loadBugReports('reporter', false)).toEqual([]);
+    expect((await loadBugReports('reporter', true)).map(report => report.id)).toEqual(['other']);
+    expect((await loadBugReportComments(['own', 'other'])).map(comment => comment.id)).toEqual(['other-comment']);
   });
 
   it('stores and loads comments with their author for selected issues', async () => {

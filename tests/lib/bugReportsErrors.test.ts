@@ -23,6 +23,7 @@ vi.mock('../../src/lib/supabase', () => ({
 import {
   createBugReport,
   createBugReportComment,
+  deleteBugReport,
   deleteBugReportComment,
   loadBugReportComments,
   loadBugReports,
@@ -54,6 +55,7 @@ describe('bug report database failures', () => {
       labels: ['bug'],
     })).rejects.toBe(databaseError);
     await expect(updateBugReportStatus('issue', 'closed')).rejects.toBe(databaseError);
+    await expect(deleteBugReport('issue')).rejects.toBe(databaseError);
     await expect(loadBugReportComments(['issue'])).rejects.toBe(databaseError);
     await expect(createBugReportComment({
       issueId: 'issue',

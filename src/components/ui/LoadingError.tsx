@@ -46,7 +46,7 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
         </div>
         <div className="ml-3 flex gap-2">
           {onRetry && (
-            <button
+            <button type="button"
               onClick={onRetry}
               className="text-sm font-medium text-red-600 hover:text-red-500"
             >
@@ -54,7 +54,7 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
             </button>
           )}
           {onDismiss && (
-            <button
+            <button type="button"
               onClick={onDismiss}
               className="text-sm font-medium text-red-600 hover:text-red-500"
             >
@@ -218,7 +218,7 @@ export const WarningMessage: React.FC<WarningMessageProps> = ({
           <p className="text-sm font-medium text-yellow-800">{translateMessage(language, message)}</p>
         </div>
         {onDismiss && (
-          <button
+          <button type="button"
             onClick={onDismiss}
             className="text-sm font-medium text-yellow-600 hover:text-yellow-500"
           >
@@ -264,7 +264,7 @@ export const SuccessMessage: React.FC<SuccessMessageProps> = ({
           <p className="text-sm font-medium text-green-800">{translateMessage(language, message)}</p>
         </div>
         {onDismiss && (
-          <button
+          <button type="button"
             onClick={onDismiss}
             className="text-sm font-medium text-green-600 hover:text-green-500"
           >

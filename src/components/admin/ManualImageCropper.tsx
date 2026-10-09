@@ -306,7 +306,7 @@ export default function ManualImageCropper({
           <aside className="space-y-4">
             <label className="block text-xs font-semibold text-gray-600">
               {labels.target}
-              <select value={targetId} onChange={event => setTargetId(event.target.value)} className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm">
+              <select value={targetId} onChange={event => setTargetId(event.target.value)} className="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-200">
                 {targets.map(target => <option key={target.id} value={target.id}>{target.label}</option>)}
               </select>
             </label>

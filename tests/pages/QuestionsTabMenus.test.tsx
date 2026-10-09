@@ -34,6 +34,44 @@ it('closes both admin question menus on outside clicks and Escape', async () => 
   expect(screen.queryByRole('listbox')).toBeNull();
 });
 
+it('keeps the add-question methods mutually exclusive', async () => {
+  localStorage.setItem('manabi_language', 'en');
+  render(<LanguageProvider><QuestionsTab /></LanguageProvider>);
+  await screen.findByText(/\d+ items/);
+
+  const addQuestion = screen.getByRole('button', { name: 'Add question' });
+  fireEvent.click(addQuestion);
+  fireEvent.click(screen.getByRole('menuitem', { name: /Import CSV/ }));
+  expect(screen.getByRole('heading', { name: 'Import questions with CSV' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Dismiss' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Cancel' })).toBeTruthy();
+
+  fireEvent.click(addQuestion);
+  fireEvent.click(screen.getByRole('menuitem', { name: /Import PDFs/ }));
+  expect(screen.queryByRole('heading', { name: 'Import questions with CSV' })).toBeNull();
+  expect(screen.getByRole('heading', { name: 'Import questions from PDFs' })).toBeTruthy();
+
+  fireEvent.click(addQuestion);
+  fireEvent.click(screen.getByRole('menuitem', { name: /^Add question/ }));
+
+  expect(screen.queryByRole('heading', { name: 'Import questions with CSV' })).toBeNull();
+  expect(screen.queryByRole('heading', { name: 'Import questions from PDFs' })).toBeNull();
+  expect(screen.getByRole('heading', { name: 'Add question' })).toBeTruthy();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  expect(screen.queryByRole('heading', { name: 'Import questions from PDFs' })).toBeNull();
+
+  const restoredAddQuestion = screen.getByRole('button', { name: 'Add question' });
+  fireEvent.click(restoredAddQuestion);
+  fireEvent.click(screen.getByRole('menuitem', { name: /Import PDFs/ }));
+  expect(screen.getByRole('heading', { name: 'Import questions from PDFs' })).toBeTruthy();
+
+  fireEvent.click(restoredAddQuestion);
+  fireEvent.click(screen.getByRole('menuitem', { name: /Import CSV/ }));
+  expect(screen.queryByRole('heading', { name: 'Import questions from PDFs' })).toBeNull();
+  expect(screen.getByRole('heading', { name: 'Import questions with CSV' })).toBeTruthy();
+});
+
 it('filters by more than one checked subject', async () => {
   localStorage.setItem('manabi_language', 'en');
   const subjects = getLocalRows('subjects') as Array<{ id: string; name: string }>;
@@ -173,7 +211,13 @@ it('shows admin review status, shared message, and choice image controls in the 
   expect(screen.getByLabelText('Review status')).toBeTruthy();
   const reviewMessage = screen.getByLabelText('Message for other admins');
   expect(reviewMessage.style.height).toBe('2.5rem');
-  expect(screen.getAllByText('Add image')).toHaveLength(4);
+  const choiceInputs = screen.getAllByPlaceholderText(/Choice \d/);
+  const addImageControls = screen.getAllByText('Add image');
+  expect(addImageControls).toHaveLength(4);
+  choiceInputs.forEach((input, index) => {
+    expect(addImageControls[index].closest('label')?.parentElement).toBe(input.parentElement);
+  });
+  expect(screen.queryAllByRole('img', { name: /Choice \d/ })).toHaveLength(0);
 });
 
 it('shows only saved review and message indicators before expanding a question', async () => {
