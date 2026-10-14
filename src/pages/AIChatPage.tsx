@@ -1,6 +1,6 @@
 import { translate } from '../i18n';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Sparkles, Send, RotateCcw, Lightbulb, MessageCircle, Plus } from 'lucide-react';
+import { ChevronDown, ChevronUp, Send, RotateCcw, Lightbulb, MessageCircle, Plus } from 'lucide-react';
 import Layout from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { getChatReply, ChatMessage } from '../lib/aiChat';
