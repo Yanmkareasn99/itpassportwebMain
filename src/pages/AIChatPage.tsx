@@ -1,6 +1,6 @@
 import { translate } from '../i18n';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Sparkles, Send, RotateCcw, Lightbulb, MessageCircle, Plus } from 'lucide-react';
+import { ChevronDown, ChevronUp, Send, RotateCcw, Lightbulb, MessageCircle, Plus } from 'lucide-react';
 import Layout from '../components/Layout';
 import { supabase } from '../lib/supabase';
 import { getChatReply, ChatMessage } from '../lib/aiChat';
@@ -315,8 +315,8 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
       subtitle={translate(language, 'aiChatPage.studyAssistant')}
     >
       <div className="w-full">
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex h-[calc(100dvh-10rem)] min-h-[28rem] w-full flex-col overflow-hidden md:h-[calc(100dvh-8rem)]">
-          <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-violet-50 dark:border-blue-900 dark:from-blue-950 dark:to-blue-900">
+        <div className="mx-auto flex h-[calc(100dvh-10rem)] min-h-[28rem] w-full max-w-[1000px] flex-col overflow-hidden rounded-2xl border border-gray-100 shadow-sm md:h-[calc(100dvh-8rem)]">
+          {/* <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-violet-50 dark:border-blue-900 dark:from-blue-950 dark:to-blue-900">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div className="min-w-0">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/80 text-blue-600 text-xs font-semibold mb-3">
@@ -334,9 +334,19 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
                 {translate(language, 'aiChatPage.reset')}
               </button>
             </div>
-          </div>
+          </div> */}
+        
+         
+
 
           <div className="relative min-h-0 flex-1">
+             <button type="button"
+                onClick={() => void resetChat()}
+                className="shrink-0 self-end inline-flex items-center gap-2 px-2 py-2 rounded-full border border-gray-200 bg-white text-sm  hover:bg-gray-50 transition whitespace-nowrap mt-2 mr-2 absolute right-0 z-10"
+              >
+                <RotateCcw className="w-4 h-4" />
+                {/* {translate(language, 'aiChatPage.reset')} */}
+          </button>
             <div
               ref={chatScrollRef}
               role="log"
