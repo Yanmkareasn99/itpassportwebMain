@@ -5,6 +5,7 @@ import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { loadPracticeProgress, practiceErrorMessage, type PracticeProgressSession } from '../lib/practice';
+import { buildDailyActivity } from '../lib/dailyActivity';
 import { supabase } from '../lib/supabase';
 import { Page, PracticeSession, ExamSession } from '../types';
 import AnnouncementBanner from '../components/AnnouncementBanner';
@@ -269,15 +270,23 @@ function getFeatures(language: Language) {
 
 function RecentActivityChart({ sessions, language, onStart }: { sessions: PracticeProgressSession[]; language: Language; onStart: () => void }) {
   const locale = languageLocales[language];
+  const [today, setToday] = useState(() => new Date());
+  const currentDay = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
 
-  // oldest -> newest
-  const data = [...sessions]
-    .slice(0, 10)
-    .reverse()
-    .map(s => ({
-      date: new Date(s.created_at),
-      pct: s.answered_count > 0 ? Math.round((s.correct_answers / s.answered_count) * 100) : 0,
-    }));
+  useEffect(() => {
+    const refreshDate = () => setToday(new Date());
+    const now = new Date();
+    const nextDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const timer = window.setTimeout(refreshDate, nextDay.getTime() - now.getTime() + 1000);
+    document.addEventListener('visibilitychange', refreshDate);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener('visibilitychange', refreshDate);
+    };
+  }, [currentDay]);
+
+  // One weighted-accuracy bucket per local calendar day, oldest -> newest.
+  const data = buildDailyActivity(sessions, today);
 
   const n = data.length;
   const fmt = (d: Date) => new Intl.DateTimeFormat(locale, { month: 'numeric', day: 'numeric' }).format(d);
@@ -290,7 +299,7 @@ function RecentActivityChart({ sessions, language, onStart }: { sessions: Practi
           {translate(language, 'homePage.recentActivity')}
         </h3>
 
-        {n === 0 ? (
+        {sessions.length === 0 ? (
           <div className="flex flex-col items-center py-4 text-center">
             <p className="text-sm text-gray-500 dark:text-[#CBD5E1]">{translate(language, 'homePage.noStudyHistoryYet')}</p>
             <button onClick={onStart} className="mt-3 rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 dark:bg-[#7EA2F8] dark:text-slate-950 dark:hover:bg-blue-300">
@@ -308,19 +317,19 @@ function RecentActivityChart({ sessions, language, onStart }: { sessions: Practi
               return (
                 <div key={i} className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
                   {/* Track */}
-                  <div className="relative h-24 w-full rounded-lg bg-blue-50 dark:bg-white/5" title={`${fmt(d.date)}: ${d.pct}%`}>
+                  <div className="relative h-24 w-full rounded-lg bg-blue-50 dark:bg-white/5" title={`${fmt(d.date)}: ${d.percentage}%`}>
                     <span
                       className="absolute left-1/2 -translate-x-1/2 pb-0.5 text-[9px] font-semibold text-gray-500 dark:text-[#94A3B8]"
-                      style={{ bottom: `${Math.max(d.pct, 4)}%` }}
+                      style={{ bottom: `${Math.max(d.percentage, 4)}%` }}
                     >
-                      {d.pct}
+                      {d.percentage}
                     </span>
                     {/* Bar */}
                     <div
                       className={`absolute bottom-0 left-0 right-0 rounded-lg transition-all ${
                         isLast ? 'bg-blue-600 dark:bg-[#7EA2F8]' : 'bg-blue-300 dark:bg-[rgba(126,162,248,0.45)]'
                       }`}
-                      style={{ height: `${Math.max(d.pct, 4)}%` }}
+                      style={{ height: `${Math.max(d.percentage, 4)}%` }}
                     />
                   </div>
                   <span className="text-[9px] text-gray-400 dark:text-[#94A3B8]">{fmt(d.date)}</span>
@@ -377,7 +386,6 @@ export default function HomePage({ currentPage, onNavigate, onSetExamDate }: Hom
     return () => { cancelled = true; window.removeEventListener('focus', refresh); };
   }, [userId]);
 
-  const recentSessions = practiceSessions.slice(0, 10);
   const guest = translate(language, 'homePage.guest');
   const greeting = translate(language, 'homePage.goodMorning');
   const features = getFeatures(language);
@@ -448,7 +456,7 @@ export default function HomePage({ currentPage, onNavigate, onSetExamDate }: Hom
 
             {/* Recent activity chart */}
             <RecentActivityChart
-              sessions={recentSessions}
+              sessions={practiceSessions}
               language={language}
               onStart={() => onNavigate('practice-list')}
             />
