@@ -390,14 +390,12 @@ export default function HomePage({ currentPage, onNavigate, onSetExamDate }: Hom
     const refreshFromStorage = (event: StorageEvent) => {
       if (event.key === PRACTICE_PROGRESS_CHANGED_STORAGE_KEY) refresh();
     };
-    const interval = window.setInterval(refresh, 60_000);
     window.addEventListener('focus', refresh);
     window.addEventListener(PRACTICE_PROGRESS_CHANGED_EVENT, refresh);
     window.addEventListener('storage', refreshFromStorage);
     document.addEventListener('visibilitychange', refreshWhenVisible);
     return () => {
       cancelled = true;
-      window.clearInterval(interval);
       window.removeEventListener('focus', refresh);
       window.removeEventListener(PRACTICE_PROGRESS_CHANGED_EVENT, refresh);
       window.removeEventListener('storage', refreshFromStorage);
