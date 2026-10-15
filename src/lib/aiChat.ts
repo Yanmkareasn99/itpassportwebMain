@@ -113,6 +113,7 @@ function buildSystemPrompt(context: ChatContext) {
     translate(context.language, 'aiChat.systemLanguage'),
     `You must respond in ${languageNames[context.language]} only. Do not use any other language.`,
     'Answer directly. Do not add greetings, welcomes, praise, or conversational filler unless the user explicitly asks for it.',
+    'Use plain Unicode symbols for formulas. Never use LaTeX, dollar-sign math delimiters, or backslash commands.',
     translate(context.language, 'aiChat.systemStructure'),
     translate(context.language, 'aiChat.systemAudience'),
     translate(context.language, 'aiChat.systemSubject', { subject: subjectName }),

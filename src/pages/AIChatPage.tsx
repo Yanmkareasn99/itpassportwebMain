@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Page, Question, Subject } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { takeAiChatHandoff } from '../lib/aiChatHandoff';
+import { formatAiChatContent } from '../lib/aiChatFormatting';
 
 interface AIChatPageProps {
   currentPage: Page;
@@ -29,7 +30,7 @@ function ChatBubble({ message }: { message: ChatMessage }) {
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div className={`max-w-[85%] rounded-2xl px-4 py-3 shadow-sm whitespace-pre-wrap break-words text-sm leading-6 ${isUser ? 'bg-blue-600 text-white' : 'bg-white border border-gray-100 text-gray-700'}`}>
-        {message.content}
+        {isUser ? message.content : formatAiChatContent(message.content)}
       </div>
     </div>
   );
