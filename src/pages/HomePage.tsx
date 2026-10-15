@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { loadPracticeProgress, practiceErrorMessage, type PracticeProgressSession } from '../lib/practice';
 import { buildDailyActivity } from '../lib/dailyActivity';
+import { PRACTICE_PROGRESS_CHANGED_EVENT, PRACTICE_PROGRESS_CHANGED_STORAGE_KEY } from '../lib/practiceProgressEvents';
 import { supabase } from '../lib/supabase';
 import { Page, PracticeSession, ExamSession } from '../types';
 import AnnouncementBanner from '../components/AnnouncementBanner';
@@ -286,7 +287,8 @@ function RecentActivityChart({ sessions, language, onStart }: { sessions: Practi
   }, [currentDay]);
 
   // One weighted-accuracy bucket per local calendar day, oldest -> newest.
-  const data = buildDailyActivity(sessions, today);
+  const answers = sessions.flatMap(session => session.answer_activity);
+  const data = buildDailyActivity(answers, today);
 
   const n = data.length;
   const fmt = (d: Date) => new Intl.DateTimeFormat(locale, { month: 'numeric', day: 'numeric' }).format(d);
@@ -382,8 +384,25 @@ export default function HomePage({ currentPage, onNavigate, onSetExamDate }: Hom
     }
     void load();
     const refresh = () => { void load(); };
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+    const refreshFromStorage = (event: StorageEvent) => {
+      if (event.key === PRACTICE_PROGRESS_CHANGED_STORAGE_KEY) refresh();
+    };
+    const interval = window.setInterval(refresh, 60_000);
     window.addEventListener('focus', refresh);
-    return () => { cancelled = true; window.removeEventListener('focus', refresh); };
+    window.addEventListener(PRACTICE_PROGRESS_CHANGED_EVENT, refresh);
+    window.addEventListener('storage', refreshFromStorage);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refresh);
+      window.removeEventListener(PRACTICE_PROGRESS_CHANGED_EVENT, refresh);
+      window.removeEventListener('storage', refreshFromStorage);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
   }, [userId]);
 
   const guest = translate(language, 'homePage.guest');
@@ -431,9 +450,10 @@ export default function HomePage({ currentPage, onNavigate, onSetExamDate }: Hom
                   key={page}
                   onClick={() => onNavigate(page)}
                   className={`${cardClass} ${
-                    page === 'materials' ? 'col-span-2 min-h-[120px] lg:col-span-4' : 'min-h-[180px]'
-                  } group relative flex flex-col justify-between overflow-hidden rounded-3xl p-5 text-left text-slate-900 transition hover:-translate-y-0.5 hover:shadow-lg`}
-                >
+                    page === 'materials'
+                      ? 'col-span-2 lg:col-span-4 gap-5 justify-start'
+                      : 'min-h-[180px] justify-between'
+                  } group relative flex flex-col overflow-hidden rounded-3xl p-5 text-left text-slate-900 transition hover:-translate-y-0.5 hover:shadow-lg`}                >
                   <span
                     aria-hidden="true"
                     className={`${shapeClass} pointer-events-none absolute -right-4 -top-4 h-24 w-24 opacity-70 transition group-hover:scale-110`}

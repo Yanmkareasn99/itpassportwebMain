@@ -1,10 +1,13 @@
-import type { PracticeProgressSession } from './practice';
-
 export interface DailyActivity {
   date: Date;
   answeredCount: number;
   correctCount: number;
   percentage: number;
+}
+
+export interface DailyActivityAnswer {
+  answered_at: string;
+  is_correct: boolean;
 }
 
 function localDateKey(date: Date) {
@@ -16,7 +19,7 @@ function localDateKey(date: Date) {
 
 /** Builds an oldest-to-newest series of local calendar days. */
 export function buildDailyActivity(
-  sessions: Pick<PracticeProgressSession, 'created_at' | 'answered_count' | 'correct_answers'>[],
+  answers: DailyActivityAnswer[],
   endDate: Date,
   dayCount = 10,
 ): DailyActivity[] {
@@ -34,13 +37,13 @@ export function buildDailyActivity(
     });
   }
 
-  for (const session of sessions) {
-    const date = new Date(session.created_at);
+  for (const answer of answers) {
+    const date = new Date(answer.answered_at);
     if (Number.isNaN(date.getTime())) continue;
     const activity = activityByDate.get(localDateKey(date));
     if (!activity) continue;
-    activity.answeredCount += Math.max(0, session.answered_count);
-    activity.correctCount += Math.max(0, session.correct_answers);
+    activity.answeredCount++;
+    if (answer.is_correct) activity.correctCount++;
   }
 
   return [...activityByDate.values()].map(activity => ({

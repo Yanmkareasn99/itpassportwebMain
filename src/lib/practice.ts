@@ -256,35 +256,56 @@ export type ModeFilter = 'all' | 'new' | 'review';
 
 export interface PracticeProgressSession extends PracticeSession {
   answered_count: number;
+  answer_activity: PracticeProgressAnswer[];
+}
+
+export interface PracticeProgressAnswer {
+  answered_at: string;
+  is_correct: boolean;
 }
 
 export async function loadPracticeProgress(userId: string): Promise<PracticeProgressSession[]> {
   const sessions = await loadPracticeSessions(userId);
-  const answers = new Map<string, { sessionId: string; correct: boolean }>();
+  const answers = new Map<string, { id: string; sessionId: string; correct: boolean; answeredAt: string }>();
   for (let batch = 0; batch < sessions.length; batch += 50) {
     const ids = sessions.slice(batch, batch + 50).map(session => session.id);
     for (let offset = 0; ; offset += 500) {
       const { data, error } = await supabase.from('session_answers')
-        .select('session_id, question_id, is_correct').in('session_id', ids)
+        .select('id, session_id, question_id, is_correct, answered_at').in('session_id', ids)
         .order('answered_at').order('id').range(offset, offset + 499);
       if (error) throw error;
       for (const answer of data ?? []) {
         // A resumed question counts once per attempt; retries in a new session count again.
-        answers.set(`${answer.session_id}:${answer.question_id}`, { sessionId: answer.session_id, correct: answer.is_correct });
+        const key = `${answer.session_id}:${answer.question_id}`;
+        const previous = answers.get(key);
+        if (!previous || answer.answered_at > previous.answeredAt
+          || (answer.answered_at === previous.answeredAt && answer.id > previous.id)) {
+          answers.set(key, {
+            id: answer.id,
+            sessionId: answer.session_id,
+            correct: answer.is_correct,
+            answeredAt: answer.answered_at,
+          });
+        }
       }
       if (!data || data.length < 500) break;
     }
   }
   const totals = new Map<string, { answered: number; correct: number }>();
+  const activity = new Map<string, PracticeProgressAnswer[]>();
   for (const answer of answers.values()) {
     const total = totals.get(answer.sessionId) ?? { answered: 0, correct: 0 };
     total.answered++;
     if (answer.correct) total.correct++;
     totals.set(answer.sessionId, total);
+    const sessionActivity = activity.get(answer.sessionId) ?? [];
+    sessionActivity.push({ answered_at: answer.answeredAt, is_correct: answer.correct });
+    activity.set(answer.sessionId, sessionActivity);
   }
   return sessions.map(session => ({
     ...session,
     answered_count: totals.get(session.id)?.answered ?? 0,
     correct_answers: totals.get(session.id)?.correct ?? 0,
+    answer_activity: activity.get(session.id) ?? [],
   })).sort((a, b) => b.created_at.localeCompare(a.created_at));
 }
