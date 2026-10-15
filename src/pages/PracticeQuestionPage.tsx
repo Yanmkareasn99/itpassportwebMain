@@ -2,6 +2,7 @@ import { translateMessage, translate } from '../i18n';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { ChevronLeft, ChevronRight, CheckCircle, XCircle, Flag, ArrowLeft, Sparkles, Loader, MessageCircle } from 'lucide-react';import Layout from '../components/Layout';
 import { supabase } from '../lib/supabase';
+import { notifyPracticeProgressChanged } from '../lib/practiceProgressEvents';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getQuestionExplanation, loadAiImageInputs } from '../lib/aiChat';
@@ -299,6 +300,7 @@ export default function PracticeQuestionPage({
         is_correct: correct,
       });
       if (error) throw error;
+      notifyPracticeProgressChanged();
       setSelectedChoiceId(choiceId);
       setAnswered(true);
       setAiExplanation(null);

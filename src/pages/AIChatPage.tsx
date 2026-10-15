@@ -342,6 +342,8 @@ export default function AIChatPage({ currentPage, onNavigate }: AIChatPageProps)
           <div className="relative min-h-0 flex-1">
              <button type="button"
                 onClick={() => void resetChat()}
+                aria-label={translate(language, 'aiChatPage.reset')}
+                title={translate(language, 'aiChatPage.reset')}
                 className="shrink-0 self-end inline-flex items-center gap-2 px-2 py-2 rounded-full border border-gray-200 bg-white text-sm  hover:bg-gray-50 transition whitespace-nowrap mt-2 mr-2 absolute right-0 z-10"
               >
                 <RotateCcw className="w-4 h-4" />

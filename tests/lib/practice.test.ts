@@ -144,6 +144,10 @@ it('calculates progress from saved answers, including unfinished and older sessi
   expect(progress[0].id).toBe('s24');
   expect(progress.reduce((sum, session) => sum + session.answered_count, 0)).toBe(3);
   expect(progress.reduce((sum, session) => sum + session.correct_answers, 0)).toBe(2);
+  expect(progress[0].answer_activity).toEqual([
+    { answered_at: '2026-09-25', is_correct: false },
+    { answered_at: '2026-09-25', is_correct: true },
+  ]);
   await supabase.from('session_answers').insert({ session_id: 's24', question_id: 'q3', is_correct: true });
   const updated = await loadPracticeProgress('me');
   expect(updated.reduce((sum, session) => sum + session.answered_count, 0)).toBe(4);
