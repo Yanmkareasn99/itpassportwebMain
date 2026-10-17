@@ -41,3 +41,24 @@ it('includes exams beyond the first session batch and page', async () => {
 it('returns no activity for an account without exams', async () => {
   expect(await loadExamActivity('me')).toEqual([]);
 });
+
+it('uses legacy answer creation dates before approximating from the exam completion or creation date', async () => {
+  localStorage.setItem('manabi-local-data', JSON.stringify({
+    exam_sessions: [
+      { id: 'completed', user_id: 'me', created_at: '2026-10-10', completed_at: '2026-10-11' },
+      { id: 'unfinished', user_id: 'me', created_at: '2026-10-12', completed_at: null },
+    ],
+    exam_answers: [
+      { id: 'a', exam_session_id: 'completed', created_at: '2026-10-09', is_correct: true },
+      { id: 'b', exam_session_id: 'completed', answered_at: null, is_correct: false },
+      { id: 'c', exam_session_id: 'unfinished', is_correct: true },
+      { id: 'd', exam_session_id: 'completed', answered_at: '2026-10-08', created_at: '2026-10-09', is_correct: true },
+    ],
+  }));
+  expect(await loadExamActivity('me')).toEqual([
+    { answered_at: '2026-10-09', is_correct: true },
+    { answered_at: '2026-10-11', is_correct: false },
+    { answered_at: '2026-10-12', is_correct: true },
+    { answered_at: '2026-10-08', is_correct: true },
+  ]);
+});
