@@ -1,4 +1,5 @@
 export const en = {
+  "ui.loadStudyActivity": "Unable to load study activity.",
   "ui.refreshPoints": "Refresh points",
   "ui.versus": "vs",
   "ui.settingsUnavailable":

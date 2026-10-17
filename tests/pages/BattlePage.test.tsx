@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import BattlePage from '../../src/pages/BattlePage';
+import { PRACTICE_PROGRESS_CHANGED_EVENT } from '../../src/lib/practiceProgressEvents';
 
 const mocks = vi.hoisted(() => ({
   room: { id: 'room-1', creator_id: 'me', opponent_id: 'them', status: 'active', question_ids: ['q1'], time_per_question_seconds: 30, wager_points: 0, creator_score: 0, opponent_score: 0, created_at: new Date().toISOString() },
@@ -73,7 +74,7 @@ beforeEach(() => {
   mocks.cancel.mockResolvedValue({ ...mocks.room, status: 'completed' });
   mocks.complete.mockImplementation(async () => { mocks.room.status = 'completed'; return { ...mocks.room, winner_id: 'them' }; });
 });
-afterEach(() => { vi.useRealTimers(); });
+afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
 
 it('shows rankings ordered by wins with battle correct answers as the tiebreak statistic', async () => {
   render(<BattlePage currentPage="battle" onNavigate={() => {}} />);
@@ -91,24 +92,29 @@ it('shows rankings ordered by wins with battle correct answers as the tiebreak s
 
 describe('battle recovery', () => {
   it('persists timed-out questions and settles instead of waiting forever', async () => {
+    const dispatch = vi.spyOn(window, 'dispatchEvent');
     await resume();
     await tick(32);
     expect(mocks.submit).toHaveBeenCalledWith('room-1', 'q1', null);
+    expect(dispatch.mock.calls.filter(([event]) => event.type === PRACTICE_PROGRESS_CHANGED_EVENT)).toHaveLength(1);
     expect(mocks.complete).toHaveBeenCalledTimes(1);
     expect(screen.getByText('Defeat')).toBeTruthy();
     expect(mocks.channel).toHaveBeenCalledTimes(1);
   });
 
   it('allows retry after an answer submission fails', async () => {
+    const dispatch = vi.spyOn(window, 'dispatchEvent');
     mocks.submit.mockRejectedValueOnce(new Error('Connection lost'));
     await resume();
     fireEvent.click(screen.getByRole('button', { name: /Answer A/ }));
     await flush();
     expect(screen.getByText('Connection lost')).toBeTruthy();
+    expect(dispatch.mock.calls.filter(([event]) => event.type === PRACTICE_PROGRESS_CHANGED_EVENT)).toHaveLength(0);
     expect((screen.getByRole('button', { name: /Answer A/ }) as HTMLButtonElement).disabled).toBe(false);
     fireEvent.click(screen.getByRole('button', { name: /Answer A/ }));
     await flush();
     await tick(2);
+    expect(dispatch.mock.calls.filter(([event]) => event.type === PRACTICE_PROGRESS_CHANGED_EVENT)).toHaveLength(1);
     expect(mocks.complete).toHaveBeenCalledTimes(1);
   });
 

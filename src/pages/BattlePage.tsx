@@ -17,6 +17,7 @@ import {
 } from '../lib/points';
 import { fetchBattleRankings, type BattleRankingRow } from '../lib/battleRanking';
 import { loadQuestionsByIds } from '../lib/practice';
+import { notifyPracticeProgressChanged } from '../lib/practiceProgressEvents';
 
 interface BattlePageProps {
   currentPage: Page;
@@ -496,6 +497,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     try {
       const room = await submitOnlineBattleAnswer(activeRoom.id, question.id, choiceId);
       persisted = true;
+      notifyPracticeProgressChanged();
       if (currentRoomId.current !== room.id) return;
       setActiveRoom(room);
       advanceTimer.current = window.setTimeout(() => {

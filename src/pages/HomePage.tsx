@@ -5,7 +5,9 @@ import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { loadPracticeProgress, practiceErrorMessage, type PracticeProgressSession } from '../lib/practice';
-import { buildDailyActivity } from '../lib/dailyActivity';
+import { buildDailyActivity, type DailyActivityAnswer } from '../lib/dailyActivity';
+import { loadExamActivity } from '../lib/examActivity';
+import { loadBattleActivity } from '../lib/battleActivity';
 import { PRACTICE_PROGRESS_CHANGED_EVENT, PRACTICE_PROGRESS_CHANGED_STORAGE_KEY } from '../lib/practiceProgressEvents';
 import { supabase } from '../lib/supabase';
 import { Page, PracticeSession, ExamSession } from '../types';
@@ -269,7 +271,7 @@ function getFeatures(language: Language) {
 
 
 
-function RecentActivityChart({ sessions, language, onStart }: { sessions: PracticeProgressSession[]; language: Language; onStart: () => void }) {
+function RecentActivityChart({ answers, language, onStart }: { answers: DailyActivityAnswer[]; language: Language; onStart: () => void }) {
   const locale = languageLocales[language];
   const [today, setToday] = useState(() => new Date());
   const currentDay = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
@@ -287,7 +289,6 @@ function RecentActivityChart({ sessions, language, onStart }: { sessions: Practi
   }, [currentDay]);
 
   // One weighted-accuracy bucket per local calendar day, oldest -> newest.
-  const answers = sessions.flatMap(session => session.answer_activity);
   const data = buildDailyActivity(answers, today);
 
   const n = data.length;
@@ -301,7 +302,7 @@ function RecentActivityChart({ sessions, language, onStart }: { sessions: Practi
           {translate(language, 'homePage.recentActivity')}
         </h3>
 
-        {sessions.length === 0 ? (
+        {answers.length === 0 ? (
           <div className="flex flex-col items-center py-4 text-center">
             <p className="text-sm text-gray-500 dark:text-[#CBD5E1]">{translate(language, 'homePage.noStudyHistoryYet')}</p>
             <button onClick={onStart} className="mt-3 rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 dark:bg-[#7EA2F8] dark:text-slate-950 dark:hover:bg-blue-300">
@@ -350,6 +351,8 @@ export default function HomePage({ currentPage, onNavigate, onSetExamDate }: Hom
   const userId = user?.id;
   const { language } = useLanguage();
   const [practiceSessions, setPracticeSessions] = useState<PracticeProgressSession[]>([]);
+  const [examActivity, setExamActivity] = useState<DailyActivityAnswer[]>([]);
+  const [battleActivity, setBattleActivity] = useState<DailyActivityAnswer[]>([]);
   const [progressError, setProgressError] = useState('');
   const [examSessions, setExamSessions] = useState<ExamSession[]>([]);
   const [daysLeft, setDaysLeft] = useState(92);
@@ -359,28 +362,46 @@ export default function HomePage({ currentPage, onNavigate, onSetExamDate }: Hom
     if (!userId) return;
     let cancelled = false;
     let loading = false;
+    let refreshPending = false;
     async function load() {
-      if (loading) return;
+      if (cancelled) return;
+      if (loading) {
+        refreshPending = true;
+        return;
+      }
       loading = true;
       try {
-        const [progress, exams, target] = await Promise.allSettled([
+        const [progress, exams, target, activity, battles] = await Promise.allSettled([
           loadPracticeProgress(userId!),
           supabase.from('exam_sessions').select('*').eq('user_id', userId!)
             .order('created_at', { ascending: false }).limit(10),
           supabase.from('exam_targets').select('target_date').eq('user_id', userId!).maybeSingle(),
+          loadExamActivity(userId!),
+          loadBattleActivity(userId!),
         ]);
         if (cancelled) return;
         if (progress.status === 'fulfilled') {
           setPracticeSessions(progress.value);
-          setProgressError('');
-        } else setProgressError(practiceErrorMessage(progress.reason, 'Unable to load practice accuracy.'));
+        }
+        if (activity.status === 'fulfilled') setExamActivity(activity.value);
+        if (battles.status === 'fulfilled') setBattleActivity(battles.value);
+        const historyError = progress.status === 'rejected' ? progress.reason
+          : activity.status === 'rejected' ? activity.reason
+            : battles.status === 'rejected' ? battles.reason : null;
+        setProgressError(historyError ? practiceErrorMessage(historyError, 'Unable to load study activity.') : '');
         if (exams.status === 'fulfilled' && !exams.value.error && exams.value.data) setExamSessions(exams.value.data);
         if (target.status === 'fulfilled' && target.value.data?.target_date) {
           setExamTargetDate(target.value.data.target_date);
           const diff = Math.ceil((new Date(target.value.data.target_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
           setDaysLeft(Math.max(0, diff));
         }
-      } finally { loading = false; }
+      } finally {
+        loading = false;
+        if (refreshPending && !cancelled) {
+          refreshPending = false;
+          void load();
+        }
+      }
     }
     void load();
     const refresh = () => { void load(); };
@@ -474,7 +495,7 @@ export default function HomePage({ currentPage, onNavigate, onSetExamDate }: Hom
 
             {/* Recent activity chart */}
             <RecentActivityChart
-              sessions={practiceSessions}
+              answers={[...practiceSessions.flatMap(session => session.answer_activity), ...examActivity, ...battleActivity]}
               language={language}
               onStart={() => onNavigate('practice-list')}
             />
