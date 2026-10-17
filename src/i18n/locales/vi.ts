@@ -1,4 +1,5 @@
 ﻿export const vi = {
+  "ui.loadStudyActivity": "Không tải được lịch sử học tập.",
   "ui.refreshPoints": "Cập nhật điểm",
   "ui.versus": "đấu với",
   "ui.settingsUnavailable":

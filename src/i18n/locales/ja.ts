@@ -1,4 +1,5 @@
 export const ja = {
+  "ui.loadStudyActivity": "学習履歴を読み込めませんでした。",
   "ui.refreshPoints": "ポイントを更新",
   "ui.versus": "対",
   "ui.settingsUnavailable":

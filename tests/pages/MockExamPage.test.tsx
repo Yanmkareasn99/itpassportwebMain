@@ -1,12 +1,15 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import MockExamPage from '../../src/pages/MockExamPage';
+import { PRACTICE_PROGRESS_CHANGED_EVENT } from '../../src/lib/practiceProgressEvents';
 
 const mocks = vi.hoisted(() => ({
+  user: null as { id: string } | null,
+  from: vi.fn(),
   settings: { question_count: 2, duration_minutes: 1, passing_score_percent: 50 },
   settingsPromise: null as Promise<{ question_count: number; duration_minutes: number; passing_score_percent: number }> | null,
 }));
-vi.mock('../../src/contexts/AuthContext', () => ({ useAuth: () => ({ user: null }) }));
+vi.mock('../../src/contexts/AuthContext', () => ({ useAuth: () => ({ user: mocks.user }) }));
 vi.mock('../../src/contexts/LanguageContext', () => ({ useLanguage: () => ({ language: 'en' }) }));
 vi.mock('../../src/components/Layout', () => ({ default: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
 vi.mock('../../src/components/QuestionMedia', () => ({ QuestionImage: () => null, AnswerChoiceContent: () => <span>Answer</span> }));
@@ -23,7 +26,7 @@ vi.mock('../../src/lib/practice', () => ({
 }));
 vi.mock('../../src/lib/supabase', () => ({
   isSupabaseEnabled: true,
-  supabase: { from: vi.fn() },
+  supabase: { from: mocks.from },
 }));
 async function flush() { await act(async () => { await Promise.resolve(); }); }
 
@@ -46,10 +49,43 @@ function mockMatchMedia(isMobile: boolean) {
 
 beforeEach(() => {
   vi.useFakeTimers();
+  mocks.user = null;
+  mocks.from.mockReset();
   mocks.settings = { question_count: 2, duration_minutes: 1, passing_score_percent: 50 };
   mocks.settingsPromise = null;
 });
 afterEach(() => { vi.useRealTimers(); });
+
+it('notifies the dashboard after a signed-in mock exam has saved its answers', async () => {
+  mocks.user = { id: 'me' };
+  let resolveAnswers!: (value: { error: null }) => void;
+  const savedAnswers = new Promise<{ error: null }>(resolve => { resolveAnswers = resolve; });
+  const insertAnswers = vi.fn().mockReturnValue(savedAnswers);
+  const sessionQuery = {
+    insert: vi.fn().mockReturnThis(), select: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({ data: { id: 'exam' }, error: null }),
+    update: vi.fn().mockReturnThis(), eq: vi.fn().mockResolvedValue({ error: null }),
+  };
+  mocks.from.mockImplementation(table => table === 'exam_answers' ? { insert: insertAnswers } : sessionQuery);
+  const listener = vi.fn();
+  window.addEventListener(PRACTICE_PROGRESS_CHANGED_EVENT, listener);
+  try {
+    render(<MockExamPage currentPage="mock-exam" onNavigate={() => {}} />);
+    await flush();
+    fireEvent.click(screen.getByRole('button', { name: /Start Exam/i }));
+    await flush();
+    fireEvent.click(screen.getByRole('button', { name: /Answer/ }));
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+    expect(insertAnswers).toHaveBeenCalledWith([
+      expect.objectContaining({ exam_session_id: 'exam', is_correct: true }),
+    ]);
+    expect(listener).not.toHaveBeenCalled();
+    await act(async () => { resolveAnswers({ error: null }); });
+    expect(listener).toHaveBeenCalledOnce();
+  } finally {
+    window.removeEventListener(PRACTICE_PROGRESS_CHANGED_EVENT, listener);
+  }
+});
 
 it('does not flash default settings while the configured settings are loading', async () => {
   let resolveSettings!: (settings: typeof mocks.settings) => void;

@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { Clock, ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertCircle, BarChart2, Flag, GraduationCap, HelpCircle, List, Sparkles, X } from 'lucide-react';
 import Layout from '../components/Layout';
 import { supabase } from '../lib/supabase';
+import { notifyPracticeProgressChanged } from '../lib/practiceProgressEvents';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { DEFAULT_MOCK_EXAM_SETTINGS, fetchMockExamSettings, hasPassedMockExam, type MockExamSettings } from '../lib/mockExamSettings';
@@ -203,6 +204,7 @@ export default function MockExamPage({ currentPage, onNavigate }: MockExamPagePr
         const { error: answerError } = await supabase.from('exam_answers').insert(answerRows);
         if (answerError) console.error('Failed to save exam answers:', answerError.message);
       }
+      notifyPracticeProgressChanged();
     }
     setStage('result');
   }, [examDuration, questions, sessionId, timeLeft, user, userAnswers]);
