@@ -87,7 +87,6 @@ function GoogleSetupProbe() {
         onClick={() => void auth.completeGoogleAccountSetup({
           name: 'Google Student',
           studentId: 'S-100',
-          className: 'IT Year 2, Class A',
         })}
       >
         Complete Google setup
@@ -212,14 +211,12 @@ describe('AuthProvider password recovery lifecycle', () => {
     await waitFor(() => expect(mocks.updateProfile).toHaveBeenCalledWith({
       name: 'Google Student',
       student_id: 'S-100',
-      class_name: 'IT Year 2, Class A',
     }));
     expect(mocks.updateUser).toHaveBeenCalledWith({
       data: {
         manabi_profile_completed: true,
         name: 'Google Student',
         student_id: 'S-100',
-        class_name: 'IT Year 2, Class A',
       },
     });
     expect(await screen.findByText('false')).toBeTruthy();

@@ -18,7 +18,6 @@ export default function GoogleAccountSetupPage() {
       ?? String(user?.user_metadata.name ?? user?.user_metadata.full_name ?? ''),
   );
   const [studentId, setStudentId] = useState(profile?.student_id ?? '');
-  const [className, setClassName] = useState(profile?.class_name ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -26,7 +25,6 @@ export default function GoogleAccountSetupPage() {
     if (!profile) return;
     setName(current => current || profile.name || '');
     setStudentId(current => current || profile.student_id || '');
-    setClassName(current => current || profile.class_name || '');
   }, [profile]);
 
   async function handleSubmit(event: FormEvent) {
@@ -37,14 +35,9 @@ export default function GoogleAccountSetupPage() {
       setError(translate(language, 'loginPage.pleaseEnterYourName'));
       return;
     }
-    if (!className.trim()) {
-      setError(translate(language, 'googleSetupPage.pleaseEnterYourClass'));
-      return;
-    }
-
     setSaving(true);
     try {
-      await completeGoogleAccountSetup({ name, studentId, className });
+      await completeGoogleAccountSetup({ name, studentId });
     } catch (setupError) {
       setError(translate(language, 'googleSetupPage.failed', {
         error: setupError instanceof Error ? setupError.message : String(setupError),
@@ -108,21 +101,6 @@ export default function GoogleAccountSetupPage() {
               value={studentId}
               onChange={event => setStudentId(event.target.value)}
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 transition focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-100"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="google-setup-class" className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">
-              {translate(language, 'settingsPage.class')}
-            </label>
-            <input
-              id="google-setup-class"
-              type="text"
-              value={className}
-              onChange={event => setClassName(event.target.value)}
-              placeholder={translate(language, 'settingsPage.classPlaceholder')}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 transition focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-100"
-              required
             />
           </div>
 

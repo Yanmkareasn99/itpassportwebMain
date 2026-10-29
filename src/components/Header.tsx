@@ -1,10 +1,10 @@
-import { translate } from '../i18n';
+import { languageLocales, translate } from '../i18n';
 import { useEffect, useRef, useState } from 'react';
 import { Bell, Coins, LogOut, UserRound } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { getCachedPointBalance, getPointBalance } from '../lib/points';
-import type { Page } from '../types';
+import { getCachedPointBalance, getPointBalance, getPointHistory } from '../lib/points';
+import type { Page, PointLedgerEntry } from '../types';
 import BrandLogo from './BrandLogo';
 
 interface HeaderProps {
@@ -38,6 +38,10 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
   const { language } = useLanguage();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isPointsOpen, setIsPointsOpen] = useState(false);
+  const [pointHistory, setPointHistory] = useState<PointLedgerEntry[]>([]);
+  const [pointHistoryLoading, setPointHistoryLoading] = useState(false);
+  const [pointHistoryError, setPointHistoryError] = useState('');
   const notificationStorageKey = `manabi-notifications-read:${profile?.id ?? 'guest'}`;
   const [readNotificationIds, setReadNotificationIds] = useState<Set<number>>(
     () => readSavedNotificationIds(notificationStorageKey),
@@ -47,6 +51,7 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
   );
 
   const notificationRef = useRef<HTMLDivElement | null>(null);
+  const pointsRef = useRef<HTMLDivElement | null>(null);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
   const notifications = [
@@ -116,11 +121,17 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
       if (!profileMenuRef.current?.contains(target)) {
         setIsProfileMenuOpen(false);
       }
+
+      if (!pointsRef.current?.contains(target)) {
+        setIsPointsOpen(false);
+      }
     }
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         setIsNotificationsOpen(false);
+        setIsPointsOpen(false);
+        setIsProfileMenuOpen(false);
       }
     }
 
@@ -142,6 +153,47 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
     } catch {
       setPointBalance(null);
     }
+  }
+
+  async function loadPointHistory() {
+    if (!profile) return;
+
+    setPointHistoryLoading(true);
+    setPointHistoryError('');
+    try {
+      const [points, history] = await Promise.all([
+        getPointBalance(profile.id),
+        getPointHistory(profile.id),
+      ]);
+      setPointBalance(points.balance);
+      setPointHistory(history);
+    } catch {
+      setPointHistoryError(translate(language, 'header.pointsHistoryFailed'));
+    } finally {
+      setPointHistoryLoading(false);
+    }
+  }
+
+  function pointReasonLabel(entry: PointLedgerEntry) {
+    const isCorrect = entry.metadata?.is_correct === true;
+    switch (entry.reason) {
+      case 'daily_login': return translate(language, 'ui.dailyLogin');
+      case 'practice_answer': return translate(language, isCorrect ? 'ui.practiceCorrect' : 'ui.practiceWrong');
+      case 'mock_answer': return translate(language, isCorrect ? 'ui.mockCorrect' : 'ui.mockWrong');
+      case 'battle_wager_lock': return translate(language, 'header.battleWager');
+      case 'battle_draw_refund':
+      case 'battle_cancel_refund':
+      case 'battle_expired_refund': return translate(language, 'header.battleRefund');
+      case 'battle_win_payout': return translate(language, 'header.battleWin');
+      default: return entry.reason.replace(/_/g, ' ');
+    }
+  }
+
+  function formatPointHistoryDate(value: string) {
+    return new Intl.DateTimeFormat(languageLocales[language], {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(value));
   }
 
   useEffect(() => {
@@ -185,6 +237,7 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
               onClick={() =>
                 setIsNotificationsOpen(open => {
                   setIsProfileMenuOpen(false);
+                  setIsPointsOpen(false);
                   return !open;
                 })
               }
@@ -275,14 +328,92 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
           </div>
 
           {/* Always-visible Points */}
-          <div className="flex items-center shrink-0" aria-hidden="false">
-  <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 whitespace-nowrap bg-amber-50 text-amber-700 rounded-full border border-amber-100 dark:bg-slate-800 dark:border-slate-700 dark:text-amber-300">
-    <Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-    <span className="text-xs sm:text-sm font-semibold whitespace-nowrap">
-      {pointBalance?.toLocaleString() ?? 0} pts
-    </span>
-  </div>
-</div>
+          <div ref={pointsRef} className="relative flex shrink-0 items-center">
+            <button
+              type="button"
+              aria-label={translate(language, 'header.openPointsHistory')}
+              aria-expanded={isPointsOpen}
+              onClick={() => {
+                const willOpen = !isPointsOpen;
+                setIsPointsOpen(willOpen);
+                setIsNotificationsOpen(false);
+                setIsProfileMenuOpen(false);
+                if (willOpen) void loadPointHistory();
+              }}
+              className="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-amber-100 bg-amber-50 px-2.5 py-1 text-amber-700 transition hover:border-amber-200 hover:bg-amber-100 sm:gap-2 sm:px-3 sm:py-1.5 dark:border-slate-700 dark:bg-slate-800 dark:text-amber-300 dark:hover:bg-slate-700"
+            >
+              <Coins className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
+              <span className="whitespace-nowrap text-xs font-semibold sm:text-sm">
+                {pointBalance?.toLocaleString(languageLocales[language]) ?? 0} pts
+              </span>
+            </button>
+
+            {isPointsOpen && (
+              <div className="fixed inset-x-4 top-14 z-50 flex max-h-[calc(100dvh-4.5rem)] flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-3 sm:max-h-[calc(100dvh-6rem)] sm:w-96 dark:border-slate-700 dark:bg-slate-900">
+                <div className="border-b border-gray-100 px-4 py-3 dark:border-slate-700">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-bold text-gray-800 dark:text-slate-100">
+                        {translate(language, 'header.pointsHistory')}
+                      </p>
+                      <p className="mt-0.5 text-xs text-gray-400 dark:text-slate-400">
+                        {translate(language, 'header.balanceAfter', {
+                          count: (pointBalance ?? 0).toLocaleString(languageLocales[language]),
+                        })}
+                      </p>
+                    </div>
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-50 text-amber-600 dark:bg-amber-400/10 dark:text-amber-300">
+                      <Coins className="h-4 w-4" />
+                    </span>
+                  </div>
+                </div>
+
+                <div className="min-h-0 overflow-y-auto sm:max-h-96">
+                  {pointHistoryLoading ? (
+                    <div className="flex items-center justify-center py-10">
+                      <span className="h-6 w-6 animate-spin rounded-full border-2 border-amber-200 border-t-amber-600" />
+                    </div>
+                  ) : pointHistoryError ? (
+                    <p role="alert" className="px-4 py-8 text-center text-sm text-red-600 dark:text-red-300">
+                      {pointHistoryError}
+                    </p>
+                  ) : pointHistory.length === 0 ? (
+                    <p className="px-4 py-10 text-center text-sm text-gray-400 dark:text-slate-400">
+                      {translate(language, 'header.noPointsHistory')}
+                    </p>
+                  ) : (
+                    pointHistory.map(entry => (
+                      <div key={entry.id} className="flex items-center gap-3 border-b border-gray-50 px-4 py-3 last:border-0 dark:border-slate-800">
+                        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+                          entry.delta >= 0
+                            ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-300'
+                            : 'bg-red-50 text-red-600 dark:bg-red-400/10 dark:text-red-300'
+                        }`}>
+                          {entry.delta >= 0 ? '+' : '−'}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium capitalize text-gray-700 dark:text-slate-200">
+                            {pointReasonLabel(entry)}
+                          </p>
+                          <p className="mt-0.5 text-[11px] text-gray-400 dark:text-slate-400">
+                            {formatPointHistoryDate(entry.created_at)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className={`text-sm font-bold ${entry.delta >= 0 ? 'text-emerald-600 dark:text-emerald-300' : 'text-red-600 dark:text-red-300'}`}>
+                            {entry.delta >= 0 ? '+' : ''}{entry.delta.toLocaleString(languageLocales[language])}
+                          </p>
+                          <p className="mt-0.5 text-[10px] text-gray-400 dark:text-slate-400">
+                            {entry.balance_after.toLocaleString(languageLocales[language])} pts
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
           <div ref={profileMenuRef} className="relative">
             <button
@@ -292,6 +423,7 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
               onClick={() =>
                 setIsProfileMenuOpen(open => {
                   setIsNotificationsOpen(false);
+                  setIsPointsOpen(false);
                   return !open;
                 })
               }

@@ -29,7 +29,6 @@ interface AuthContextType {
   completeGoogleAccountSetup: (details: {
     name: string;
     studentId?: string;
-    className: string;
   }) => Promise<void>;
 
   clearPasswordRecovery: () => void;
@@ -298,6 +297,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem('manabi-local-data');
       localStorage.removeItem(`manabi-local-points:${user.id}`);
       localStorage.removeItem(`manabi-local-daily-points:${user.id}`);
+      localStorage.removeItem(`manabi-local-point-ledger:${user.id}`);
       setProfile(null);
       setUser(null);
       setSession(null);
@@ -341,27 +341,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function completeGoogleAccountSetup({
     name,
     studentId,
-    className,
   }: {
     name: string;
     studentId?: string;
-    className: string;
   }) {
     if (!isSupabaseEnabled || !user || !userHasProvider(user, 'google')) {
       throw new Error('A signed-in Google account is required.');
     }
 
     const trimmedName = name.trim();
-    const trimmedClassName = className.trim();
     if (!trimmedName) throw new Error('Name is required.');
-    if (!trimmedClassName) throw new Error('Class is required.');
 
     const { error: profileError } = await supabase
       .from('profiles')
       .update({
         name: trimmedName,
         student_id: studentId?.trim() || null,
-        class_name: trimmedClassName,
       })
       .eq('id', user.id);
     if (profileError) throw profileError;
@@ -371,7 +366,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         manabi_profile_completed: true,
         name: trimmedName,
         student_id: studentId?.trim() || null,
-        class_name: trimmedClassName,
       },
     });
     if (metadataError) throw metadataError;

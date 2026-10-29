@@ -1,5 +1,5 @@
 import { supabase, isSupabaseEnabled } from './supabase';
-import { BattleRoom, PointSetting, ProfilePoints } from '../types';
+import { BattleRoom, PointLedgerEntry, PointSetting, ProfilePoints } from '../types';
 
 export const DEFAULT_POINT_SETTINGS: Record<string, number> = {
   daily_login_points: 100,
@@ -9,8 +9,12 @@ export const DEFAULT_POINT_SETTINGS: Record<string, number> = {
   mock_wrong_points: 10,
 };
 
+export const BATTLE_ROOM_TIMEOUT_MINUTES = 15;
+export const BATTLE_REJOIN_GRACE_SECONDS = 180;
+
 const LOCAL_POINTS_KEY = 'manabi-local-points';
 const LOCAL_DAILY_KEY = 'manabi-local-daily-points';
+const LOCAL_POINT_LEDGER_KEY = 'manabi-local-point-ledger';
 
 function readLocalNumber(key: string, fallback: number) {
   const value = Number(localStorage.getItem(key));
@@ -36,6 +40,55 @@ function localBalanceKey(userId: string) {
 
 function localDailyKey(userId: string) {
   return `${LOCAL_DAILY_KEY}:${userId}`;
+}
+
+function localLedgerKey(userId: string) {
+  return `${LOCAL_POINT_LEDGER_KEY}:${userId}`;
+}
+
+function readLocalPointHistory(userId: string): PointLedgerEntry[] {
+  try {
+    const value = localStorage.getItem(localLedgerKey(userId));
+    return value ? JSON.parse(value) as PointLedgerEntry[] : [];
+  } catch {
+    return [];
+  }
+}
+
+function addLocalPointHistory(
+  userId: string,
+  delta: number,
+  reason: string,
+  balanceAfter: number,
+  metadata: Record<string, unknown> = {},
+) {
+  const entry: PointLedgerEntry = {
+    id: globalThis.crypto?.randomUUID?.() ?? `point-${Date.now()}-${Math.random()}`,
+    user_id: userId,
+    delta,
+    reason,
+    balance_after: balanceAfter,
+    metadata,
+    created_at: new Date().toISOString(),
+  };
+  localStorage.setItem(localLedgerKey(userId), JSON.stringify([
+    entry,
+    ...readLocalPointHistory(userId),
+  ].slice(0, 100)));
+}
+
+export async function getPointHistory(userId: string, limit = 50): Promise<PointLedgerEntry[]> {
+  if (!isSupabaseEnabled) return readLocalPointHistory(userId).slice(0, limit);
+
+  const { data, error } = await supabase
+    .from('point_ledger')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return (data ?? []) as PointLedgerEntry[];
 }
 
 export async function getPointBalance(userId: string): Promise<ProfilePoints> {
@@ -79,6 +132,7 @@ export async function claimDailyLoginPoints(userId: string): Promise<ProfilePoin
       const nextBalance = readLocalNumber(balanceKey, 0) + DEFAULT_POINT_SETTINGS.daily_login_points;
       localStorage.setItem(balanceKey, String(nextBalance));
       localStorage.setItem(dailyKey, today);
+      addLocalPointHistory(userId, DEFAULT_POINT_SETTINGS.daily_login_points, 'daily_login', nextBalance);
     }
     return getPointBalance(userId);
   }
@@ -98,6 +152,13 @@ export async function awardLocalAnswerPoints(userId: string, isCorrect: boolean,
   const nextBalance = readLocalNumber(balanceKey, 0) + DEFAULT_POINT_SETTINGS[key];
   localStorage.setItem(balanceKey, String(nextBalance));
   cachePointBalance(userId, nextBalance);
+  addLocalPointHistory(
+    userId,
+    DEFAULT_POINT_SETTINGS[key],
+    mode === 'practice' ? 'practice_answer' : 'mock_answer',
+    nextBalance,
+    { is_correct: isCorrect },
+  );
 }
 
 export async function fetchPointSettings(): Promise<PointSetting[]> {
@@ -142,6 +203,44 @@ export async function createOnlineBattleRoom(wager: number, questionCount: numbe
   });
   if (error) throw error;
   return data as BattleRoom;
+}
+
+export async function expireStaleBattleRooms() {
+  if (!isSupabaseEnabled) return 0;
+  const { data, error } = await supabase.rpc('expire_stale_battle_rooms');
+  if (error) throw error;
+  return Number(data ?? 0);
+}
+
+export async function leaveActiveBattleRoom(roomId: string) {
+  const { data, error } = await supabase.rpc('leave_active_battle_room', {
+    target_room_id: roomId,
+  });
+  if (error) throw error;
+  return data as BattleRoom;
+}
+
+export async function rejoinActiveBattleRoom(roomId: string) {
+  const { data, error } = await supabase.rpc('rejoin_active_battle_room', {
+    target_room_id: roomId,
+  });
+  if (error) throw error;
+  return data as BattleRoom;
+}
+
+export async function abandonActiveBattleRoom(roomId: string) {
+  const { data, error } = await supabase.rpc('abandon_active_battle_room', {
+    target_room_id: roomId,
+  });
+  if (error) throw error;
+  return data as BattleRoom;
+}
+
+export async function expireAbandonedBattleRooms() {
+  if (!isSupabaseEnabled) return 0;
+  const { data, error } = await supabase.rpc('expire_abandoned_battle_rooms');
+  if (error) throw error;
+  return Number(data ?? 0);
 }
 
 export async function joinOnlineBattleRoom(roomId: string) {
