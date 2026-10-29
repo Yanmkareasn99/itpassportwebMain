@@ -4,7 +4,8 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { createPracticeSession, loadPracticeSession, practiceErrorMessage, preloadQuestionCatalog } from './lib/practice';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import type { Page, Question } from './types';
+import { isSupabaseEnabled, supabase } from './lib/supabase';
+import type { BattleRoom, Page, Question } from './types';
 
 const AIChatPage = lazy(() => import('./pages/AIChatPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
@@ -195,6 +196,57 @@ function QuestionCatalogPreloader() {
   return null;
 }
 
+export function ActiveBattleRedirector() {
+  const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const userId = user?.id;
+
+  useEffect(() => {
+    if (!isSupabaseEnabled || !userId) return;
+
+    void supabase
+      .from('battle_rooms')
+      .select('*')
+      .eq('creator_id', userId)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) {
+          console.warn('Failed to check active battle:', error.message);
+          return;
+        }
+        const room = data as BattleRoom | null;
+        if (room?.opponent_id && location.pathname !== '/battle') navigate('/battle');
+      });
+  }, [location.pathname, navigate, userId]);
+
+  useEffect(() => {
+    if (!isSupabaseEnabled || !userId) return;
+
+    const channel = supabase
+      .channel(`creator-active-battle-${userId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'battle_rooms',
+        filter: `creator_id=eq.${userId}`,
+      }, payload => {
+        const room = payload.new as BattleRoom;
+        if (room.status === 'active' && room.opponent_id && window.location.pathname !== '/battle') {
+          navigate('/battle');
+        }
+      })
+      .subscribe();
+
+    return () => { void supabase.removeChannel(channel); };
+  }, [navigate, userId]);
+
+  return null;
+}
+
 export default function App() {
   useEffect(() => {
     const savedTheme = window.localStorage.getItem('manabi-theme');
@@ -205,6 +257,7 @@ export default function App() {
     <BrowserRouter>
       <AuthProvider>
         <QuestionCatalogPreloader />
+        <ActiveBattleRedirector />
         <AppRoutes />
       </AuthProvider>
     </BrowserRouter>

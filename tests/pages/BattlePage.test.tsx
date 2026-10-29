@@ -52,9 +52,12 @@ vi.mock('../../src/lib/supabase', () => ({
 
 async function flush() { await act(async () => { await Promise.resolve(); }); }
 async function resume() {
+  mocks.room.status = 'active';
   render(<BattlePage currentPage="battle" onNavigate={() => {}} />);
   await flush();
-  fireEvent.click(screen.getByRole('button', { name: /Resume/ }));
+  if (mocks.room.creator_id !== 'me') {
+    fireEvent.click(screen.getByRole('button', { name: /Resume/ }));
+  }
   await flush();
 }
 async function tick(seconds: number) {
@@ -64,7 +67,7 @@ async function tick(seconds: number) {
 beforeEach(() => {
   vi.useFakeTimers();
   vi.clearAllMocks();
-  mocks.room.status = 'active';
+  mocks.room.status = 'waiting';
   mocks.balance = 100;
   mocks.room.time_per_question_seconds = 30;
   mocks.room.wager_points = 0;
@@ -182,13 +185,25 @@ describe('battle recovery', () => {
 
   it('starts a waiting room through polling without recreating its subscription', async () => {
     mocks.room.status = 'waiting';
-    await resume();
+    render(<BattlePage currentPage="battle" onNavigate={() => {}} />);
+    await flush();
+    fireEvent.click(screen.getByRole('button', { name: /Resume/ }));
+    await flush();
     expect(screen.getByText(/The battle starts automatically/)).toBeTruthy();
     mocks.room.status = 'active';
     await tick(3);
     expect(screen.getByText('Test question')).toBeTruthy();
     expect(mocks.channel.mock.calls.filter(([name]) => String(name).startsWith('battle-room-'))).toHaveLength(1);
   });
+});
+
+it('automatically opens the battle when an opponent joins the creator room', async () => {
+  mocks.room.status = 'active';
+  render(<BattlePage currentPage="battle" onNavigate={() => {}} />);
+  await flush();
+  await flush();
+
+  expect(screen.getByText('Test question')).toBeTruthy();
 });
 
 it('allows a player to leave and rejoin during the three-minute grace period', async () => {

@@ -246,7 +246,16 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     const availableRooms = (data ?? []) as BattleRoom[];
     setRooms(availableRooms);
     void loadProfileNames(availableRooms.map(room => room.creator_id));
-  }, [loadProfileNames, profile?.id]);
+    const creatorRoom = availableRooms.find(room => (
+      room.status === 'active'
+      && room.creator_id === profile?.id
+      && Boolean(room.opponent_id)
+    ));
+    if (stage === 'lobby' && creatorRoom) {
+      setActiveRoom(creatorRoom);
+      setStage(creatorRoom.abandoning_user_id === profile?.id ? 'left' : 'waiting');
+    }
+  }, [loadProfileNames, profile?.id, stage]);
 
   const loadRankings = useCallback(async () => {
     if (!isSupabaseEnabled) return;
