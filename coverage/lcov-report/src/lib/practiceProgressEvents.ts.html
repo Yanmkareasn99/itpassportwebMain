@@ -3,7 +3,7 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for src/components/BrandLogo.tsx</title>
+    <title>Code coverage report for src/lib/practiceProgressEvents.ts</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="../../prettify.css" />
     <link rel="stylesheet" href="../../base.css" />
@@ -19,20 +19,20 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/components</a> BrandLogo.tsx</h1>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/lib</a> practiceProgressEvents.ts</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">86.66% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>18/18</span>
+                <span class='fraction'>13/15</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">62.5% </span>
+                <span class="strong">50% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>5/8</span>
+                <span class='fraction'>1/2</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">86.66% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>18/18</span>
+                <span class='fraction'>13/15</span>
             </div>
         
             
@@ -78,44 +78,35 @@
 <a name='L13'></a><a href='#L13'>13</a>
 <a name='L14'></a><a href='#L14'>14</a>
 <a name='L15'></a><a href='#L15'>15</a>
-<a name='L16'></a><a href='#L16'>16</a>
-<a name='L17'></a><a href='#L17'>17</a>
-<a name='L18'></a><a href='#L18'>18</a>
-<a name='L19'></a><a href='#L19'>19</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L16'></a><a href='#L16'>16</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">55x</span>
-<span class="cline-any cline-yes">55x</span>
-<span class="cline-any cline-yes">55x</span>
-<span class="cline-any cline-yes">55x</span>
-<span class="cline-any cline-yes">55x</span>
-<span class="cline-any cline-yes">55x</span>
-<span class="cline-any cline-yes">55x</span>
-<span class="cline-any cline-yes">55x</span>
-<span class="cline-any cline-yes">55x</span>
-<span class="cline-any cline-yes">55x</span>
-<span class="cline-any cline-yes">55x</span>
-<span class="cline-any cline-yes">55x</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">interface BrandLogoProps {
-  alt?: string;
-  variant?: 'wordmark' | 'mark';
-  compact?: boolean;
-}
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">export const PRACTICE_PROGRESS_CHANGED_EVENT = 'manabi:practice-progress-changed';
+export const PRACTICE_PROGRESS_CHANGED_STORAGE_KEY = 'manabi-practice-progress-updated';
 &nbsp;
-export default function BrandLogo({ alt = 'マナビ', variant = 'wordmark', compact = false }: BrandLogoProps) {
-  const mark = variant === 'mark';
-  return (
-    &lt;span className={`relative inline-block shrink-0 overflow-hidden ${<span class="branch-0 cbranch-no" title="branch not covered" >mark ? 'h-7 w-7' : c</span>ompact ? 'h-10 w-[117px]' : 'h-[50px] w-[146px]'}`}&gt;
-      &lt;img
-        src={<span class="branch-0 cbranch-no" title="branch not covered" >mark ? '/manabi-icon-v3.png' : '</span>/manabi-wordmark-v3.png'}
-        alt={alt}
-        className={`absolute max-w-none dark:brightness-[1.8] ${<span class="branch-0 cbranch-no" title="branch not covered" >mark ? '-left-[3px] -top-[4px] w-[34px]' : c</span>ompact ? '-left-[14px] -top-[17px] w-[142px]' : '-left-[17px] -top-[21px] w-[177px]'}`}
-      /&gt;
-    &lt;/span&gt;
-  );
+/** Notifies the current page and other open tabs that study activity changed. */
+export function notifyPracticeProgressChanged() {
+  window.dispatchEvent(new Event(PRACTICE_PROGRESS_CHANGED_EVENT));
+  try {
+    window.localStorage.setItem(
+      PRACTICE_PROGRESS_CHANGED_STORAGE_KEY,
+      `${Date.now()}:${Math.random()}`,
+    );
+<span class="branch-0 cbranch-no" title="branch not covered" >  } catch {</span>
+<span class="cstat-no" title="statement not covered" >    // The same-page event still works when storage is unavailable.</span>
+<span class="cstat-no" title="statement not covered" >  }</span>
 }
 &nbsp;</pre></td></tr></table></pre>
 
@@ -124,7 +115,7 @@ export default function BrandLogo({ alt = 'マナビ', variant = 'wordmark', com
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-10-03T01:55:17.378Z
+                at 2026-10-29T01:52:37.236Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

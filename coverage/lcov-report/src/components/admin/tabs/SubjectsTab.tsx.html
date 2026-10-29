@@ -404,7 +404,7 @@
 <span class="cstat-no" title="statement not covered" >  return (</span>
 <span class="cstat-no" title="statement not covered" >    &lt;div className="space-y-4"&gt;</span>
 <span class="cstat-no" title="statement not covered" >      &lt;div className="flex justify-end"&gt;</span>
-<span class="cstat-no" title="statement not covered" >        &lt;button onClick={startNew} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition"&gt;</span>
+<span class="cstat-no" title="statement not covered" >        &lt;button type="button" onClick={startNew} className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition"&gt;</span>
 <span class="cstat-no" title="statement not covered" >          &lt;Plus className="w-4 h-4" /&gt;{translate(language, 'adminPage.addSubject')}</span>
 <span class="cstat-no" title="statement not covered" >        &lt;/button&gt;</span>
 <span class="cstat-no" title="statement not covered" >      &lt;/div&gt;</span>
@@ -413,7 +413,7 @@
 <span class="cstat-no" title="statement not covered" >        &lt;div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6"&gt;</span>
 <span class="cstat-no" title="statement not covered" >          &lt;div className="flex items-center justify-between mb-4"&gt;</span>
 <span class="cstat-no" title="statement not covered" >            &lt;h3 className="font-bold text-gray-800"&gt;{editingId === 'new' ? translate(language, 'adminPage.addSubject') : translate(language, 'adminPage.editSubject')}&lt;/h3&gt;</span>
-<span class="cstat-no" title="statement not covered" >            &lt;button onClick={() =&gt; setEditingId(null)} className="p-1 hover:bg-gray-100 rounded-lg"&gt;&lt;X className="w-4 h-4 text-gray-500" /&gt;&lt;/button&gt;</span>
+<span class="cstat-no" title="statement not covered" >            &lt;button type="button" onClick={() =&gt; setEditingId(null)} className="p-1 hover:bg-gray-100 rounded-lg"&gt;&lt;X className="w-4 h-4 text-gray-500" /&gt;&lt;/button&gt;</span>
 <span class="cstat-no" title="statement not covered" >          &lt;/div&gt;</span>
 <span class="cstat-no" title="statement not covered" >          {error &amp;&amp; &lt;div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600"&gt;{error}&lt;/div&gt;}</span>
 <span class="cstat-no" title="statement not covered" >          &lt;div className="space-y-3"&gt;</span>
@@ -434,8 +434,8 @@
 <span class="cstat-no" title="statement not covered" >            &lt;/div&gt;</span>
 <span class="cstat-no" title="statement not covered" >          &lt;/div&gt;</span>
 <span class="cstat-no" title="statement not covered" >          &lt;div className="flex justify-end gap-3 mt-4"&gt;</span>
-<span class="cstat-no" title="statement not covered" >            &lt;button onClick={() =&gt; setEditingId(null)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl transition"&gt;{translate(language, 'adminPage.cancel')}&lt;/button&gt;</span>
-<span class="cstat-no" title="statement not covered" >            &lt;button onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition disabled:opacity-60"&gt;</span>
+<span class="cstat-no" title="statement not covered" >            &lt;button type="button" onClick={() =&gt; setEditingId(null)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl transition"&gt;{translate(language, 'adminPage.cancel')}&lt;/button&gt;</span>
+<span class="cstat-no" title="statement not covered" >            &lt;button type="button" onClick={handleSave} disabled={saving} className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition disabled:opacity-60"&gt;</span>
 <span class="cstat-no" title="statement not covered" >              {saving ? &lt;RefreshCw className="w-4 h-4 animate-spin" /&gt; : &lt;Save className="w-4 h-4" /&gt;}{translate(language, 'adminPage.save')}</span>
 <span class="cstat-no" title="statement not covered" >            &lt;/button&gt;</span>
 <span class="cstat-no" title="statement not covered" >          &lt;/div&gt;</span>
@@ -457,8 +457,8 @@
 <span class="cstat-no" title="statement not covered" >                  {s.description &amp;&amp; &lt;p className="text-xs text-gray-400"&gt;{s.description}&lt;/p&gt;}</span>
 <span class="cstat-no" title="statement not covered" >                &lt;/div&gt;</span>
 <span class="cstat-no" title="statement not covered" >                &lt;div className="flex items-center gap-1"&gt;</span>
-<span class="cstat-no" title="statement not covered" >                  &lt;button onClick={() =&gt; startEdit(s)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"&gt;&lt;Edit2 className="w-4 h-4" /&gt;&lt;/button&gt;</span>
-<span class="cstat-no" title="statement not covered" >                  &lt;button onClick={() =&gt; handleDelete(s.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"&gt;&lt;Trash2 className="w-4 h-4" /&gt;&lt;/button&gt;</span>
+<span class="cstat-no" title="statement not covered" >                  &lt;button type="button" onClick={() =&gt; startEdit(s)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"&gt;&lt;Edit2 className="w-4 h-4" /&gt;&lt;/button&gt;</span>
+<span class="cstat-no" title="statement not covered" >                  &lt;button type="button" onClick={() =&gt; handleDelete(s.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"&gt;&lt;Trash2 className="w-4 h-4" /&gt;&lt;/button&gt;</span>
 <span class="cstat-no" title="statement not covered" >                &lt;/div&gt;</span>
 <span class="cstat-no" title="statement not covered" >              &lt;/div&gt;</span>
 <span class="cstat-no" title="statement not covered" >            ))}</span>
@@ -475,7 +475,7 @@
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-10-07T04:37:12.975Z
+                at 2026-10-29T01:52:37.236Z
             </div>
         <script src="../../../../prettify.js"></script>
         <script>

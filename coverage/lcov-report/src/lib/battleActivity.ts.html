@@ -3,7 +3,7 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for src/lib/scoring.ts</title>
+    <title>Code coverage report for src/lib/battleActivity.ts</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="../../prettify.css" />
     <link rel="stylesheet" href="../../base.css" />
@@ -19,34 +19,34 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/lib</a> scoring.ts</h1>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/lib</a> battleActivity.ts</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">92.85% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>14/14</span>
+                <span class='fraction'>13/14</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">50% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>8/8</span>
+                <span class='fraction'>3/6</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>3/3</span>
+                <span class='fraction'>1/1</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">92.85% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>14/14</span>
+                <span class='fraction'>13/14</span>
             </div>
         
             
@@ -78,33 +78,33 @@
 <a name='L13'></a><a href='#L13'>13</a>
 <a name='L14'></a><a href='#L14'>14</a>
 <a name='L15'></a><a href='#L15'>15</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">export function calculateAccuracy(correctAnswers: number, totalQuestions: number): number {
-  if (totalQuestions &lt;= 0) return 0;
-  return Math.round((correctAnswers / totalQuestions) * 100);
-}
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { supabase } from './supabase';
+import type { DailyActivityAnswer } from './dailyActivity';
 &nbsp;
-export function calculateScore(correctAnswers: number, pointsPerQuestion = 1): number {
-  return correctAnswers * pointsPerQuestion;
-}
-&nbsp;
-export function classifyAccuracy(accuracy: number): 'good' | 'passable' | 'needs-improvement' {
-  if (accuracy &gt;= 70) return 'good';
-  if (accuracy &gt;= 50) return 'passable';
-  return 'needs-improvement';
-}
+export async function loadBattleActivity(userId: string): Promise&lt;DailyActivityAnswer[]&gt; {
+  const answers: DailyActivityAnswer[] = [];
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await supabase.from('battle_answers')
+      .select('answered_at, is_correct').eq('user_id', userId)
+      .order('answered_at').order('id').range(offset, offset + 499);
+    if (error) <span class="branch-0 cbranch-no" title="branch not covered" >throw error;</span>
+    answers.push(...(<span class="branch-0 cbranch-no" title="branch not covered" >data ?? []))</span>;
+    if (!data || data.length &lt; 500) return answers;
+<span class="branch-0 cbranch-no" title="branch not covered" >  }</span>
+<span class="cstat-no" title="statement not covered" >}</span>
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
@@ -112,7 +112,7 @@ export function classifyAccuracy(accuracy: number): 'good' | 'passable' | 'needs
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-10-03T01:55:17.378Z
+                at 2026-10-29T01:52:37.236Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

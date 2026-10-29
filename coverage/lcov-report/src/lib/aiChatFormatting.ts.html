@@ -3,7 +3,7 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for src/lib/battleRanking.ts</title>
+    <title>Code coverage report for src/lib/aiChatFormatting.ts</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="../../prettify.css" />
     <link rel="stylesheet" href="../../base.css" />
@@ -19,20 +19,20 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/lib</a> battleRanking.ts</h1>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">src/lib</a> aiChatFormatting.ts</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">77.27% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>17/22</span>
+                <span class='fraction'>36/36</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">33.33% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>1/3</span>
+                <span class='fraction'>3/3</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">77.27% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>17/22</span>
+                <span class='fraction'>36/36</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line medium'></div>
+    <div class='status-line high'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -85,7 +85,21 @@
 <a name='L20'></a><a href='#L20'>20</a>
 <a name='L21'></a><a href='#L21'>21</a>
 <a name='L22'></a><a href='#L22'>22</a>
-<a name='L23'></a><a href='#L23'>23</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -95,39 +109,67 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">27x</span>
-<span class="cline-any cline-yes">27x</span>
-<span class="cline-any cline-yes">27x</span>
-<span class="cline-any cline-yes">27x</span>
-<span class="cline-any cline-yes">27x</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-yes">27x</span>
-<span class="cline-any cline-yes">27x</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { supabase } from './supabase';
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">129x</span>
+<span class="cline-any cline-yes">129x</span>
+<span class="cline-any cline-yes">129x</span>
+<span class="cline-any cline-yes">129x</span>
+<span class="cline-any cline-yes">129x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">516x</span>
+<span class="cline-any cline-yes">516x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-yes">43x</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">const LATEX_COMMANDS: Array&lt;[RegExp, string]&gt; = [
+  [/[\\¥](?:rightarrow|to)\b/g, '→'],
+  [/[\\¥]leftarrow\b/g, '←'],
+  [/[\\¥]leftrightarrow\b/g, '↔'],
+  [/[\\¥]land\b/g, '∧'],
+  [/[\\¥]lor\b/g, '∨'],
+  [/[\\¥]neg\b/g, '¬'],
+  [/[\\¥]oplus\b/g, '⊕'],
+  [/[\\¥]neq\b/g, '≠'],
+  [/[\\¥]leq?\b/g, '≤'],
+  [/[\\¥]geq?\b/g, '≥'],
+  [/[\\¥]times\b/g, '×'],
+  [/[\\¥]cdot\b/g, '·'],
+];
 &nbsp;
-export interface BattleRankingRow {
-  ranking_position: number;
-  user_id: string;
-  name: string;
-  win_count: number;
-  correct_answer_count: number;
-}
+/** Makes common model-generated LaTeX readable in the plain-text chat UI. */
+export function formatAiChatContent(content: string) {
+  let formatted = content
+    .replace(/[\\¥]\[([\s\S]*?)[\\¥]\]/g, '$1')
+    .replace(/[\\¥]\(([\s\S]*?)[\\¥]\)/g, '$1')
+    .replace(/\$([^$\n]+)\$/g, '$1');
 &nbsp;
-export async function fetchBattleRankings(limit = 50): Promise&lt;BattleRankingRow[]&gt; {
-  const { data, error } = await supabase.rpc('get_battle_rankings', {
-    ranking_limit: limit,
-  });
-  if (error) <span class="branch-0 cbranch-no" title="branch not covered" >{</span>
-<span class="cstat-no" title="statement not covered" >    if (error.code === 'PGRST202' || error.message?.includes('get_battle_rankings')) {</span>
-<span class="cstat-no" title="statement not covered" >      throw new Error('Battle rankings are unavailable. Ask an administrator to apply the battle ranking migration.');</span>
-<span class="cstat-no" title="statement not covered" >    }</span>
-<span class="cstat-no" title="statement not covered" >    throw error;</span>
-<span class="cstat-no" title="statement not covered" >  }</span>
-  return (<span class="branch-0 cbranch-no" title="branch not covered" >data ?? []) as BattleRankingRow[];</span>
+  // Remove common formatting wrappers while retaining their readable content.
+  for (let pass = 0; pass &lt; 3; pass++) {
+    formatted = formatted.replace(
+      /[\\¥](?:text|textrm|mathrm|mathbf|textbf|operatorname)\{([^{}]*)\}/g,
+      '$1',
+    );
+  }
+&nbsp;
+  for (const [command, replacement] of LATEX_COMMANDS) {
+    formatted = formatted.replace(command, replacement);
+  }
+&nbsp;
+  return formatted;
 }
 &nbsp;</pre></td></tr></table></pre>
 
@@ -136,7 +178,7 @@ export async function fetchBattleRankings(limit = 50): Promise&lt;BattleRankingR
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-10-03T01:55:17.378Z
+                at 2026-10-29T01:52:37.236Z
             </div>
         <script src="../../prettify.js"></script>
         <script>
