@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createOnlineBattleRoom } from '../../src/lib/points';
+import {
+  abandonActiveBattleRoom,
+  createOnlineBattleRoom,
+  expireAbandonedBattleRooms,
+  expireStaleBattleRooms,
+  leaveActiveBattleRoom,
+  rejoinActiveBattleRoom,
+} from '../../src/lib/points';
 
 const mocks = vi.hoisted(() => ({ rpc: vi.fn() }));
 
@@ -33,4 +40,29 @@ describe('createOnlineBattleRoom', () => {
     await expect(createOnlineBattleRoom(100, 5, 30)).rejects.toThrow('Insufficient points');
     expect(mocks.rpc).toHaveBeenCalledTimes(1);
   });
+});
+
+it('requests expiration of stale waiting battle rooms', async () => {
+  mocks.rpc.mockResolvedValueOnce({ data: 2, error: null });
+
+  await expect(expireStaleBattleRooms()).resolves.toBe(2);
+  expect(mocks.rpc).toHaveBeenCalledWith('expire_stale_battle_rooms');
+});
+
+it.each([
+  ['leave_active_battle_room', leaveActiveBattleRoom],
+  ['rejoin_active_battle_room', rejoinActiveBattleRoom],
+  ['abandon_active_battle_room', abandonActiveBattleRoom],
+] as const)('calls the %s battle lifecycle RPC', async (rpcName, action) => {
+  mocks.rpc.mockResolvedValueOnce({ data: { id: 'room-1' }, error: null });
+
+  await action('room-1');
+  expect(mocks.rpc).toHaveBeenCalledWith(rpcName, { target_room_id: 'room-1' });
+});
+
+it('requests settlement of expired abandonment grace periods', async () => {
+  mocks.rpc.mockResolvedValueOnce({ data: 1, error: null });
+
+  await expect(expireAbandonedBattleRooms()).resolves.toBe(1);
+  expect(mocks.rpc).toHaveBeenCalledWith('expire_abandoned_battle_rooms');
 });

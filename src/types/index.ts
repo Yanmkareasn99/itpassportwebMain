@@ -80,6 +80,8 @@ export interface BattleRoom {
   created_at: string;
   started_at: string | null;
   completed_at: string | null;
+  abandoning_user_id?: string | null;
+  abandonment_deadline_at?: string | null;
 }
 
 export interface ProfilePoints {
@@ -87,6 +89,16 @@ export interface ProfilePoints {
   balance: number;
   last_daily_awarded_on: string | null;
   updated_at: string;
+}
+
+export interface PointLedgerEntry {
+  id: string;
+  user_id: string;
+  delta: number;
+  reason: string;
+  balance_after: number;
+  metadata: Record<string, unknown>;
+  created_at: string;
 }
 
 export interface StudyMaterial {

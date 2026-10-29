@@ -8,11 +8,18 @@ import { translateMessage, translate, languageLocales } from '../i18n';
 import { AnswerChoice, BattleRoom, Page, Question } from '../types';
 import { AnswerChoiceContent, QuestionImage } from '../components/QuestionMedia';
 import {
+  abandonActiveBattleRoom,
+  BATTLE_REJOIN_GRACE_SECONDS,
+  BATTLE_ROOM_TIMEOUT_MINUTES,
   cancelOnlineBattleRoom,
   completeOnlineBattleRoom,
   createOnlineBattleRoom,
+  expireAbandonedBattleRooms,
+  expireStaleBattleRooms,
   getPointBalance,
   joinOnlineBattleRoom,
+  leaveActiveBattleRoom,
+  rejoinActiveBattleRoom,
   submitOnlineBattleAnswer,
 } from '../lib/points';
 import { fetchBattleRankings, type BattleRankingRow } from '../lib/battleRanking';
@@ -27,7 +34,7 @@ interface BattlePageProps {
 const DEFAULT_BATTLE_QUESTIONS = 5;
 const DEFAULT_TIME_PER_QUESTION = 30;
 
-type BattleStage = 'lobby' | 'waiting' | 'battle' | 'result';
+type BattleStage = 'lobby' | 'waiting' | 'battle' | 'left' | 'result';
 
 type BattleAnswerRow = {
   user_id: string;
@@ -146,6 +153,9 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   const [rankingLoading, setRankingLoading] = useState(isSupabaseEnabled);
   const [rankingError, setRankingError] = useState('');
   const [joinCode, setJoinCode] = useState('');
+  const [leaveConfirmationOpen, setLeaveConfirmationOpen] = useState(false);
+  const [abandonConfirmationOpen, setAbandonConfirmationOpen] = useState(false);
+  const [rejoinSecondsLeft, setRejoinSecondsLeft] = useState(BATTLE_REJOIN_GRACE_SECONDS);
   const createCardRef = useRef<HTMLElement>(null);
 
   const submittingAnswer = useRef(false);
@@ -214,6 +224,12 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   const loadRooms = useCallback(async () => {
     if (!isSupabaseEnabled) return;
     setError('');
+    try {
+      await expireStaleBattleRooms();
+    } catch (expirationError) {
+      setError(expirationError instanceof Error ? expirationError.message : 'Unable to expire old battle rooms.');
+      return;
+    }
     const { data, error: roomError } = await supabase
       .from('battle_rooms')
       .select('*')
@@ -270,6 +286,8 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     if (!activeRoomId || refreshingRoom.current) return;
     refreshingRoom.current = true;
     try {
+      await expireAbandonedBattleRooms();
+      if (stage === 'waiting') await expireStaleBattleRooms();
       const { data, error: roomError } = await supabase
         .from('battle_rooms')
         .select('*')
@@ -285,7 +303,9 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
       setActiveRoom(room);
       void loadProfileNames([room.creator_id, room.opponent_id]);
 
-      if (room.status === 'active' && stage === 'waiting') {
+      if (room.status === 'active' && room.abandoning_user_id === profile?.id) {
+        setStage('left');
+      } else if (room.status === 'active' && stage === 'waiting') {
         try {
           await loadQuestionsForRoom(room);
           const savedAnswers = await loadRoomAnswers(room.id);
@@ -366,6 +386,21 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
       void supabase.removeChannel(channel);
     };
   }, [activeRoomId]);
+
+  useEffect(() => {
+    const deadline = activeRoom?.abandonment_deadline_at;
+    if (!deadline) {
+      setRejoinSecondsLeft(BATTLE_REJOIN_GRACE_SECONDS);
+      return;
+    }
+
+    const updateCountdown = () => {
+      setRejoinSecondsLeft(Math.max(0, Math.ceil((new Date(deadline).getTime() - Date.now()) / 1000)));
+    };
+    updateCountdown();
+    const interval = window.setInterval(updateCountdown, 1000);
+    return () => window.clearInterval(interval);
+  }, [activeRoom?.abandonment_deadline_at]);
 
   useEffect(() => {
     if (stage !== 'lobby') return;
@@ -483,6 +518,62 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
       setError(cancelError instanceof Error ? cancelError.message : 'Unable to cancel battle room.');
     } finally {
       cancellingRoom.current = false;
+      setLoading(false);
+    }
+  }
+
+  async function confirmLeaveBattle() {
+    if (!activeRoom) return;
+    setLoading(true);
+    setError('');
+    try {
+      const room = await leaveActiveBattleRoom(activeRoom.id);
+      setActiveRoom(room);
+      setLeaveConfirmationOpen(false);
+      setStage('left');
+    } catch (leaveError) {
+      setError(leaveError instanceof Error ? leaveError.message : 'Unable to leave battle.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function rejoinBattle() {
+    if (!activeRoom || rejoinSecondsLeft <= 0) return;
+    setLoading(true);
+    setError('');
+    try {
+      const room = await rejoinActiveBattleRoom(activeRoom.id);
+      setActiveRoom(room);
+      if (room.status === 'completed') {
+        setStage('result');
+        await loadBalance();
+        void loadRankings();
+      } else {
+        setStage('waiting');
+        window.setTimeout(() => { void refreshRoomRef.current(); }, 0);
+      }
+    } catch (rejoinError) {
+      setError(rejoinError instanceof Error ? rejoinError.message : 'Unable to rejoin battle.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function confirmAbandonBattle() {
+    if (!activeRoom) return;
+    setLoading(true);
+    setError('');
+    try {
+      const room = await abandonActiveBattleRoom(activeRoom.id);
+      setActiveRoom(room);
+      setAbandonConfirmationOpen(false);
+      setStage('result');
+      await loadBalance();
+      void loadRankings();
+    } catch (abandonError) {
+      setError(abandonError instanceof Error ? abandonError.message : 'Unable to abandon battle.');
+    } finally {
       setLoading(false);
     }
   }
@@ -718,13 +809,19 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                         <span className="flex items-center gap-1.5"><ListChecks className="h-4 w-4 text-indigo-400" />{room.question_ids.length}</span>
                         <span className="flex items-center gap-1.5"><Timer className="h-4 w-4 text-indigo-400" />{translate(language, 'ui.seconds', { count: room.time_per_question_seconds ?? DEFAULT_TIME_PER_QUESTION })}</span>
                         <span className="flex items-center gap-1.5"><Coins className="h-4 w-4 text-amber-500" />{room.wager_points.toLocaleString(locale)}</span>
+                        <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-300">
+                          <Timer className="h-4 w-4" />
+                          {translate(language, 'ui.roomExpiresIn', {
+                            count: Math.max(1, Math.ceil(BATTLE_ROOM_TIMEOUT_MINUTES - (Date.now() - new Date(room.created_at).getTime()) / 60_000)),
+                          })}
+                        </span>
                       </div>
                     </div>
                     <button type="button"
                       onClick={() => {
                         if (mine) {
                           setActiveRoom(room);
-                          setStage('waiting');
+                          setStage(room.status === 'active' && room.abandoning_user_id === profile?.id ? 'left' : 'waiting');
                         } else void joinRoom(room.id);
                       }}
                       disabled={loading}
@@ -843,6 +940,9 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
             <p>{translate(language, 'ui.roomRules', { count: activeRoom?.question_ids.length ?? 0, seconds: roomTimeLimit })}</p>
           </div>
           <p className={`mt-5 text-sm ${mute}`}>{translate(language, 'ui.keepOpen')}</p>
+          <p className="mt-2 text-xs font-semibold text-amber-600 dark:text-amber-300">
+            {translate(language, 'ui.roomExpiresAfter', { count: BATTLE_ROOM_TIMEOUT_MINUTES })}
+          </p>
           {error && <p role="alert" className="mt-4 text-sm font-medium text-rose-500">{translateMessage(language, error)}</p>}
           <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
             <button type="button"
@@ -856,11 +956,73 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
             >
               {translate(language, 'ui.checkRooms')}
             </button>
-            <button type="button" onClick={() => void cancelRoom()} disabled={loading} className={secondaryBtn}>
-              {translate(language, 'ui.cancelRefund')}
+            {activeRoom?.status === 'waiting' && activeRoom.creator_id === profile?.id && (
+              <button type="button" onClick={() => void cancelRoom()} disabled={loading} className={secondaryBtn}>
+                {translate(language, 'ui.cancelRefund')}
+              </button>
+            )}
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // ================= LEFT / REJOIN GRACE PERIOD =================
+  if (stage === 'left') {
+    const countdown = `${Math.floor(rejoinSecondsLeft / 60)}:${String(rejoinSecondsLeft % 60).padStart(2, '0')}`;
+    return (
+      <Layout currentPage={currentPage} onNavigate={onNavigate} title={translate(language, 'ui.battlePaused')} subtitle={translate(language, 'battlePage.battle')}>
+        <div className={`${panel} mx-auto max-w-md p-8 text-center`}>
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-400/10 dark:text-amber-300">
+            <Timer className="h-8 w-8" />
+          </div>
+          <h2 className={`text-xl font-extrabold ${strong}`}>{translate(language, 'ui.rejoinBattleTitle')}</h2>
+          <p className={`mt-3 text-sm leading-6 ${mute}`}>
+            {translate(language, 'ui.rejoinBattleHelp', { count: 3 })}
+          </p>
+          {error && <p role="alert" className="mt-4 text-sm font-medium text-rose-500">{translateMessage(language, error)}</p>}
+          <div className="mt-7 space-y-3">
+            <button
+              type="button"
+              onClick={() => void rejoinBattle()}
+              disabled={loading || rejoinSecondsLeft <= 0}
+              className={`${primaryBtn} w-full py-3.5`}
+            >
+              <RotateCcw className="h-4 w-4" />
+              {translate(language, 'ui.rejoinBattleCountdown', { time: countdown })}
+            </button>
+            <button
+              type="button"
+              onClick={() => setAbandonConfirmationOpen(true)}
+              disabled={loading}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-bold text-rose-600 ring-2 ring-rose-200 transition hover:bg-rose-50 disabled:opacity-40 dark:text-rose-300 dark:ring-rose-400/30 dark:hover:bg-rose-500/10"
+            >
+              <XCircle className="h-4 w-4" />
+              {translate(language, 'ui.abandonBattle')}
             </button>
           </div>
         </div>
+
+        {abandonConfirmationOpen && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/60 p-4" role="presentation">
+            <div role="dialog" aria-modal="true" aria-labelledby="abandon-battle-title" className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900">
+              <h2 id="abandon-battle-title" className="text-lg font-extrabold text-slate-900 dark:text-white">
+                {translate(language, 'ui.abandonBattle')}
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                {translate(language, 'ui.abandonBattleWarning')}
+              </p>
+              <div className="mt-6 flex gap-3">
+                <button type="button" onClick={() => setAbandonConfirmationOpen(false)} disabled={loading} className={`${secondaryBtn} flex-1`}>
+                  {translate(language, 'ui.goBack')}
+                </button>
+                <button type="button" onClick={() => void confirmAbandonBattle()} disabled={loading} className="flex flex-1 items-center justify-center rounded-full bg-rose-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-rose-500 disabled:opacity-40">
+                  {translate(language, 'ui.confirmAbandon')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </Layout>
     );
   }
@@ -984,6 +1146,26 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
       <div className="mx-auto max-w-2xl space-y-4">
         {errorBox}
 
+        {activeRoom?.abandoning_user_id === opponentId && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm font-semibold text-amber-800 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200">
+            {translate(language, 'ui.opponentLeftBattle', {
+              time: `${Math.floor(rejoinSecondsLeft / 60)}:${String(rejoinSecondsLeft % 60).padStart(2, '0')}`,
+            })}
+          </div>
+        )}
+
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => setLeaveConfirmationOpen(true)}
+            disabled={loading || activeRoom?.abandoning_user_id === opponentId}
+            className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold text-rose-600 ring-1 ring-rose-200 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40 dark:text-rose-300 dark:ring-rose-400/30 dark:hover:bg-rose-500/10"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            {translate(language, 'ui.leaveBattle')}
+          </button>
+        </div>
+
         {/* Scoreboard */}
         <div className={`${panel} overflow-hidden`}>
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 px-5 py-5 sm:px-8">
@@ -1066,6 +1248,27 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
           </>
         )}
       </div>
+
+      {leaveConfirmationOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/60 p-4" role="presentation">
+          <div role="dialog" aria-modal="true" aria-labelledby="leave-battle-title" className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900">
+            <h2 id="leave-battle-title" className="text-lg font-extrabold text-slate-900 dark:text-white">
+              {translate(language, 'ui.leaveBattle')}
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              {translate(language, 'ui.leaveBattleWarning', { count: 3 })}
+            </p>
+            <div className="mt-6 flex gap-3">
+              <button type="button" onClick={() => setLeaveConfirmationOpen(false)} disabled={loading} className={`${secondaryBtn} flex-1`}>
+                {translate(language, 'ui.continueBattle')}
+              </button>
+              <button type="button" onClick={() => void confirmLeaveBattle()} disabled={loading} className="flex flex-1 items-center justify-center rounded-full bg-amber-500 px-4 py-2.5 text-sm font-bold text-white hover:bg-amber-400 disabled:opacity-40">
+                {translate(language, 'ui.confirmLeave')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

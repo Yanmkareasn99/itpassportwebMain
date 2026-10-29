@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
     { ranking_position: 1, user_id: 'alice', name: 'Alice', win_count: 4, correct_answer_count: 100 },
     { ranking_position: 2, user_id: 'me', name: 'Me', win_count: 3, correct_answer_count: 120 },
   ],
-  create: vi.fn(), cancel: vi.fn(), submit: vi.fn(), complete: vi.fn(), channel: vi.fn(), rpc: vi.fn(),
+  create: vi.fn(), cancel: vi.fn(), expire: vi.fn(), expireAbandoned: vi.fn(), leave: vi.fn(), rejoin: vi.fn(), abandon: vi.fn(), submit: vi.fn(), complete: vi.fn(), channel: vi.fn(), rpc: vi.fn(),
 }));
 vi.mock('../../src/contexts/AuthContext', () => {
   const auth = { profile: { id: 'me', name: 'Me' } };
@@ -23,6 +23,13 @@ vi.mock('../../src/components/QuestionMedia', () => ({ QuestionImage: () => null
 vi.mock('../../src/lib/points', () => ({
   getPointBalance: async () => ({ balance: mocks.balance }),
   createOnlineBattleRoom: mocks.create, joinOnlineBattleRoom: vi.fn(), cancelOnlineBattleRoom: mocks.cancel,
+  expireStaleBattleRooms: mocks.expire,
+  expireAbandonedBattleRooms: mocks.expireAbandoned,
+  BATTLE_ROOM_TIMEOUT_MINUTES: 15,
+  BATTLE_REJOIN_GRACE_SECONDS: 180,
+  leaveActiveBattleRoom: mocks.leave,
+  rejoinActiveBattleRoom: mocks.rejoin,
+  abandonActiveBattleRoom: mocks.abandon,
   submitOnlineBattleAnswer: mocks.submit, completeOnlineBattleRoom: mocks.complete,
 }));
 vi.mock('../../src/lib/supabase', () => ({
@@ -63,6 +70,8 @@ beforeEach(() => {
   mocks.room.wager_points = 0;
   mocks.room.creator_id = 'me';
   mocks.room.opponent_id = 'them';
+  mocks.room.abandoning_user_id = null;
+  mocks.room.abandonment_deadline_at = null;
   mocks.answers = [{ user_id: 'them', question_id: 'q1', selected_choice_id: 'a1', is_correct: true }];
   mocks.channel.mockImplementation(() => { const channel = { on: () => channel, subscribe: () => channel }; return channel; });
   mocks.rpc.mockResolvedValue({ data: mocks.rankings, error: null });
@@ -72,6 +81,23 @@ beforeEach(() => {
   });
   mocks.create.mockImplementation(async () => ({ ...mocks.room }));
   mocks.cancel.mockResolvedValue({ ...mocks.room, status: 'completed' });
+  mocks.expire.mockResolvedValue(0);
+  mocks.expireAbandoned.mockResolvedValue(0);
+  mocks.leave.mockImplementation(async () => {
+    mocks.room.abandoning_user_id = 'me';
+    mocks.room.abandonment_deadline_at = new Date(Date.now() + 180_000).toISOString();
+    return { ...mocks.room };
+  });
+  mocks.rejoin.mockImplementation(async () => {
+    mocks.room.abandoning_user_id = null;
+    mocks.room.abandonment_deadline_at = null;
+    return { ...mocks.room };
+  });
+  mocks.abandon.mockImplementation(async () => {
+    mocks.room.status = 'completed';
+    mocks.room.winner_id = 'them';
+    return { ...mocks.room };
+  });
   mocks.complete.mockImplementation(async () => { mocks.room.status = 'completed'; return { ...mocks.room, winner_id: 'them' }; });
 });
 afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
@@ -145,6 +171,37 @@ describe('battle recovery', () => {
   });
 });
 
+it('allows a player to leave and rejoin during the three-minute grace period', async () => {
+  await resume();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Leave Battle' }));
+  expect(screen.getByText(/rejoin this battle within 3 minutes/i)).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm Leave' }));
+  await flush();
+
+  expect(mocks.leave).toHaveBeenCalledWith('room-1');
+  expect(screen.getByRole('button', { name: /Rejoin Battle \(3:00\)/ })).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: /Rejoin Battle/ }));
+  await flush();
+
+  expect(mocks.rejoin).toHaveBeenCalledWith('room-1');
+});
+
+it('warns before abandonment and records an immediate loss', async () => {
+  await resume();
+  fireEvent.click(screen.getByRole('button', { name: 'Leave Battle' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm Leave' }));
+  await flush();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Abandon Battle' }));
+  expect(screen.getByText(/immediately result in a loss/i)).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: 'Abandon and Lose' }));
+  await flush();
+
+  expect(mocks.abandon).toHaveBeenCalledWith('room-1');
+  expect(screen.getByText('Defeat')).toBeTruthy();
+});
+
 it('opens the room list without cancelling the waiting room', async () => {
   mocks.room.status = 'waiting';
   render(<BattlePage currentPage="battle" onNavigate={() => {}} />);
@@ -158,6 +215,7 @@ it('opens the room list without cancelling the waiting room', async () => {
   expect(screen.getByText('Available Rooms')).toBeTruthy();
   expect(screen.getByRole('button', { name: /Resume/ })).toBeTruthy();
   expect(mocks.cancel).not.toHaveBeenCalled();
+  expect(mocks.expire).toHaveBeenCalled();
 });
 
 it('sends the chosen question count and time when creating a room', async () => {
