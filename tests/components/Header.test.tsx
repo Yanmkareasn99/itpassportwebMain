@@ -66,3 +66,21 @@ it('opens earned and spent point history from the points badge', async () => {
   expect(screen.getByText('-100')).toBeTruthy();
   await waitFor(() => expect(mocks.getPointHistory).toHaveBeenCalledWith('user-1'));
 });
+
+it('shows an empty state when the user has no point activity', async () => {
+  mocks.getPointHistory.mockResolvedValueOnce([]);
+  render(<Header title="Home" onNavigate={vi.fn()} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open points history' }));
+
+  expect(await screen.findByText('No points activity yet.')).toBeTruthy();
+});
+
+it('shows an error when point history cannot be loaded', async () => {
+  mocks.getPointHistory.mockRejectedValueOnce(new Error('Connection failed'));
+  render(<Header title="Home" onNavigate={vi.fn()} />);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open points history' }));
+
+  expect((await screen.findByRole('alert')).textContent).toContain('Unable to load points history.');
+});

@@ -820,7 +820,7 @@ export default function AnnouncementsTab() {
                   &lt;input
                     value={form[`title_${code}`]}
                     onChange={<span class="fstat-no" title="function not covered" >event =&gt; setForm(current =&gt; ({ ...current, [`title_${code}`]: event.target.value }))}</span>
-                    className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+                    className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
                   /&gt;
                 &lt;/label&gt;
                 &lt;label className="block text-xs font-semibold text-gray-600"&gt;
@@ -829,7 +829,7 @@ export default function AnnouncementsTab() {
                     rows={4}
                     value={form[`message_${code}`]}
                     onChange={<span class="fstat-no" title="function not covered" >event =&gt; setForm(current =&gt; ({ ...current, [`message_${code}`]: event.target.value }))}</span>
-                    className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+                    className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
                   /&gt;
                 &lt;/label&gt;
               &lt;/div&gt;
@@ -840,7 +840,7 @@ export default function AnnouncementsTab() {
             &lt;label className="text-xs font-semibold text-gray-600"&gt;
               {translate(language, 'adminPage.announcementSeverity')}
               &lt;select value={form.severity} onChange={<span class="fstat-no" title="function not covered" >event =&gt; setForm(current =&gt; ({ ...current, severity: event.target.value as AnnouncementSeverity }))}</span>
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"&gt;
+                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200"&gt;
                 &lt;option value="info"&gt;{translate(language, 'adminPage.announcementInfo')}&lt;/option&gt;
                 &lt;option value="warning"&gt;{translate(language, 'adminPage.announcementWarning')}&lt;/option&gt;
                 &lt;option value="urgent"&gt;{translate(language, 'adminPage.announcementUrgent')}&lt;/option&gt;
@@ -850,19 +850,19 @@ export default function AnnouncementsTab() {
               {translate(language, 'adminPage.announcementPriority')}
               &lt;input type="number" min={0} max={100} value={form.priority}
                 onChange={<span class="fstat-no" title="function not covered" >event =&gt; setForm(current =&gt; ({ ...current, priority: event.target.valueAsNumber }))}</span>
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" /&gt;
+                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200" /&gt;
             &lt;/label&gt;
             &lt;label className="text-xs font-semibold text-gray-600"&gt;
               {translate(language, 'adminPage.announcementStarts')}
               &lt;input type="datetime-local" required value={form.starts_at}
                 onChange={<span class="fstat-no" title="function not covered" >event =&gt; setForm(current =&gt; ({ ...current, starts_at: event.target.value }))}</span>
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" /&gt;
+                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200" /&gt;
             &lt;/label&gt;
             &lt;label className="text-xs font-semibold text-gray-600"&gt;
               {translate(language, 'adminPage.announcementEnds')}
               &lt;input type="datetime-local" value={form.ends_at ?? ''}
                 onChange={<span class="fstat-no" title="function not covered" >event =&gt; setForm(current =&gt; ({ ...current, ends_at: event.target.value || null }))}</span>
-                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" /&gt;
+                className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-200" /&gt;
             &lt;/label&gt;
           &lt;/div&gt;
 &nbsp;
@@ -873,7 +873,7 @@ export default function AnnouncementsTab() {
                 className="h-4 w-4 rounded border-gray-300" /&gt;
               {translate(language, 'adminPage.announcementActive')}
             &lt;/label&gt;
-            &lt;button type="submit" className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700"&gt;
+            &lt;button type="submit" className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"&gt;
               {<span class="branch-0 cbranch-no" title="branch not covered" >saving ? &lt;RefreshCw className="h-4 w-4 animate-spin" /&gt; : <span class="branch-0 cbranch-no" title="branch not covered" >e</span>ditingId ? &lt;Pencil className="h-4 w-4" /&gt; : &lt;</span>Plus className="h-4 w-4" /&gt;}
               {<span class="branch-0 cbranch-no" title="branch not covered" >saving ? translate(language, 'ui.saving') : t</span>ranslate(language, 'adminPage.save')}
             &lt;/button&gt;
@@ -937,7 +937,7 @@ export default function AnnouncementsTab() {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-10-07T04:37:12.975Z
+                at 2026-10-29T01:52:37.236Z
             </div>
         <script src="../../../../prettify.js"></script>
         <script>

@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">55.58% </span>
+                <span class="strong">55.67% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>503/905</span>
+                <span class='fraction'>505/907</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">55.58% </span>
+                <span class="strong">55.67% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>503/905</span>
+                <span class='fraction'>505/907</span>
             </div>
         
             
@@ -968,7 +968,10 @@
 <a name='L903'></a><a href='#L903'>903</a>
 <a name='L904'></a><a href='#L904'>904</a>
 <a name='L905'></a><a href='#L905'>905</a>
-<a name='L906'></a><a href='#L906'>906</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L906'></a><a href='#L906'>906</a>
+<a name='L907'></a><a href='#L907'>907</a>
+<a name='L908'></a><a href='#L908'>908</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -1269,6 +1272,7 @@
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -1877,6 +1881,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { ChevronLeft, ChevronRight, CheckCircle, XCircle, Flag, ArrowLeft, Sparkles, Loader, MessageCircle } from 'lucide-react';import Layout from '../components/Layout';
 import { supabase } from '../lib/supabase';
+import { notifyPracticeProgressChanged } from '../lib/practiceProgressEvents';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getQuestionExplanation, loadAiImageInputs } from '../lib/aiChat';
@@ -2174,6 +2179,7 @@ export default function PracticeQuestionPage({
         is_correct: correct,
       });
       if (error) throw error;
+      notifyPracticeProgressChanged();
       setSelectedChoiceId(choiceId);
       setAnswered(true);
       setAiExplanation(null);
@@ -2372,13 +2378,13 @@ export default function PracticeQuestionPage({
 <span class="cstat-no" title="statement not covered" >            &lt;/div&gt;</span>
 <span class="cstat-no" title="statement not covered" ></span>
 <span class="cstat-no" title="statement not covered" >            &lt;div className="flex flex-col sm:flex-row gap-3 justify-center"&gt;</span>
-<span class="cstat-no" title="statement not covered" >              &lt;button</span>
+<span class="cstat-no" title="statement not covered" >              &lt;button type="button"</span>
 <span class="cstat-no" title="statement not covered" >                onClick={<span class="fstat-no" title="function not covered" >() =&gt; onNavigate("practice-list")}</span></span>
 <span class="cstat-no" title="statement not covered" >                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition"</span>
 <span class="cstat-no" title="statement not covered" >              &gt;</span>
 <span class="cstat-no" title="statement not covered" >                {label.backToSubjects}</span>
 <span class="cstat-no" title="statement not covered" >              &lt;/button&gt;</span>
-<span class="cstat-no" title="statement not covered" >              &lt;button</span>
+<span class="cstat-no" title="statement not covered" >              &lt;button type="button"</span>
 <span class="cstat-no" title="statement not covered" >                onClick={<span class="fstat-no" title="function not covered" >() =&gt; onNavigate("home")}</span></span>
 <span class="cstat-no" title="statement not covered" >                className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition"</span>
 <span class="cstat-no" title="statement not covered" >              &gt;</span>
@@ -2406,7 +2412,7 @@ export default function PracticeQuestionPage({
         &lt;div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-5"&gt;
           &lt;div className="flex items-center justify-between mb-2"&gt;
             &lt;div className="flex items-center gap-3"&gt;
-              &lt;button
+              &lt;button type="button"
                 onClick={<span class="fstat-no" title="function not covered" >() =&gt; onNavigate("practice-list")}</span>
                 className="p-1.5 hover:bg-gray-100 rounded-lg transition"
               &gt;
@@ -2501,7 +2507,7 @@ export default function PracticeQuestionPage({
                 }
 &nbsp;
                 return (
-                  &lt;button
+                  &lt;button type="button"
                     key={choice.id}
                     onClick={() =&gt; setSelectedChoiceId(choice.id)}
                     disabled={answered || saving}
@@ -2531,7 +2537,7 @@ export default function PracticeQuestionPage({
             {/* AI Explanation */}
             {answered &amp;&amp; (
               &lt;div&gt;
-                &lt;button
+                &lt;button type="button"
                   onClick={handleAIExplanation}
                   disabled={isLoadingAI}
                   className="flex items-center gap-2 text-sm text-purple-600 font-medium hover:underline mb-2 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -2566,7 +2572,7 @@ export default function PracticeQuestionPage({
 &nbsp;
             {/* Navigation */}
             &lt;div className="flex items-center justify-between gap-3 pt-2"&gt;
-              &lt;button
+              &lt;button type="button"
                 onClick={<span class="fstat-no" title="function not covered" >() =&gt; goToQuestion(Math.max(0, currentIndex - 1))}</span>
                 disabled={currentIndex === 0}
                 className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
@@ -2576,7 +2582,7 @@ export default function PracticeQuestionPage({
               &lt;/button&gt;
               &lt;div className="flex gap-2"&gt;
                 {!answered &amp;&amp; (
-                  &lt;button
+                  &lt;button type="button"
                     disabled={!selectedChoiceId || saving}
                     onClick={() =&gt;
                       selectedChoiceId &amp;&amp; handleAnswer(selectedChoiceId)
@@ -2587,7 +2593,7 @@ export default function PracticeQuestionPage({
                   &lt;/button&gt;
                 )}
                 {answered &amp;&amp; (
-                  &lt;button
+                  &lt;button type="button"
                     onClick={handleNext}
                     className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition"
                   &gt;
@@ -2785,7 +2791,7 @@ export default function PracticeQuestionPage({
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-10-07T04:37:12.975Z
+                at 2026-10-29T01:52:37.236Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

@@ -4,16 +4,36 @@ ALTER TABLE public.battle_rooms
   ADD COLUMN IF NOT EXISTS abandoning_user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,
   ADD COLUMN IF NOT EXISTS abandonment_deadline_at timestamptz;
 
-ALTER TABLE public.battle_rooms
-  ADD CONSTRAINT battle_rooms_abandonment_pair_check CHECK (
-    (abandoning_user_id IS NULL AND abandonment_deadline_at IS NULL)
-    OR (abandoning_user_id IS NOT NULL AND abandonment_deadline_at IS NOT NULL)
-  ),
-  ADD CONSTRAINT battle_rooms_abandoning_participant_check CHECK (
-    abandoning_user_id IS NULL
-    OR abandoning_user_id = creator_id
-    OR abandoning_user_id = opponent_id
-  );
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'battle_rooms_abandonment_pair_check'
+      AND conrelid = 'public.battle_rooms'::regclass
+  ) THEN
+    ALTER TABLE public.battle_rooms
+      ADD CONSTRAINT battle_rooms_abandonment_pair_check CHECK (
+        (abandoning_user_id IS NULL AND abandonment_deadline_at IS NULL)
+        OR (abandoning_user_id IS NOT NULL AND abandonment_deadline_at IS NOT NULL)
+      );
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'battle_rooms_abandoning_participant_check'
+      AND conrelid = 'public.battle_rooms'::regclass
+  ) THEN
+    ALTER TABLE public.battle_rooms
+      ADD CONSTRAINT battle_rooms_abandoning_participant_check CHECK (
+        abandoning_user_id IS NULL
+        OR abandoning_user_id = creator_id
+        OR abandoning_user_id = opponent_id
+      );
+  END IF;
+END;
+$$;
 
 CREATE INDEX IF NOT EXISTS battle_rooms_abandonment_deadline_idx
   ON public.battle_rooms (abandonment_deadline_at)
