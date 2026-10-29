@@ -55,12 +55,12 @@ function usePageNavigation() {
 }
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
-  const { user, loading, needsGooglePasswordSetup } = useAuth();
+  const { user, loading, needsGoogleAccountSetup } = useAuth();
   const location = useLocation();
 
   if (loading) return <LoadingScreen />;
   if (!user) return <Navigate to="/login" replace state={{ from: location }} />;
-  if (needsGooglePasswordSetup) return <Navigate to="/google-account-setup" replace />;
+  if (needsGoogleAccountSetup) return <Navigate to="/google-account-setup" replace />;
 
   return children;
 }
@@ -75,22 +75,22 @@ function AdminRoute({ children }: { children: JSX.Element }) {
 }
 
 export function LoginRoute() {
-  const { user, loading, passwordRecoveryState, needsGooglePasswordSetup } = useAuth();
+  const { user, loading, passwordRecoveryState, needsGoogleAccountSetup } = useAuth();
 
   if (loading) return <LoadingScreen />;
   if (user && (passwordRecoveryState === 'idle' || passwordRecoveryState === 'invalid')) {
-    return <Navigate to={needsGooglePasswordSetup ? '/google-account-setup' : '/'} replace />;
+    return <Navigate to={needsGoogleAccountSetup ? '/google-account-setup' : '/'} replace />;
   }
 
   return <LoginPage />;
 }
 
 function GoogleAccountSetupRoute() {
-  const { user, loading, needsGooglePasswordSetup } = useAuth();
+  const { user, loading, needsGoogleAccountSetup } = useAuth();
 
   if (loading) return <LoadingScreen />;
   if (!user) return <Navigate to="/login" replace />;
-  if (!needsGooglePasswordSetup) return <Navigate to="/" replace />;
+  if (!needsGoogleAccountSetup) return <Navigate to="/" replace />;
 
   return <GoogleAccountSetupPage />;
 }

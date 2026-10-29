@@ -3,7 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import GoogleAccountSetupPage from '../../src/pages/GoogleAccountSetupPage';
 
 const mocks = vi.hoisted(() => ({
-  completeGooglePasswordSetup: vi.fn(),
+  completeGoogleAccountSetup: vi.fn(),
   signOut: vi.fn(),
 }));
 
@@ -16,8 +16,9 @@ vi.mock('../../src/contexts/AuthContext', () => ({
     profile: {
       name: 'Google Student',
       student_id: null,
+      class_name: null,
     },
-    completeGooglePasswordSetup: mocks.completeGooglePasswordSetup,
+    completeGoogleAccountSetup: mocks.completeGoogleAccountSetup,
     signOut: mocks.signOut,
   }),
 }));
@@ -28,33 +29,31 @@ vi.mock('../../src/contexts/LanguageContext', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.completeGooglePasswordSetup.mockResolvedValue(undefined);
+  mocks.completeGoogleAccountSetup.mockResolvedValue(undefined);
   mocks.signOut.mockResolvedValue(undefined);
 });
 
-it('requires profile details and creates a Manabi password for the Google account', async () => {
+it('requires profile details without asking for a password', async () => {
   render(<GoogleAccountSetupPage />);
 
   expect((screen.getByLabelText('Email') as HTMLInputElement).value).toBe('student@gmail.com');
+  expect(screen.queryByLabelText('New password')).toBeNull();
   fireEvent.change(screen.getByLabelText('Student ID (optional)'), { target: { value: 'S-100' } });
-  fireEvent.change(screen.getByLabelText('New password'), { target: { value: 'manabi-secret' } });
-  fireEvent.change(screen.getByLabelText('Confirm new password'), { target: { value: 'manabi-secret' } });
+  fireEvent.change(screen.getByLabelText('Class'), { target: { value: 'IT Year 2, Class A' } });
   fireEvent.click(screen.getByRole('button', { name: 'Save and continue' }));
 
-  await waitFor(() => expect(mocks.completeGooglePasswordSetup).toHaveBeenCalledWith({
-    password: 'manabi-secret',
+  await waitFor(() => expect(mocks.completeGoogleAccountSetup).toHaveBeenCalledWith({
     name: 'Google Student',
     studentId: 'S-100',
+    className: 'IT Year 2, Class A',
   }));
 });
 
-it('does not submit when the passwords do not match', async () => {
+it('does not submit when the required class is missing', async () => {
   render(<GoogleAccountSetupPage />);
 
-  fireEvent.change(screen.getByLabelText('New password'), { target: { value: 'manabi-secret' } });
-  fireEvent.change(screen.getByLabelText('Confirm new password'), { target: { value: 'different-secret' } });
   fireEvent.click(screen.getByRole('button', { name: 'Save and continue' }));
 
-  expect((await screen.findByRole('alert')).textContent).toContain('The passwords do not match.');
-  expect(mocks.completeGooglePasswordSetup).not.toHaveBeenCalled();
+  expect((screen.getByLabelText('Class') as HTMLInputElement).checkValidity()).toBe(false);
+  expect(mocks.completeGoogleAccountSetup).not.toHaveBeenCalled();
 });

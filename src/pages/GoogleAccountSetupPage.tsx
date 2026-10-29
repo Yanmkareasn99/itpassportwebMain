@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { Eye, EyeOff, LockKeyhole } from 'lucide-react';
+import { UserRound } from 'lucide-react';
 import BrandLogo from '../components/BrandLogo';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -9,7 +9,7 @@ export default function GoogleAccountSetupPage() {
   const {
     user,
     profile,
-    completeGooglePasswordSetup,
+    completeGoogleAccountSetup,
     signOut,
   } = useAuth();
   const { language } = useLanguage();
@@ -18,9 +18,7 @@ export default function GoogleAccountSetupPage() {
       ?? String(user?.user_metadata.name ?? user?.user_metadata.full_name ?? ''),
   );
   const [studentId, setStudentId] = useState(profile?.student_id ?? '');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [className, setClassName] = useState(profile?.class_name ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -28,6 +26,7 @@ export default function GoogleAccountSetupPage() {
     if (!profile) return;
     setName(current => current || profile.name || '');
     setStudentId(current => current || profile.student_id || '');
+    setClassName(current => current || profile.class_name || '');
   }, [profile]);
 
   async function handleSubmit(event: FormEvent) {
@@ -38,18 +37,14 @@ export default function GoogleAccountSetupPage() {
       setError(translate(language, 'loginPage.pleaseEnterYourName'));
       return;
     }
-    if (password.length < 6) {
-      setError(translate(language, 'loginPage.passwordMinimum'));
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError(translate(language, 'loginPage.passwordsDoNotMatch'));
+    if (!className.trim()) {
+      setError(translate(language, 'googleSetupPage.pleaseEnterYourClass'));
       return;
     }
 
     setSaving(true);
     try {
-      await completeGooglePasswordSetup({ password, name, studentId });
+      await completeGoogleAccountSetup({ name, studentId, className });
     } catch (setupError) {
       setError(translate(language, 'googleSetupPage.failed', {
         error: setupError instanceof Error ? setupError.message : String(setupError),
@@ -65,7 +60,7 @@ export default function GoogleAccountSetupPage() {
         <div className="text-center">
           <BrandLogo alt={translate(language, 'loginPage.brand')} />
           <div className="mx-auto mt-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-            <LockKeyhole className="h-6 w-6" />
+            <UserRound className="h-6 w-6" />
           </div>
           <h1 className="mt-4 text-2xl font-bold text-slate-900">
             {translate(language, 'googleSetupPage.title')}
@@ -91,7 +86,7 @@ export default function GoogleAccountSetupPage() {
 
           <div>
             <label htmlFor="google-setup-name" className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">
-              {translate(language, 'loginPage.name')}
+              {translate(language, 'googleSetupPage.username')}
             </label>
             <input
               id="google-setup-name"
@@ -117,44 +112,16 @@ export default function GoogleAccountSetupPage() {
           </div>
 
           <div>
-            <label htmlFor="google-setup-password" className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">
-              {translate(language, 'loginPage.newPassword')}
-            </label>
-            <div className="relative">
-              <input
-                id="google-setup-password"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={event => setPassword(event.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 pr-12 text-sm text-slate-700 transition focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-100"
-                minLength={6}
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(current => !current)}
-                aria-label={translate(language, showPassword ? 'loginPage.hidePassword' : 'loginPage.showPassword')}
-                className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-slate-400 hover:text-slate-600"
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-            <p className="mt-1.5 text-xs text-slate-500">
-              {translate(language, 'googleSetupPage.passwordHint')}
-            </p>
-          </div>
-
-          <div>
-            <label htmlFor="google-setup-confirm-password" className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">
-              {translate(language, 'loginPage.confirmNewPassword')}
+            <label htmlFor="google-setup-class" className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">
+              {translate(language, 'settingsPage.class')}
             </label>
             <input
-              id="google-setup-confirm-password"
-              type={showPassword ? 'text' : 'password'}
-              value={confirmPassword}
-              onChange={event => setConfirmPassword(event.target.value)}
+              id="google-setup-class"
+              type="text"
+              value={className}
+              onChange={event => setClassName(event.target.value)}
+              placeholder={translate(language, 'settingsPage.classPlaceholder')}
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 transition focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-100"
-              minLength={6}
               required
             />
           </div>

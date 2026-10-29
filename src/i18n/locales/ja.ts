@@ -446,12 +446,12 @@ export const ja = {
   "googleSetupPage.complete": "保存して続ける",
   "googleSetupPage.failed": "アカウント設定を完了できませんでした: {error}",
   "googleSetupPage.help":
-    "プロフィールを入力し、GmailアドレスでもログインできるManabi用パスワードを作成してください。",
-  "googleSetupPage.passwordHint":
-    "Manabi専用のパスワードを作成してください。Googleのパスワードは入力しないでください。",
+    "プロフィールを入力して続行してください。ログインにはGoogleアカウントを使用します。",
+  "googleSetupPage.pleaseEnterYourClass": "クラスを入力してください。",
   "googleSetupPage.saving": "保存中...",
   "googleSetupPage.signOut": "ログアウト",
   "googleSetupPage.title": "Manabiアカウントの設定",
+  "googleSetupPage.username": "ユーザー名",
   "loginPage.backToSignIn": "ログインに戻る",
   "loginPage.cancelRecoveryFailed": "パスワードの再設定を終了できませんでした。もう一度お試しください。",
   "loginPage.brand": "マナビ",

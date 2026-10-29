@@ -81,13 +81,13 @@ function GoogleSetupProbe() {
   const auth = useAuth();
   return (
     <div>
-      <span data-testid="google-setup-required">{String(auth.needsGooglePasswordSetup)}</span>
+      <span data-testid="google-setup-required">{String(auth.needsGoogleAccountSetup)}</span>
       <button
         type="button"
-        onClick={() => void auth.completeGooglePasswordSetup({
-          password: 'manabi-secret',
+        onClick={() => void auth.completeGoogleAccountSetup({
           name: 'Google Student',
           studentId: 'S-100',
+          className: 'IT Year 2, Class A',
         })}
       >
         Complete Google setup
@@ -196,12 +196,10 @@ describe('AuthProvider password recovery lifecycle', () => {
     expect(await screen.findByText('User already registered')).toBeTruthy();
   });
 
-  it('adds a Manabi password and profile information to a Google account', async () => {
+  it('saves profile information for a Google account without adding a password', async () => {
     const updatedUser = {
       ...googleSession.user,
-      app_metadata: { provider: 'google', providers: ['google', 'email'] },
-      user_metadata: { name: 'Google Student', manabi_password_set: true },
-      identities: [{ provider: 'google' }, { provider: 'email' }],
+      user_metadata: { name: 'Google Student', manabi_profile_completed: true },
     };
     mocks.getSession.mockResolvedValueOnce({ data: { session: googleSession }, error: null });
     mocks.updateUser.mockResolvedValueOnce({ data: { user: updatedUser }, error: null });
@@ -214,13 +212,14 @@ describe('AuthProvider password recovery lifecycle', () => {
     await waitFor(() => expect(mocks.updateProfile).toHaveBeenCalledWith({
       name: 'Google Student',
       student_id: 'S-100',
+      class_name: 'IT Year 2, Class A',
     }));
     expect(mocks.updateUser).toHaveBeenCalledWith({
-      password: 'manabi-secret',
       data: {
-        manabi_password_set: true,
+        manabi_profile_completed: true,
         name: 'Google Student',
         student_id: 'S-100',
+        class_name: 'IT Year 2, Class A',
       },
     });
     expect(await screen.findByText('false')).toBeTruthy();

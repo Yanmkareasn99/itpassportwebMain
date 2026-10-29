@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
   abandonPasswordRecovery: vi.fn(),
   passwordRecoveryState: 'idle' as 'idle' | 'pending' | 'valid' | 'invalid',
   user: null as { id: string } | null,
-  needsGooglePasswordSetup: false,
+  needsGoogleAccountSetup: false,
   loading: false,
 }));
 
@@ -37,7 +37,7 @@ beforeEach(() => {
   mocks.abandonPasswordRecovery.mockResolvedValue(undefined);
   mocks.passwordRecoveryState = 'idle';
   mocks.user = null;
-  mocks.needsGooglePasswordSetup = false;
+  mocks.needsGoogleAccountSetup = false;
 });
 
 it.each([null, 'light'])('keeps light mode after leaving login with saved theme %s', savedTheme => {
@@ -204,9 +204,9 @@ it('submits a Gmail address and Manabi password through regular sign-in', async 
   await waitFor(() => expect(mocks.signIn).toHaveBeenCalledWith('student@gmail.com', 'manabi-secret'));
 });
 
-it('redirects a Google user without a Manabi password to account setup', async () => {
+it('redirects a Google user with an incomplete profile to account setup', async () => {
   mocks.user = { id: 'google-user' };
-  mocks.needsGooglePasswordSetup = true;
+  mocks.needsGoogleAccountSetup = true;
   render(
     <MemoryRouter initialEntries={['/login']}>
       <Routes>
