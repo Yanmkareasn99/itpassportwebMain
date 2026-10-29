@@ -73,7 +73,27 @@ beforeEach(() => {
   mocks.room.abandoning_user_id = null;
   mocks.room.abandonment_deadline_at = null;
   mocks.answers = [{ user_id: 'them', question_id: 'q1', selected_choice_id: 'a1', is_correct: true }];
-  mocks.channel.mockImplementation(() => { const channel = { on: () => channel, subscribe: () => channel }; return channel; });
+  mocks.channel.mockImplementation((name: string) => {
+    let presenceSync: (() => void) | undefined;
+    const channel = {
+      on: (event: string, config: { event?: string }, callback?: () => void) => {
+        if (event === 'presence' && config.event === 'sync') presenceSync = callback;
+        return channel;
+      },
+      subscribe: (callback?: (status: string) => void) => {
+        callback?.('SUBSCRIBED');
+        if (name === 'battle-online-users') presenceSync?.();
+        return channel;
+      },
+      presenceState: () => ({
+        me: [{ user_id: 'me' }, { user_id: 'me' }],
+        them: [{ user_id: 'them' }],
+      }),
+      track: vi.fn().mockResolvedValue('ok'),
+      untrack: vi.fn().mockResolvedValue('ok'),
+    };
+    return channel;
+  });
   mocks.rpc.mockResolvedValue({ data: mocks.rankings, error: null });
   mocks.submit.mockImplementation(async (_room, question, choice) => {
     mocks.answers.push({ user_id: 'me', question_id: question, selected_choice_id: choice, is_correct: choice === 'a1' });
@@ -125,7 +145,7 @@ describe('battle recovery', () => {
     expect(dispatch.mock.calls.filter(([event]) => event.type === PRACTICE_PROGRESS_CHANGED_EVENT)).toHaveLength(1);
     expect(mocks.complete).toHaveBeenCalledTimes(1);
     expect(screen.getByText('Defeat')).toBeTruthy();
-    expect(mocks.channel).toHaveBeenCalledTimes(1);
+    expect(mocks.channel.mock.calls.filter(([name]) => String(name).startsWith('battle-room-'))).toHaveLength(1);
   });
 
   it('allows retry after an answer submission fails', async () => {
@@ -167,7 +187,7 @@ describe('battle recovery', () => {
     mocks.room.status = 'active';
     await tick(3);
     expect(screen.getByText('Test question')).toBeTruthy();
-    expect(mocks.channel).toHaveBeenCalledTimes(1);
+    expect(mocks.channel.mock.calls.filter(([name]) => String(name).startsWith('battle-room-'))).toHaveLength(1);
   });
 });
 
@@ -216,6 +236,16 @@ it('opens the room list without cancelling the waiting room', async () => {
   expect(screen.getByRole('button', { name: /Resume/ })).toBeTruthy();
   expect(mocks.cancel).not.toHaveBeenCalled();
   expect(mocks.expire).toHaveBeenCalled();
+});
+
+it('shows a deduplicated online-user count above available rooms', async () => {
+  render(<BattlePage currentPage="battle" onNavigate={() => {}} />);
+  await flush();
+
+  expect(screen.getByText('2 users online')).toBeTruthy();
+  const onlineCount = screen.getByText('2 users online');
+  const availableRooms = screen.getByText('Available Rooms');
+  expect(onlineCount.compareDocumentPosition(availableRooms) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 });
 
 it('sends the chosen question count and time when creating a room', async () => {
