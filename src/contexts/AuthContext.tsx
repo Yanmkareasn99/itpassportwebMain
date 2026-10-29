@@ -12,7 +12,7 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   isAdmin: boolean;
-  needsGooglePasswordSetup: boolean;
+  needsGoogleAccountSetup: boolean;
 
   passwordRecoveryState: PasswordRecoveryState;
 
@@ -26,10 +26,10 @@ interface AuthContextType {
 
   updatePassword: (password: string) => Promise<void>;
 
-  completeGooglePasswordSetup: (details: {
-    password: string;
+  completeGoogleAccountSetup: (details: {
     name: string;
     studentId?: string;
+    className: string;
   }) => Promise<void>;
 
   clearPasswordRecovery: () => void;
@@ -117,9 +117,9 @@ function userHasProvider(user: User, provider: string) {
     || identities.some(identity => identity.provider === provider);
 }
 
-function googlePasswordSetupRequired(user: User | null) {
+function googleAccountSetupRequired(user: User | null) {
   if (!user || !userHasProvider(user, 'google')) return false;
-  return !userHasProvider(user, 'email')
+  return user.user_metadata.manabi_profile_completed !== true
     && user.user_metadata.manabi_password_set !== true;
 }
 
@@ -338,40 +338,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setPasswordRecoveryState('idle');
   }
 
-  async function completeGooglePasswordSetup({
-    password,
+  async function completeGoogleAccountSetup({
     name,
     studentId,
+    className,
   }: {
-    password: string;
     name: string;
     studentId?: string;
+    className: string;
   }) {
     if (!isSupabaseEnabled || !user || !userHasProvider(user, 'google')) {
       throw new Error('A signed-in Google account is required.');
     }
 
     const trimmedName = name.trim();
+    const trimmedClassName = className.trim();
     if (!trimmedName) throw new Error('Name is required.');
+    if (!trimmedClassName) throw new Error('Class is required.');
 
     const { error: profileError } = await supabase
       .from('profiles')
       .update({
         name: trimmedName,
         student_id: studentId?.trim() || null,
+        class_name: trimmedClassName,
       })
       .eq('id', user.id);
     if (profileError) throw profileError;
 
-    const { data, error: passwordError } = await supabase.auth.updateUser({
-      password,
+    const { data, error: metadataError } = await supabase.auth.updateUser({
       data: {
-        manabi_password_set: true,
+        manabi_profile_completed: true,
         name: trimmedName,
         student_id: studentId?.trim() || null,
+        class_name: trimmedClassName,
       },
     });
-    if (passwordError) throw passwordError;
+    if (metadataError) throw metadataError;
 
     setUser(data.user);
     await fetchProfile(user.id);
@@ -416,7 +419,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const isAdmin = profile?.is_admin === true;
-  const needsGooglePasswordSetup = googlePasswordSetupRequired(user);
+  const needsGoogleAccountSetup = googleAccountSetupRequired(user);
 
   return (
     <AuthContext.Provider
@@ -426,14 +429,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         profile,
         loading,
         isAdmin,
-        needsGooglePasswordSetup,
+        needsGoogleAccountSetup,
         passwordRecoveryState,
         signIn,
         signInWithGoogle,
         signUp,
         resetPassword,
         updatePassword,
-        completeGooglePasswordSetup,
+        completeGoogleAccountSetup,
         clearPasswordRecovery,
         abandonPasswordRecovery,
         signOut,

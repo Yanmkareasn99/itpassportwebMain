@@ -455,12 +455,12 @@ export const en = {
   "googleSetupPage.complete": "Save and continue",
   "googleSetupPage.failed": "Unable to complete account setup: {error}",
   "googleSetupPage.help":
-    "Complete your profile and create a Manabi password so you can also sign in with your Gmail address.",
-  "googleSetupPage.passwordHint":
-    "Create a password for Manabi. Do not enter your Google password.",
+    "Complete your profile to continue. You will sign in with your Google account.",
+  "googleSetupPage.pleaseEnterYourClass": "Please enter your class.",
   "googleSetupPage.saving": "Saving...",
   "googleSetupPage.signOut": "Sign out",
   "googleSetupPage.title": "Complete your Manabi account",
+  "googleSetupPage.username": "Username",
   "loginPage.backToSignIn": "Back to sign in",
   "loginPage.cancelRecoveryFailed": "Unable to leave password reset. Please try again.",
   "loginPage.brand": "Manabi",
