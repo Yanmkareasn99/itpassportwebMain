@@ -76,6 +76,8 @@ export const ja = {
   "ui.perQuestion": "1問あたり",
   "ui.defaultWager": "賭けポイント",
   "ui.availableRooms": "参加可能なルーム",
+  "ui.usersOnline": "オンライン: {count}人",
+  "ui.checkingOnlineUsers": "オンライン人数を確認中...",
   "ui.noRooms": "現在、待機中のルームはありません。",
   "ui.room": "ルーム #{id}",
   "ui.roomExpiresIn": "あと{count}分で期限切れ",

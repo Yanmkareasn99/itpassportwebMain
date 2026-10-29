@@ -78,6 +78,8 @@ export const en = {
   "ui.perQuestion": "Per question",
   "ui.defaultWager": "Default wager",
   "ui.availableRooms": "Available Rooms",
+  "ui.usersOnline": "{count} users online",
+  "ui.checkingOnlineUsers": "Checking online users...",
   "ui.noRooms": "No rooms are waiting right now.",
   "ui.room": "Room #{id}",
   "ui.roomExpiresIn": "Expires in {count} min",

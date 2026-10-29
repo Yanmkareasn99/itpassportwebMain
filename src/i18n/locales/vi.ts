@@ -76,6 +76,8 @@
   "ui.perQuestion": "Mỗi câu hỏi",
   "ui.defaultWager": "Điểm cược",
   "ui.availableRooms": "Phòng hiện có",
+  "ui.usersOnline": "{count} người đang trực tuyến",
+  "ui.checkingOnlineUsers": "Đang kiểm tra người dùng trực tuyến...",
   "ui.noRooms": "Hiện không có phòng nào đang chờ.",
   "ui.room": "Phòng #{id}",
   "ui.roomExpiresIn": "Hết hạn sau {count} phút",

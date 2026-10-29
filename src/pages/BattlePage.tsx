@@ -153,6 +153,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   const [rankingLoading, setRankingLoading] = useState(isSupabaseEnabled);
   const [rankingError, setRankingError] = useState('');
   const [joinCode, setJoinCode] = useState('');
+  const [onlineUserCount, setOnlineUserCount] = useState<number | null>(null);
   const [leaveConfirmationOpen, setLeaveConfirmationOpen] = useState(false);
   const [abandonConfirmationOpen, setAbandonConfirmationOpen] = useState(false);
   const [rejoinSecondsLeft, setRejoinSecondsLeft] = useState(BATTLE_REJOIN_GRACE_SECONDS);
@@ -353,6 +354,40 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     void loadBalance();
     void loadRankings();
   }, [loadBalance, loadRankings, loadRooms]);
+
+  useEffect(() => {
+    if (!isSupabaseEnabled || !profile?.id) {
+      setOnlineUserCount(null);
+      return;
+    }
+
+    const presenceChannel = supabase.channel('battle-online-users', {
+      config: { presence: { key: profile.id } },
+    });
+
+    presenceChannel
+      .on('presence', { event: 'sync' }, () => {
+        const state = presenceChannel.presenceState() as Record<string, Array<{ user_id?: string }>>;
+        const onlineUserIds = new Set<string>();
+        Object.entries(state).forEach(([key, presences]) => {
+          presences.forEach(presence => onlineUserIds.add(presence.user_id ?? key));
+        });
+        setOnlineUserCount(onlineUserIds.size);
+      })
+      .subscribe(status => {
+        if (status === 'SUBSCRIBED') {
+          void presenceChannel.track({
+            user_id: profile.id,
+            online_at: new Date().toISOString(),
+          });
+        }
+      });
+
+    return () => {
+      void presenceChannel.untrack();
+      void supabase.removeChannel(presenceChannel);
+    };
+  }, [profile?.id]);
 
   useEffect(() => {
     if (profile) {
@@ -769,6 +804,18 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                 <ArrowRight className="h-4 w-4" />
               </button>
             </section>
+          </div>
+
+          <div className={`${inner} flex items-center gap-3 px-4 py-3`}>
+            <span className="relative flex h-3 w-3 shrink-0">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-50 motion-reduce:animate-none" />
+              <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-500" />
+            </span>
+            <p className={`text-sm font-bold ${strong}`}>
+              {onlineUserCount === null
+                ? translate(language, 'ui.checkingOnlineUsers')
+                : translate(language, 'ui.usersOnline', { count: onlineUserCount })}
+            </p>
           </div>
 
           {/* Rooms */}
