@@ -473,6 +473,7 @@ export const en = {
     "Students can check materials anytime, making information sharing smoother.",
   "homePage.takeExam": "Take exam",
   "homePage.today": "Today",
+  "homePage.goToExamDate": "Go to exam date",
   "homePage.setExamDate": "Set exam date",
   "homePage.untilExam": "Until exam",
   "homePage.viewMaterials": "View materials",

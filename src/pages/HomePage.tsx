@@ -44,7 +44,8 @@ function CalendarWidget({ daysLeft, language, sessions = [], examTargetDate, onS
   );
 
   // Parse exam target date
-  const examDate = examTargetDate ? new Date(`${examTargetDate}T00:00:00`) : null;
+  const parsedExamDate = examTargetDate ? new Date(`${examTargetDate}T00:00:00`) : null;
+  const examDate = parsedExamDate && !Number.isNaN(parsedExamDate.getTime()) ? parsedExamDate : null;
   const examEnd = examDate
     ? new Date(
         examDate.getFullYear(),
@@ -80,7 +81,7 @@ function CalendarWidget({ daysLeft, language, sessions = [], examTargetDate, onS
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 dark:bg-[rgba(255,255,255,0.055)] dark:border-[rgba(255,255,255,0.10)] dark:shadow-[0_8px_24px_rgba(0,0,0,0.15)] dark:[backdrop-filter:blur(16px)] dark:[-webkit-backdrop-filter:blur(16px)]">
       {/* Countdown */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         {!needsExamDate ? (
           <div>
             <p className="text-xs text-gray-500 dark:text-[#94A3B8]">{translate(language, 'homePage.untilExam')}</p>
@@ -98,13 +99,25 @@ function CalendarWidget({ daysLeft, language, sessions = [], examTargetDate, onS
             {translate(language, 'homePage.setExamDate')}
           </button>
         )}
-        <button type="button"
-          onClick={() => setViewDate(new Date(today.getFullYear(), today.getMonth(), 1))}
-          className="ml-auto h-10 rounded-full bg-blue-50 px-4 text-sm font-semibold text-blue-600 hover:bg-blue-100 active:bg-blue-200 transition cursor-pointer dark:bg-[rgba(126,162,248,0.12)] dark:text-[#7EA2F8] dark:hover:bg-[rgba(126,162,248,0.18)]"
-          title={translate(language, 'homePage.today')}
-        >
-          {translate(language, 'homePage.today')}
-        </button>
+        <div className="ml-auto flex flex-wrap justify-end gap-2">
+          {showExamMarker && examDate && (
+            <button
+              type="button"
+              onClick={() => setViewDate(new Date(examDate.getFullYear(), examDate.getMonth(), 1))}
+              className="h-10 rounded-full bg-red-50 px-4 text-sm font-semibold text-red-600 transition hover:bg-red-100 active:bg-red-200 dark:bg-red-500/10 dark:text-red-300 dark:hover:bg-red-500/20"
+              title={translate(language, 'homePage.goToExamDate')}
+            >
+              {translate(language, 'homePage.goToExamDate')}
+            </button>
+          )}
+          <button type="button"
+            onClick={() => setViewDate(new Date(today.getFullYear(), today.getMonth(), 1))}
+            className="h-10 rounded-full bg-blue-50 px-4 text-sm font-semibold text-blue-600 hover:bg-blue-100 active:bg-blue-200 transition cursor-pointer dark:bg-[rgba(126,162,248,0.12)] dark:text-[#7EA2F8] dark:hover:bg-[rgba(126,162,248,0.18)]"
+            title={translate(language, 'homePage.today')}
+          >
+            {translate(language, 'homePage.today')}
+          </button>
+        </div>
       </div>
 
       {/* Calendar nav */}

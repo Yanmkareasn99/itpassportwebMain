@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import HomePage from '../../src/pages/HomePage';
 import type { PracticeProgressSession } from '../../src/lib/practice';
@@ -149,4 +149,20 @@ it('does not run a queued refresh after unmount', async () => {
   unmount();
   await act(async () => { resolveInitial(progress([true])); });
   expect(mocks.loadProgress).toHaveBeenCalledTimes(1);
+});
+
+it('jumps the calendar to the upcoming exam date', async () => {
+  const query = {
+    select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(), limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+    maybeSingle: vi.fn().mockResolvedValue({ data: { target_date: '2099-05-20' }, error: null }),
+  };
+  mocks.from.mockReturnValue(query);
+
+  render(<HomePage currentPage="home" onNavigate={() => {}} />);
+  await flush();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Go to exam date' }));
+
+  expect(screen.getByText('May 2099')).toBeTruthy();
 });

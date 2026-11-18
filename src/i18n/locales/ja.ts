@@ -464,6 +464,7 @@ export const ja = {
     "学生はいつでも教材を確認できるため、情報共有がスムーズになります。",
   "homePage.takeExam": "模擬試験を受ける",
   "homePage.today": "今日",
+  "homePage.goToExamDate": "試験日へ移動",
   "homePage.setExamDate": "試験日を設定",
   "homePage.untilExam": "試験まで",
   "homePage.viewMaterials": "教材を見る",
