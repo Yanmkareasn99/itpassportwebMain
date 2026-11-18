@@ -461,6 +461,7 @@
     "Sinh viên có thể xem tài liệu bất cứ lúc nào, giúp việc chia sẻ thông tin trở nên thuận tiện hơn.",
   "homePage.takeExam": "Thi thử",
   "homePage.today": "Hôm nay",
+  "homePage.goToExamDate": "Đến ngày thi",
   "homePage.setExamDate": "Đặt ngày thi",
   "homePage.untilExam": "còn",
   "homePage.viewMaterials": "Xem tài liệu",
