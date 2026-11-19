@@ -51,6 +51,9 @@ vi.mock('../../src/lib/supabase', () => ({
 }));
 
 async function flush() { await act(async () => { await Promise.resolve(); }); }
+function openCreateSetup() {
+  fireEvent.click(screen.getByRole('button', { name: 'Start battle' }));
+}
 async function resume() {
   mocks.room.status = 'active';
   render(<BattlePage currentPage="battle" onNavigate={() => {}} />);
@@ -133,9 +136,8 @@ it('shows rankings ordered by wins with battle correct answers as the tiebreak s
   expect(screen.getByText('Ranked by wins, then by correct answers in battles only.')).toBeTruthy();
   expect(screen.getByText('Battle correct')).toBeTruthy();
   expect(screen.getByText('Alice')).toBeTruthy();
-  expect(screen.getByText('100')).toBeTruthy();
-  expect(screen.getByText('Me')).toBeTruthy();
-  expect(screen.getByText('You')).toBeTruthy();
+  expect(screen.getByRole('row', { name: /Alice 4 100/ })).toBeTruthy();
+  expect(screen.getByRole('row', { name: /Me You 3 120/ })).toBeTruthy();
   expect(mocks.rpc).toHaveBeenCalledWith('get_battle_rankings', { ranking_limit: 50 });
 });
 
@@ -241,6 +243,7 @@ it('opens the room list without cancelling the waiting room', async () => {
   mocks.room.status = 'waiting';
   render(<BattlePage currentPage="battle" onNavigate={() => {}} />);
   await flush();
+  openCreateSetup();
   fireEvent.click(screen.getByRole('button', { name: 'Create Room' }));
   await flush();
 
@@ -267,6 +270,7 @@ it('sends the chosen question count and time when creating a room', async () => 
   mocks.room.status = 'waiting';
   render(<BattlePage currentPage="battle" onNavigate={() => {}} />);
   await flush();
+  openCreateSetup();
   fireEvent.change(screen.getByLabelText('Question count (1-20)'), { target: { value: '7' } });
   fireEvent.change(screen.getByLabelText('Seconds per question (5-300)'), { target: { value: '45' } });
   fireEvent.click(screen.getByRole('button', { name: 'Create Room' }));
@@ -278,6 +282,7 @@ it('allows the wager to be cleared before entering a new value', async () => {
   mocks.room.status = 'waiting';
   render(<BattlePage currentPage="battle" onNavigate={() => {}} />);
   await flush();
+  openCreateSetup();
 
   const wagerInput = screen.getByLabelText('Wager points') as HTMLInputElement;
   fireEvent.change(wagerInput, { target: { value: '' } });
@@ -295,6 +300,7 @@ it('accepts a zero wager', async () => {
   mocks.room.status = 'waiting';
   render(<BattlePage currentPage="battle" onNavigate={() => {}} />);
   await flush();
+  openCreateSetup();
   fireEvent.change(screen.getByLabelText('Wager points'), { target: { value: '0' } });
   const button = screen.getByRole('button', { name: 'Create Room' }) as HTMLButtonElement;
   expect(button.disabled).toBe(false);
@@ -307,6 +313,7 @@ it.each(['-1', '1.5'])('rejects an invalid wager of %s', async value => {
   mocks.room.status = 'waiting';
   render(<BattlePage currentPage="battle" onNavigate={() => {}} />);
   await flush();
+  openCreateSetup();
   fireEvent.change(screen.getByLabelText('Wager points'), { target: { value } });
   expect((screen.getByRole('button', { name: 'Create Room' }) as HTMLButtonElement).disabled).toBe(true);
 });
@@ -315,6 +322,7 @@ it('rejects a wager above the current balance with a clear message', async () =>
   mocks.balance = 25;
   render(<BattlePage currentPage="battle" onNavigate={() => {}} />);
   await flush();
+  openCreateSetup();
   fireEvent.change(screen.getByLabelText('Wager points'), { target: { value: '26' } });
   expect(screen.getByText('Insufficient points')).toBeTruthy();
   expect((screen.getByRole('button', { name: 'Create Room' }) as HTMLButtonElement).disabled).toBe(true);
@@ -325,6 +333,7 @@ it('guards concurrent create-room submissions', async () => {
   mocks.create.mockImplementationOnce(() => new Promise(resolve => { resolveCreate = resolve; }));
   render(<BattlePage currentPage="battle" onNavigate={() => {}} />);
   await flush();
+  openCreateSetup();
   const button = screen.getByRole('button', { name: 'Create Room' });
   fireEvent.click(button);
   fireEvent.click(button);
@@ -339,6 +348,7 @@ it('submits exactly one cancellation for repeated refund clicks', async () => {
   mocks.cancel.mockImplementationOnce(() => new Promise(resolve => { resolveCancel = resolve; }));
   render(<BattlePage currentPage="battle" onNavigate={() => {}} />);
   await flush();
+  openCreateSetup();
   fireEvent.click(screen.getByRole('button', { name: 'Create Room' }));
   await flush();
   const cancel = screen.getByRole('button', { name: 'Cancel and Refund' });
