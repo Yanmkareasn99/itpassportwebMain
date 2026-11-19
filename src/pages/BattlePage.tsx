@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, CheckCircle, Coins, Flame, Gamepad2, Lightbulb, ListChecks, RefreshCw, RotateCcw, Sparkles, Swords, Tag, Timer, Trophy, User, Users, XCircle, Zap } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, Coins, Flame, Lightbulb, ListChecks, Play, RefreshCw, RotateCcw, Swords, Tag, Timer, Trophy, User, Users, X, XCircle, Zap } from 'lucide-react';
 import Layout from '../components/Layout';
 import { supabase, isSupabaseEnabled } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
@@ -58,11 +58,17 @@ const primaryBtn =
 const secondaryBtn =
   'inline-flex items-center justify-center gap-2 rounded-full bg-indigo-50 px-6 py-3 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 disabled:opacity-50 dark:bg-white/10 dark:text-slate-200 dark:hover:bg-white/15';
 
-// Strings for the new "join by code" card (add to your i18n files if you prefer).
-const LOCAL_TEXT: Record<string, { joinTitle: string; joinHelp: string; codePlaceholder: string; joinBtn: string; codeNotFound: string; replay: string; playNext: string; hint: string }> = {
-  vi: { joinTitle: 'Tham gia phòng đấu', joinHelp: 'Nhập mã phòng để tham gia trận đấu của người khác.', codePlaceholder: 'Nhập mã phòng...', joinBtn: 'Tham gia', codeNotFound: 'Không tìm thấy phòng với mã này.', replay: 'Chơi lại', playNext: 'Chơi tiếp', hint: 'Hãy ôn lại các câu hỏi chưa đúng rồi thử lại nhé!' },
-  en: { joinTitle: 'Join a battle room', joinHelp: "Enter a room code to join someone else's battle.", codePlaceholder: 'Enter room code...', joinBtn: 'Join', codeNotFound: 'No room found with this code.', replay: 'Play again', playNext: 'Play next', hint: 'Review the questions you missed and try again!' },
-  ja: { joinTitle: 'ルームに参加', joinHelp: 'ルームコードを入力して対戦に参加しましょう。', codePlaceholder: 'ルームコードを入力...', joinBtn: '参加', codeNotFound: 'このコードのルームが見つかりません。', replay: 'もう一度', playNext: '続ける', hint: '間違えた問題を復習して、もう一度挑戦しよう！' },
+// Strings for the join by code card and 1 vs 1 title.
+const LOCAL_TEXT: Record<string, { joinTitle: string; joinHelp: string; codePlaceholder: string; joinBtn: string; codeNotFound: string; replay: string; playNext: string; hint: string; oneVsOne: string; close: string }> = {
+  vi: { joinTitle: 'Tham gia phòng đấu', joinHelp: 'Nhập mã phòng để tham gia trận đấu của người khác.', codePlaceholder: 'Nhập mã phòng...', joinBtn: 'Tham gia', codeNotFound: 'Không tìm thấy phòng với mã này.', replay: 'Chơi lại', playNext: 'Chơi tiếp', hint: 'Hãy ôn lại các câu hỏi chưa đúng rồi thử lại nhé!', oneVsOne: 'Đấu 1 vs 1', close: 'Đóng' },
+  en: { joinTitle: 'Join a battle room', joinHelp: "Enter a room code to join someone else's battle.", codePlaceholder: 'Enter room code...', joinBtn: 'Join', codeNotFound: 'No room found with this code.', replay: 'Play again', playNext: 'Play next', hint: 'Review the questions you missed and try again!', oneVsOne: '1 vs 1 Battle', close: 'Close' },
+  ja: { joinTitle: 'ルームに参加', joinHelp: 'ルームコードを入力して対戦に参加しましょう。', codePlaceholder: 'ルームコードを入力...', joinBtn: '参加', codeNotFound: 'このコードのルームが見つかりません。', replay: 'もう一度', playNext: '続ける', hint: '間違えた問題を復習して、もう一度挑戦しよう！', oneVsOne: '1 対 1 バトル', close: '閉じる' },
+};
+
+const LOBBY_TEXT: Record<string, { duelSub: string; joinSub: string }> = {
+  vi: { duelSub: 'Đấu kinh điển', joinSub: 'Nhập mã phòng' },
+  en: { duelSub: 'Classic Duel', joinSub: 'Enter room code' },
+  ja: { duelSub: 'クラシック対戦', joinSub: 'コードで参加' },
 };
 
 function CrownIcon({ className = '' }: { className?: string }) {
@@ -157,7 +163,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   const [leaveConfirmationOpen, setLeaveConfirmationOpen] = useState(false);
   const [abandonConfirmationOpen, setAbandonConfirmationOpen] = useState(false);
   const [rejoinSecondsLeft, setRejoinSecondsLeft] = useState(BATTLE_REJOIN_GRACE_SECONDS);
-  const createCardRef = useRef<HTMLElement>(null);
+  const [setupOpen, setSetupOpen] = useState<'create' | 'join' | null>(null);
 
   const submittingAnswer = useRef(false);
   const completingBattle = useRef(false);
@@ -667,7 +673,16 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
 
   const locale = languageLocales[language];
   const localText = LOCAL_TEXT[language as string] ?? LOCAL_TEXT.en;
+  const lobbyText = LOBBY_TEXT[language as string] ?? LOBBY_TEXT.en;
   const myRank = rankings.find(row => row.user_id === profile?.id);
+  const canCreateRoom = !loading && isSupabaseEnabled && isValidWager
+    && Number.isInteger(questionCount) && questionCount >= 1 && questionCount <= 20
+    && Number.isInteger(secondsPerQuestion) && secondsPerQuestion >= 5 && secondsPerQuestion <= 300;
+
+  function openSetup(kind: 'create' | 'join') {
+    setSetupOpen(kind);
+    setError('');
+  }
 
   function joinByCode() {
     const code = joinCode.trim().replace(/^#/, '').toLowerCase();
@@ -702,41 +717,26 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     return (
       <Layout currentPage={currentPage} onNavigate={onNavigate} title={translate(language, 'battlePage.battle')} subtitle={translate(language, 'battlePage.studyMenu')}>
         <div className="mx-auto max-w-3xl space-y-4">
-          {/* Hero */}
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-100 via-indigo-50 to-white p-6 ring-1 ring-indigo-100 dark:from-[#1a1f5c] dark:via-[#10173f] dark:to-[#0a0e24] dark:ring-indigo-400/20 sm:p-8">
-            <Swords aria-hidden className="pointer-events-none absolute -right-4 -top-4 h-44 w-44 -rotate-12 text-indigo-500/10 dark:text-indigo-300/10" />
-            <Sparkles aria-hidden className="pointer-events-none absolute right-8 top-6 h-6 w-6 text-violet-400" />
-            <div className="relative max-w-md">
-              <h2 className="flex items-center gap-3 text-2xl font-black uppercase tracking-tight text-indigo-600 dark:text-indigo-200 sm:text-3xl">
-                <Swords className="h-8 w-8 shrink-0" />
-                {translate(language, 'battlePage.battle')}
-              </h2>
-              <p className={`mt-3 text-sm leading-relaxed ${mute}`}>{translate(language, 'ui.roomIntro')}</p>
-            </div>
-            {!isSupabaseEnabled && (
-              <div className="relative mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-700 ring-1 ring-amber-200 dark:bg-amber-400/10 dark:text-amber-200 dark:ring-amber-400/30">
-                {translate(language, 'ui.onlineRequired')}
+          {/* Top bar: profile / coins / rank */}
+          <div className="grid grid-cols-[1fr_auto] items-stretch gap-3">
+            <div className={`${panel} flex items-center gap-3 p-3`}>
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 ring-4 ring-violet-400/30">
+                <User className="h-6 w-6 text-white" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className={`truncate text-sm font-extrabold ${strong}`}>{profile?.name ?? translate(language, 'ui.you')}</p>
+                <p className={`mt-0.5 flex items-center gap-1 text-xs font-semibold ${mute}`}>
+                  <Flame className="h-4 w-4 fill-amber-400 text-orange-500" />
+                  {(myRank?.win_count ?? 0).toLocaleString(locale)} {translate(language, 'ui.wins')}
+                </p>
               </div>
-            )}
-          </div>
-
-          {/* Stats */}
-          <div className={`${panel} grid grid-cols-3 divide-x divide-indigo-100 dark:divide-indigo-400/15`}>
-            <div className="flex items-center gap-3 px-4 py-4 sm:px-6">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-yellow-300 to-amber-500 text-sm font-black text-amber-900 shadow">P</span>
-              <p className={`min-w-0 text-lg font-extrabold tabular-nums sm:text-xl ${strong}`}>
-                {translate(language, 'ui.pointAmount', { count: balance.toLocaleString(locale) })}
-              </p>
+              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-amber-100 py-1 pl-1 pr-3 text-sm font-extrabold tabular-nums text-amber-900 dark:bg-amber-400/15 dark:text-amber-200">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-yellow-300 to-amber-500 text-[11px] font-black text-amber-900">P</span>
+                {balance.toLocaleString(locale)}
+              </span>
             </div>
-            <div className="px-4 py-4 sm:px-6">
-              <p className={`text-xs font-medium ${mute}`}>{translate(language, 'ui.wins')}</p>
-              <p className={`mt-0.5 flex items-center gap-1.5 text-lg font-extrabold tabular-nums ${strong}`}>
-                <Flame className="h-5 w-5 fill-amber-400 text-orange-500" />
-                {(myRank?.win_count ?? 0).toLocaleString(locale)}
-              </p>
-            </div>
-            <div className="px-4 py-4 sm:px-6">
-              <p className={`text-xs font-medium ${mute}`}>{translate(language, 'ui.rank')}</p>
+            <div className={`${panel} flex min-w-[84px] flex-col items-center justify-center px-4 py-2 text-center`}>
+              <p className={`text-[11px] font-medium ${mute}`}>{translate(language, 'ui.rank')}</p>
               <p className={`mt-0.5 flex items-center gap-1.5 text-lg font-extrabold tabular-nums ${strong}`}>
                 <CrownIcon className="h-5 w-5" />
                 {myRank ? `#${myRank.ranking_position}` : '—'}
@@ -744,76 +744,169 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
             </div>
           </div>
 
-          {errorBox}
-
-          {/* Create + Join */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <section ref={createCardRef} className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-400 via-indigo-400 to-sky-300 p-5 text-indigo-950 shadow-lg shadow-indigo-400/25 ring-1 ring-white/40 dark:from-violet-500 dark:via-indigo-600 dark:to-indigo-700 dark:text-white dark:shadow-indigo-500/20 dark:ring-white/10">
-              <h3 className="flex items-center gap-2 text-lg font-black uppercase tracking-tight">
-                <Zap className="h-6 w-6 text-yellow-300" />
-                {translate(language, 'ui.createRoom')}
-              </h3>
-              <p className="mt-1.5 text-sm text-indigo-900/75 dark:text-indigo-100">{translate(language, 'ui.roomIntro')}</p>
-              <div className="mt-4 divide-y divide-indigo-200/60 rounded-2xl bg-white/70 ring-1 ring-white/80 dark:divide-white/10 dark:bg-black/20 dark:ring-white/15">
-                {settingRows.map(({ icon: Icon, label, value, set, min, max }) => (
-                  <label key={label} className="flex items-center gap-3 px-4 py-2.5 text-sm">
-                    <Icon className="h-4 w-4 shrink-0 text-indigo-500 dark:text-indigo-200" />
-                    <span className="flex-1 text-slate-600 dark:text-indigo-100">{label}</span>
-                    <input
-                      type="number"
-                      aria-label={label}
-                      min={min}
-                      max={max}
-                      step={1}
-                      value={Number.isNaN(value) ? '' : value}
-                      disabled={loading}
-                      onChange={event => set(event.target.valueAsNumber)}
-                      className="w-20 appearance-none rounded-lg border-0 bg-transparent py-1 text-right font-extrabold text-indigo-950 focus:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-violet-400 dark:text-white dark:focus:bg-white/10 dark:focus:ring-white/60"
-                    />
-                  </label>
-                ))}
-              </div>
-              {hasInsufficientBalance && (
-                <p className="mt-2 text-xs font-semibold text-rose-600 dark:text-rose-200">{translate(language, 'ui.insufficientPoints')}</p>
-              )}
-              <button type="button"
-                onClick={() => void createRoom()}
-                disabled={loading || !isSupabaseEnabled || !isValidWager || !Number.isInteger(questionCount) || questionCount < 1 || questionCount > 20 || !Number.isInteger(secondsPerQuestion) || secondsPerQuestion < 5 || secondsPerQuestion > 300}
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-white py-3 text-sm font-extrabold uppercase text-indigo-600 shadow-sm transition hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-600 disabled:opacity-50"
-              >
-                {translate(language, 'ui.createRoom')}
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            </section>
-
-            <section className={`${panel} p-5`}>
-              <h3 className={`flex items-center gap-2 text-lg font-black uppercase tracking-tight ${strong}`}>
-                <Users className="h-6 w-6 text-indigo-500 dark:text-indigo-300" />
-                {localText.joinTitle}
-              </h3>
-              <p className={`mt-1.5 text-sm ${mute}`}>{localText.joinHelp}</p>
-              <label className="mt-4 flex items-center gap-3 rounded-2xl bg-[#f8f7ff] px-4 py-3 ring-1 ring-indigo-100 focus-within:ring-2 focus-within:ring-indigo-500 dark:bg-white/5 dark:ring-indigo-300/20">
-                <Tag className="h-5 w-5 shrink-0 text-indigo-400" />
-                <input
-                  type="text"
-                  value={joinCode}
-                  onChange={event => setJoinCode(event.target.value)}
-                  onKeyDown={event => { if (event.key === 'Enter') joinByCode(); }}
-                  placeholder={localText.codePlaceholder}
-                  aria-label={localText.joinTitle}
-                  className="w-full appearance-none border-0 !bg-transparent p-0 text-sm font-semibold text-slate-800 shadow-none outline-none ring-0 placeholder:text-slate-400 focus:!bg-transparent focus:shadow-none focus:outline-none focus:ring-0 [-webkit-tap-highlight-color:transparent] [&:-webkit-autofill]:[transition:background-color_9999s_ease-in-out_0s] [&:-webkit-autofill]:[-webkit-text-fill-color:inherit] dark:text-white dark:placeholder:text-slate-500"
-                />
-              </label>
-              <button type="button"
-                onClick={joinByCode}
-                disabled={loading || !joinCode.trim()}
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-sky-400 to-violet-400 py-3 text-sm font-extrabold uppercase text-white transition hover:from-sky-300 hover:to-violet-300 dark:from-sky-300 dark:to-blue-400 dark:hover:from-sky-200 dark:hover:to-blue-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 disabled:opacity-50 dark:text-slate-900 dark:focus-visible:ring-offset-[#0f1530]"
-              >
-                {localText.joinBtn}
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            </section>
+          {/* MABI logo */}
+          <div className="flex justify-center">
+            <img
+              src="/mabi-logo.png"
+              alt="MABI"
+              draggable={false}
+              className="h-52 w-auto max-w-full select-none object-contain sm:h-64"
+            />
           </div>
+
+          {/* Mode tiles */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              aria-pressed={setupOpen === 'create'}
+              onClick={() => openSetup('create')}
+              className={`relative flex h-44 flex-col items-center justify-between overflow-hidden rounded-3xl bg-gradient-to-b from-amber-300 to-orange-400 p-4 text-amber-950 shadow-[0_6px_0_0_rgba(194,120,3,0.55)] transition active:translate-y-0.5 active:shadow-[0_3px_0_0_rgba(194,120,3,0.55)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white ${setupOpen === 'create' ? 'ring-4 ring-white/90 dark:ring-white/70' : ''}`}
+            >
+              <Swords aria-hidden className="pointer-events-none absolute -right-3 -top-3 h-24 w-24 rotate-12 text-white/25" />
+              <span className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-white/80 shadow">
+                <Swords className="h-9 w-9 text-orange-500" />
+              </span>
+              <span className="relative text-2xl font-black uppercase leading-none tracking-tight">{localText.oneVsOne}</span>
+              <span className="relative inline-flex items-center gap-1.5 rounded-full bg-white/85 px-3 py-1 text-[11px] font-bold text-orange-700">
+                <ArrowRight className="h-3.5 w-3.5" />
+                {lobbyText.duelSub}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              aria-pressed={setupOpen === 'join'}
+              onClick={() => openSetup('join')}
+              className={`relative flex h-44 flex-col items-center justify-between overflow-hidden rounded-3xl bg-gradient-to-b from-emerald-400 to-emerald-600 p-4 text-white shadow-[0_6px_0_0_rgba(4,120,87,0.55)] transition active:translate-y-0.5 active:shadow-[0_3px_0_0_rgba(4,120,87,0.55)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white ${setupOpen === 'join' ? 'ring-4 ring-white/90 dark:ring-white/70' : ''}`}
+            >
+              <Users aria-hidden className="pointer-events-none absolute -right-3 -top-3 h-24 w-24 rotate-12 text-white/20" />
+              <span className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-white/85 shadow">
+                <Users className="h-9 w-9 text-emerald-600" />
+              </span>
+              <span className="relative text-2xl font-black uppercase leading-none tracking-tight">{localText.joinBtn}</span>
+              <span className="relative inline-flex items-center gap-1.5 rounded-full bg-white/85 px-3 py-1 text-[11px] font-bold text-emerald-700">
+                <Tag className="h-3.5 w-3.5" />
+                {lobbyText.joinSub}
+              </span>
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => openSetup('create')}
+            className="relative flex w-full items-center justify-center gap-2 rounded-3xl bg-gradient-to-b from-yellow-200 via-amber-300 to-amber-400 py-4 text-xl font-black uppercase tracking-wide text-amber-950 shadow-[0_8px_0_0_rgba(194,120,3,0.55)] transition active:translate-y-1 active:shadow-[0_4px_0_0_rgba(194,120,3,0.55)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white"
+          >
+            <Play className="h-6 w-6 fill-amber-950" />
+            {translate(language, 'battlePage.startBattle')}
+          </button>
+
+          {hasInsufficientBalance && (
+            <p className="text-center text-xs font-semibold text-rose-600 dark:text-rose-300">{translate(language, 'ui.insufficientPoints')}</p>
+          )}
+
+          {!isSupabaseEnabled && (
+            <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-700 ring-1 ring-amber-200 dark:bg-amber-400/10 dark:text-amber-200 dark:ring-amber-400/30">
+              {translate(language, 'ui.onlineRequired')}
+            </div>
+          )}
+
+          {!setupOpen && errorBox}
+
+          {setupOpen && (
+            <div
+              className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-slate-950/60 p-4 backdrop-blur-sm"
+              onMouseDown={event => { if (event.target === event.currentTarget) setSetupOpen(null); }}
+              role="presentation"
+            >
+              <section
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="battle-setup-title"
+                className={`relative my-auto w-full max-w-lg rounded-3xl p-5 shadow-2xl ring-1 sm:p-6 ${setupOpen === 'create'
+                  ? 'bg-gradient-to-br from-yellow-100 via-amber-100 to-orange-200 text-amber-950 ring-amber-200 dark:from-amber-950 dark:via-amber-900 dark:to-orange-950 dark:text-amber-50 dark:ring-amber-700'
+                  : 'bg-gradient-to-br from-emerald-50 via-emerald-100 to-teal-100 text-emerald-950 ring-emerald-200 dark:from-emerald-950 dark:via-emerald-900 dark:to-teal-950 dark:text-emerald-50 dark:ring-emerald-700'}`}
+              >
+                <button
+                  type="button"
+                  aria-label={localText.close}
+                  onClick={() => setSetupOpen(null)}
+                  className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/5 text-current transition hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:bg-white/10 dark:hover:bg-white/15"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+
+                {setupOpen === 'create' ? (
+                  <>
+                    <h3 id="battle-setup-title" className="flex items-center gap-2 pr-10 text-lg font-black uppercase tracking-tight">
+                      <Swords className="h-6 w-6 text-orange-500 dark:text-amber-300" />
+                      {localText.oneVsOne}
+                    </h3>
+                    <p className="mt-1.5 text-sm text-amber-900/75 dark:text-amber-100/80">{translate(language, 'ui.roomIntro')}</p>
+                    <div className="mt-4 divide-y divide-amber-200 rounded-2xl bg-white/80 ring-1 ring-white dark:divide-amber-900/10 dark:bg-black/15 dark:ring-white/15">
+                      {settingRows.map(({ icon: Icon, label, value, set, min, max }) => (
+                        <label key={label} className="flex items-center gap-3 px-4 py-2.5 text-sm">
+                          <Icon className="h-4 w-4 shrink-0 text-orange-600 dark:text-amber-300" />
+                          <span className="flex-1 text-amber-950/80 dark:text-amber-50">{label}</span>
+                          <input
+                            type="number"
+                            aria-label={label}
+                            min={min}
+                            max={max}
+                            step={1}
+                            value={Number.isNaN(value) ? '' : value}
+                            disabled={loading}
+                            onChange={event => set(event.target.valueAsNumber)}
+                            className="w-20 appearance-none rounded-lg border-0 bg-white py-1 text-right font-extrabold text-amber-950 focus:outline-none focus:ring-2 focus:ring-orange-400 dark:bg-amber-950/30 dark:text-white dark:focus:ring-amber-300"
+                          />
+                        </label>
+                      ))}
+                    </div>
+                    {hasInsufficientBalance && (
+                      <p className="mt-2 text-xs font-semibold text-rose-600 dark:text-rose-200">{translate(language, 'ui.insufficientPoints')}</p>
+                    )}
+                    <button type="button"
+                      onClick={() => void createRoom()}
+                      disabled={!canCreateRoom}
+                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-amber-400 to-orange-400 py-3 text-sm font-extrabold uppercase text-amber-950 shadow-md transition hover:from-amber-300 hover:to-orange-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-amber-100 disabled:opacity-50 dark:from-amber-300 dark:to-orange-300 dark:focus-visible:ring-offset-amber-950"
+                    >
+                      <Zap className="h-4 w-4" />
+                      {translate(language, 'ui.createRoom')}
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <h3 id="battle-setup-title" className="flex items-center gap-2 pr-10 text-lg font-black uppercase tracking-tight">
+                      <Users className="h-6 w-6 text-emerald-600 dark:text-emerald-300" />
+                      {localText.joinTitle}
+                    </h3>
+                    <p className="mt-1.5 text-sm text-emerald-900/75 dark:text-emerald-100/80">{localText.joinHelp}</p>
+                    <label className="mt-4 flex items-center gap-3 rounded-2xl bg-white/80 px-4 py-3 ring-1 ring-emerald-200 focus-within:ring-2 focus-within:ring-emerald-400 dark:bg-black/15 dark:ring-emerald-800">
+                      <Tag className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-300" />
+                      <input
+                        type="text"
+                        value={joinCode}
+                        onChange={event => setJoinCode(event.target.value)}
+                        onKeyDown={event => { if (event.key === 'Enter') joinByCode(); }}
+                        placeholder={localText.codePlaceholder}
+                        aria-label={localText.joinTitle}
+                        className="w-full appearance-none border-0 !bg-transparent p-0 text-sm font-semibold text-emerald-950 shadow-none outline-none ring-0 placeholder:text-emerald-700/50 focus:!bg-transparent focus:shadow-none focus:outline-none focus:ring-0 [-webkit-tap-highlight-color:transparent] [&:-webkit-autofill]:[transition:background-color_9999s_ease-in-out_0s] [&:-webkit-autofill]:[-webkit-text-fill-color:inherit] dark:text-emerald-50 dark:placeholder:text-emerald-200/50"
+                      />
+                    </label>
+                    <button type="button"
+                      onClick={joinByCode}
+                      disabled={loading || !joinCode.trim()}
+                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 py-3 text-sm font-extrabold uppercase text-emerald-950 shadow-md transition hover:from-emerald-300 hover:to-emerald-400 dark:from-emerald-300 dark:to-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-emerald-50 disabled:opacity-50 dark:focus-visible:ring-offset-emerald-950"
+                    >
+                      {localText.joinBtn}
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                  </>
+                )}
+                {errorBox && <div className="mt-4">{errorBox}</div>}
+              </section>
+            </div>
+          )}
 
           <div className={`${inner} flex items-center gap-3 px-4 py-3`}>
             <span className="relative flex h-3 w-3 shrink-0">
@@ -826,85 +919,6 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                 : translate(language, 'ui.usersOnline', { count: onlineUserCount })}
             </p>
           </div>
-
-          {/* Rooms */}
-          <section className={`${panel} p-5`}>
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <h3 className={`flex items-center gap-2.5 text-base font-black uppercase ${strong}`}>
-                <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                <Users className="h-5 w-5 text-indigo-500 dark:text-indigo-300" />
-                {translate(language, 'ui.availableRooms')}
-              </h3>
-              <button
-                type="button"
-                aria-label={translate(language, 'ui.checkRooms')}
-                onClick={loadRooms}
-                className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:hover:bg-white/10 dark:hover:text-white"
-              >
-                <RefreshCw className="h-5 w-5" />
-              </button>
-            </div>
-
-            <ul className="space-y-3">
-              {rooms.map(room => {
-                const mine = room.creator_id === profile?.id || room.opponent_id === profile?.id;
-                return (
-                  <li key={room.id} className={`${inner} flex items-center gap-4 p-4`}>
-                    <span className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-blue-500">
-                      <Gamepad2 className="h-8 w-8 text-white" />
-                      <CrownIcon className="absolute -right-1.5 -top-2 h-6 w-6" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className={`truncate text-base font-extrabold ${strong}`}>
-                        {translate(language, 'ui.room', { id: room.id.slice(0, 8).toUpperCase() })}
-                      </p>
-                      <p className={`truncate text-xs font-medium ${mute}`}>
-                        {profileNames[room.creator_id] ?? translate(language, 'ui.waitingPlayer')} · {new Date(room.created_at).toLocaleTimeString(locale)}
-                      </p>
-                      <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                        <span className="flex items-center gap-1.5"><ListChecks className="h-4 w-4 text-indigo-400" />{room.question_ids.length}</span>
-                        <span className="flex items-center gap-1.5"><Timer className="h-4 w-4 text-indigo-400" />{translate(language, 'ui.seconds', { count: room.time_per_question_seconds ?? DEFAULT_TIME_PER_QUESTION })}</span>
-                        <span className="flex items-center gap-1.5"><Coins className="h-4 w-4 text-amber-500" />{room.wager_points.toLocaleString(locale)}</span>
-                        <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-300">
-                          <Timer className="h-4 w-4" />
-                          {translate(language, 'ui.roomExpiresIn', {
-                            count: Math.max(1, Math.ceil(BATTLE_ROOM_TIMEOUT_MINUTES - (Date.now() - new Date(room.created_at).getTime()) / 60_000)),
-                          })}
-                        </span>
-                      </div>
-                    </div>
-                    <button type="button"
-                      onClick={() => {
-                        if (mine) {
-                          setActiveRoom(room);
-                          setStage(room.status === 'active' && room.abandoning_user_id === profile?.id ? 'left' : 'waiting');
-                        } else void joinRoom(room.id);
-                      }}
-                      disabled={loading}
-                      className="inline-flex shrink-0 items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-indigo-500 px-5 py-2.5 text-sm font-extrabold uppercase text-white transition hover:from-violet-500 hover:to-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 disabled:opacity-40 dark:focus-visible:ring-offset-[#0f1530]"
-                    >
-                      <Swords className="h-4 w-4" />
-                      {mine ? translate(language, 'ui.resume') : translate(language, 'ui.join')}
-                    </button>
-                  </li>
-                );
-              })}
-
-              {rooms.length === 0 && (
-                <li className="rounded-2xl border border-dashed border-indigo-200 px-4 py-8 text-center dark:border-indigo-300/20">
-                  <Users className="mx-auto mb-2 h-8 w-8 text-indigo-400" />
-                  <p className={`text-sm font-bold ${strong}`}>{translate(language, 'ui.noRooms')}</p>
-                  <button type="button"
-                    onClick={() => createCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
-                    className="mt-4 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-indigo-500 px-5 py-2.5 text-sm font-extrabold uppercase text-white transition hover:from-violet-500 hover:to-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#0f1530]"
-                  >
-                    <Zap className="h-4 w-4" />
-                    {translate(language, 'ui.gotoCreateRoom')}
-                  </button>
-                </li>
-              )}
-            </ul>
-          </section>
 
           {/* Ranking */}
           <section className={`${panel} overflow-hidden`}>
