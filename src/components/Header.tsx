@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { languageLocales, translate } from '../i18n';
 import { useEffect, useRef, useState } from 'react';
 import { Bell, Coins, LogOut, UserRound } from 'lucide-react';
@@ -7,16 +6,6 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { getCachedPointBalance, getPointBalance, getPointHistory } from '../lib/points';
 import type { Page, PointLedgerEntry } from '../types';
 import BrandLogo from './BrandLogo';
-=======
-import { translate } from "../i18n";
-import { useEffect, useRef, useState } from "react";
-import { Bell, Coins, LogOut, ShieldCheck, UserRound } from "lucide-react";
-import { useAuth } from "../contexts/AuthContext";
-import { useLanguage } from "../contexts/LanguageContext";
-import { getCachedPointBalance, getPointBalance } from "../lib/points";
-import type { Page } from "../types";
-import BrandLogo from "./BrandLogo";
->>>>>>> origin/truc
 
 interface HeaderProps {
   title: string;
@@ -53,15 +42,11 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
   const { language } = useLanguage();
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
-<<<<<<< HEAD
   const [isPointsOpen, setIsPointsOpen] = useState(false);
   const [pointHistory, setPointHistory] = useState<PointLedgerEntry[]>([]);
   const [pointHistoryLoading, setPointHistoryLoading] = useState(false);
   const [pointHistoryError, setPointHistoryError] = useState('');
   const notificationStorageKey = `manabi-notifications-read:${profile?.id ?? 'guest'}`;
-=======
-  const notificationStorageKey = `manabi-notifications-read:${profile?.id ?? "guest"}`;
->>>>>>> origin/truc
   const [readNotificationIds, setReadNotificationIds] = useState<Set<number>>(
     () => readSavedNotificationIds(notificationStorageKey),
   );
@@ -479,12 +464,8 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
             </button>
 
             {isProfileMenuOpen && (
-<<<<<<< HEAD
-<div className="fixed right-4 top-14 z-50 w-max min-w-[180px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900 sm:absolute sm:right-0 sm:top-auto sm:mt-3 sm:w-72">                <div className="border-b border-gray-100 px-4 py-3 dark:border-slate-700">
-=======
               <div className="fixed right-4 top-14 z-50 w-max min-w-48 max-w-[calc(100vw-2rem)] max-h-[calc(100dvh-4.5rem)] overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900 sm:absolute sm:right-0 sm:top-auto sm:mt-3 sm:w-72 sm:min-w-0 sm:max-w-none">
                 <div className="border-b border-gray-100 px-4 py-3 dark:border-slate-700">
->>>>>>> origin/truc
                   <div className="flex items-center gap-3">
                     <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full profile-avatar-gradient text-sm font-bold text-white shadow-inner">
                       {profile?.avatar_url ? (
@@ -513,23 +494,7 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
                 </div>
 
                 <div className="p-2">
-<<<<<<< HEAD
-=======
-                  {isAdmin && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsProfileMenuOpen(false);
-                        onNavigate("admin");
-                      }}
-                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-gray-700 transition hover:bg-gray-50 dark:text-slate-200 dark:hover:bg-slate-800"
-                    >
-                      <ShieldCheck className="h-4 w-4" />
-                      <span>{translate(language, "adminPage.admin")}</span>
-                    </button>
-                  )}
-
->>>>>>> origin/truc
+ 
                   <button
                     type="button"
                     onClick={() => {
