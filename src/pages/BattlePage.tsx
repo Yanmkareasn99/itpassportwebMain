@@ -143,6 +143,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   const [stage, setStage] = useState<BattleStage>('lobby');
   const [rooms, setRooms] = useState<BattleRoom[]>([]);
   const [activeRoom, setActiveRoom] = useState<BattleRoom | null>(null);
+  const [systemBattle, setSystemBattle] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<BattleAnswerRow[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -171,6 +172,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   const completingBattle = useRef(false);
   const refreshingRoom = useRef(false);
   const creatingRoom = useRef(false);
+  const quickMatching = useRef(false);
   const cancellingRoom = useRef(false);
   const advanceTimer = useRef<number | undefined>(undefined);
   const activeRoomId = activeRoom?.id;
@@ -427,7 +429,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   }, [activeCreatorId, activeOpponentId, loadProfileNames]);
 
   useEffect(() => {
-    if (!isSupabaseEnabled || !activeRoomId) return;
+    if (!isSupabaseEnabled || !activeRoomId || systemBattle) return;
     const refresh = () => { void refreshRoomRef.current(); };
     refresh();
     const interval = window.setInterval(refresh, 2500);
@@ -445,7 +447,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
       window.clearTimeout(advanceTimer.current);
       void supabase.removeChannel(channel);
     };
-  }, [activeRoomId]);
+  }, [activeRoomId, systemBattle]);
 
   useEffect(() => {
     const deadline = activeRoom?.abandonment_deadline_at;
@@ -533,6 +535,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     setError('');
     try {
       const room = await createOnlineBattleRoom(roomWager, roomCount, roomSeconds);
+      setSystemBattle(false);
       setActiveRoom(room);
       void loadProfileNames([room.creator_id]);
       setQuestions([]);
@@ -549,11 +552,117 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     }
   }
 
+  async function startSystemBattle() {
+    if (!profile) return;
+    const systemQuestionCount = Number.isInteger(questionCount) && questionCount > 0
+      ? Math.min(20, questionCount)
+      : DEFAULT_BATTLE_QUESTIONS;
+    const systemTimeLimit = Number.isInteger(secondsPerQuestion) && secondsPerQuestion >= 5
+      ? Math.min(300, secondsPerQuestion)
+      : DEFAULT_TIME_PER_QUESTION;
+    const { data, error: questionListError } = await supabase
+      .from('questions')
+      .select('id')
+      .limit(500);
+    if (questionListError) throw questionListError;
+
+    const questionIds = ((data ?? []) as Array<{ id: string }>).map(item => item.id);
+    for (let index = questionIds.length - 1; index > 0; index--) {
+      const randomIndex = Math.floor(Math.random() * (index + 1));
+      [questionIds[index], questionIds[randomIndex]] = [questionIds[randomIndex], questionIds[index]];
+    }
+    const selectedIds = questionIds.slice(0, Math.min(systemQuestionCount, questionIds.length));
+    if (selectedIds.length === 0) throw new Error('No questions are available for a system battle.');
+
+    const selectedQuestions = await loadQuestionsByIds(selectedIds);
+    const syntheticOpponentId = 'system-opponent';
+    const systemName = language === 'vi' ? 'Hệ thống' : language === 'ja' ? 'システム' : 'System';
+    const now = new Date().toISOString();
+    const room: BattleRoom = {
+      id: `system-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      creator_id: profile.id,
+      opponent_id: syntheticOpponentId,
+      subject_id: null,
+      status: 'active',
+      creator_score: 0,
+      opponent_score: 0,
+      wager_points: 0,
+      question_ids: selectedQuestions.map(item => item.id),
+      time_per_question_seconds: systemTimeLimit,
+      winner_id: null,
+      created_at: now,
+      started_at: now,
+      completed_at: null,
+    };
+
+    if (room.question_ids.length === 0) throw new Error('No questions are available for a system battle.');
+    setSystemBattle(true);
+    setProfileNames(current => ({ ...current, [syntheticOpponentId]: systemName }));
+    setActiveRoom(room);
+    setQuestions(selectedQuestions);
+    setAnswers([]);
+    setCurrentIndex(0);
+    setSelectedChoiceId(null);
+    setAnswered(false);
+    setWaitingForOpponent(false);
+    setTimeLeft(systemTimeLimit);
+    setSetupOpen(null);
+    setStage('battle');
+  }
+
+  async function quickMatch() {
+    if (!profile || quickMatching.current || loading) return;
+    if (!isSupabaseEnabled) {
+      setError(translate(language, 'ui.onlineRequired'));
+      return;
+    }
+    quickMatching.current = true;
+    setLoading(true);
+    setError('');
+    try {
+      const { data, error: searchError } = await supabase
+        .from('battle_rooms')
+        .select('*')
+        .eq('status', 'waiting')
+        .neq('creator_id', profile.id)
+        .limit(50);
+      if (searchError) throw searchError;
+
+      const candidates = (data ?? []) as BattleRoom[];
+      if (candidates.length > 0) {
+        // Pick a random waiting player; the join RPC locks the room so simultaneous
+        // matchmaking requests cannot put multiple players into the same battle.
+        const shuffledCandidates = [...candidates].sort(() => Math.random() - 0.5);
+        for (const room of shuffledCandidates) {
+          try {
+            const joinedRoom = await joinOnlineBattleRoom(room.id);
+            setSystemBattle(false);
+            setActiveRoom(joinedRoom);
+            setSetupOpen(null);
+            setStage('waiting');
+            await loadBalance();
+            return;
+          } catch {
+            // Another player may have claimed this room after the search; try another.
+          }
+        }
+      }
+
+      await startSystemBattle();
+    } catch (matchError) {
+      setError(matchError instanceof Error ? matchError.message : 'Unable to find an opponent. Please try again.');
+    } finally {
+      quickMatching.current = false;
+      setLoading(false);
+    }
+  }
+
   async function joinRoom(roomId: string) {
     setLoading(true);
     setError('');
     try {
       const room = await joinOnlineBattleRoom(roomId);
+      setSystemBattle(false);
       setActiveRoom(room);
       setSetupOpen(null);
       setStage('waiting');
@@ -586,6 +695,17 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
 
   async function confirmLeaveBattle() {
     if (!activeRoom) return;
+    if (systemBattle) {
+      window.clearTimeout(advanceTimer.current);
+      setLeaveConfirmationOpen(false);
+      setSystemBattle(false);
+      setActiveRoom(null);
+      setQuestions([]);
+      setAnswers([]);
+      setWaitingForOpponent(false);
+      setStage('lobby');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
@@ -648,6 +768,57 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     setAnswered(true);
     setError('');
     try {
+      if (systemBattle) {
+        const answerChoices = question.answer_choices ?? [];
+        const playerCorrect = Boolean(answerChoices.find(choice => choice.id === choiceId)?.is_correct);
+        const botAnswersCorrectly = Math.random() < 0.65;
+        const correctChoice = answerChoices.find(choice => choice.is_correct);
+        const wrongChoices = answerChoices.filter(choice => !choice.is_correct);
+        const botChoice = botAnswersCorrectly
+          ? correctChoice?.id ?? null
+          : wrongChoices[Math.floor(Math.random() * wrongChoices.length)]?.id ?? null;
+        const playerId = profile?.id ?? activeRoom.creator_id;
+        const botId = activeRoom.opponent_id ?? 'system-opponent';
+        const playerAnswer: BattleAnswerRow = {
+          user_id: playerId,
+          question_id: question.id,
+          selected_choice_id: choiceId,
+          is_correct: playerCorrect,
+        };
+        const botAnswer: BattleAnswerRow = {
+          user_id: botId,
+          question_id: question.id,
+          selected_choice_id: botChoice,
+          is_correct: Boolean(botAnswersCorrectly && correctChoice),
+        };
+        const nextCreatorScore = activeRoom.creator_score + Number(playerCorrect);
+        const nextOpponentScore = activeRoom.opponent_score + Number(botAnswer.is_correct);
+        const isLastQuestion = currentIndex + 1 >= questions.length;
+        const nextRoom: BattleRoom = {
+          ...activeRoom,
+          creator_score: nextCreatorScore,
+          opponent_score: nextOpponentScore,
+          status: isLastQuestion ? 'completed' : 'active',
+          winner_id: isLastQuestion
+            ? nextCreatorScore === nextOpponentScore ? null : nextCreatorScore > nextOpponentScore ? activeRoom.creator_id : botId
+            : null,
+        };
+        setActiveRoom(nextRoom);
+        setAnswers(current => [...current, playerAnswer, botAnswer]);
+        advanceTimer.current = window.setTimeout(() => {
+          if (currentRoomId.current !== activeRoom.id) return;
+          if (isLastQuestion) {
+            setStage('result');
+          } else {
+            setCurrentIndex(currentIndex + 1);
+            setSelectedChoiceId(null);
+            setAnswered(false);
+            setTimeLeft(roomTimeLimit);
+          }
+        }, 1000);
+        return;
+      }
+
       const room = await submitOnlineBattleAnswer(activeRoom.id, question.id, choiceId);
       persisted = true;
       notifyPracticeProgressChanged();
@@ -671,7 +842,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     } finally {
       submittingAnswer.current = false;
     }
-  }, [activeRoom, answered, currentIndex, loadRoomAnswers, question, questions.length, resetQuestionState]);
+  }, [activeRoom, answered, currentIndex, loadRoomAnswers, profile?.id, question, questions.length, resetQuestionState, roomTimeLimit, systemBattle]);
 
   useEffect(() => {
     if (stage !== 'battle' || answered || waitingForOpponent) return;
@@ -778,11 +949,14 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
 
           <button
             type="button"
-            onClick={() => openSetup('create')}
+            onClick={() => void quickMatch()}
+            disabled={loading}
             className={`${noTapHighlight} relative flex w-full items-center justify-center gap-2 rounded-3xl bg-gradient-to-b from-yellow-200 via-amber-300 to-amber-400 py-4 text-xl font-black uppercase tracking-wide text-amber-950 shadow-[0_8px_0_0_rgba(194,120,3,0.55)] transition active:translate-y-1 active:shadow-[0_4px_0_0_rgba(194,120,3,0.55)] focus:outline-none focus-visible:ring-4 focus-visible:ring-white`}
           >
             <Play className="h-6 w-6 fill-amber-950" />
-            {translate(language, 'battlePage.startBattle')}
+            {loading
+              ? (language === 'vi' ? 'Đang tìm đối thủ...' : language === 'ja' ? '対戦相手を検索中...' : 'Finding opponent...')
+              : translate(language, 'battlePage.startBattle')}
           </button>
 
           {hasInsufficientBalance && (
@@ -1098,11 +1272,35 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     const totalQuestions = activeRoom?.question_ids.length ?? questions.length;
     const myCorrect = answers.filter(answer => answer.user_id === profile?.id && answer.is_correct).length;
     const title = won ? translate(language, 'ui.victory') : draw ? translate(language, 'ui.draw') : translate(language, 'ui.defeat');
-    const subtitle = draw ? translate(language, 'ui.drawRefund') : won ? translate(language, 'ui.wonWager') : translate(language, 'ui.lostWager');
+    const subtitle = systemBattle
+      ? draw
+        ? (language === 'vi' ? 'Bạn hòa với Hệ thống.' : language === 'ja' ? 'システムと引き分けました。' : 'You tied with the system.')
+        : won
+          ? (language === 'vi' ? 'Bạn đã thắng Hệ thống!' : language === 'ja' ? 'システムに勝ちました！' : 'You beat the system!')
+          : (language === 'vi' ? 'Hệ thống thắng trận này.' : language === 'ja' ? 'システムの勝ちです。' : 'The system won this round.')
+      : draw ? translate(language, 'ui.drawRefund') : won ? translate(language, 'ui.wonWager') : translate(language, 'ui.lostWager');
     const myName = profile?.name ?? translate(language, 'ui.you');
-    const backToLobby = () => { setStage('lobby'); setActiveRoom(null); void loadRooms(); void loadBalance(); };
+    const backToLobby = () => {
+      setStage('lobby');
+      setSystemBattle(false);
+      setActiveRoom(null);
+      setQuestions([]);
+      setAnswers([]);
+      setWaitingForOpponent(false);
+      void loadRooms();
+      void loadBalance();
+    };
     const replay = () => {
       if (!activeRoom) return;
+      if (systemBattle) {
+        setStage('lobby');
+        setSystemBattle(false);
+        setActiveRoom(null);
+        setQuestions([]);
+        setAnswers([]);
+        void quickMatch();
+        return;
+      }
       void createRoom({
         wager: activeRoom.wager_points,
         count: activeRoom.question_ids.length,
@@ -1131,7 +1329,12 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
             <div className={`${inner} relative mt-3 grid grid-cols-3 divide-x divide-indigo-100 py-3 dark:divide-indigo-300/15`}>
               <Stat icon={CheckCircle} tint="text-emerald-500" label={translate(language, 'ui.battleCorrect')} value={`${myCorrect}/${totalQuestions}`} />
               <Stat icon={Timer} tint="text-indigo-400" label={translate(language, 'ui.perQuestion')} value={seconds} />
-              <Stat icon={Flame} tint="text-orange-500" label={translate(language, 'ui.pointsAdded')} value={`+${pointsAdded.toLocaleString(locale)}`} />
+              <Stat
+                icon={systemBattle ? ListChecks : Flame}
+                tint={systemBattle ? 'text-sky-500' : 'text-orange-500'}
+                label={translate(language, systemBattle ? 'ui.battleCorrect' : 'ui.pointsAdded')}
+                value={systemBattle ? `${opponentScore}/${totalQuestions}` : `+${pointsAdded.toLocaleString(locale)}`}
+              />
             </div>
 
             <p className={`relative mt-4 text-xs font-medium ${mute}`}>{translate(language, 'ui.balance', { count: balance.toLocaleString(locale) })}</p>
@@ -1175,7 +1378,12 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
           <div className={`${panel} grid grid-cols-3 divide-x divide-indigo-100 py-4 dark:divide-indigo-400/15`}>
             <Stat icon={ListChecks} tint="text-indigo-400" label={translate(language, 'ui.questions')} value={`${totalQuestions}`} />
             <Stat icon={Timer} tint="text-indigo-400" label={translate(language, 'ui.perQuestion')} value={seconds} />
-            <Stat icon={Coins} tint="text-amber-500" label={draw ? translate(language, 'ui.pointsAdded') : translate(language, 'ui.pointsDeducted')} value={draw ? `+${pointsAdded.toLocaleString(locale)}` : `-${pointsDeducted.toLocaleString(locale)}`} />
+            <Stat
+              icon={systemBattle ? ListChecks : Coins}
+              tint={systemBattle ? 'text-sky-500' : 'text-amber-500'}
+              label={translate(language, systemBattle ? 'ui.battleCorrect' : draw ? 'ui.pointsAdded' : 'ui.pointsDeducted')}
+              value={systemBattle ? `${opponentScore}/${totalQuestions}` : draw ? `+${pointsAdded.toLocaleString(locale)}` : `-${pointsDeducted.toLocaleString(locale)}`}
+            />
           </div>
 
           <div className={`${panel} flex items-center gap-4 p-4 text-left`}>
