@@ -858,7 +858,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
           {/* MABI logo */}
           <div className="flex justify-center">
             <img
-              src="/mabi-logo.png"
+              src="/manabi-battle.logo.png"
               alt="MABI"
               draggable={false}
               className="h-52 w-auto max-w-full select-none object-contain sm:h-64"

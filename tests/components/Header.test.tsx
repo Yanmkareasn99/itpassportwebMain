@@ -60,7 +60,10 @@ it('opens earned and spent point history from the points badge', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Open points history' }));
 
   expect(await screen.findByText('Points history')).toBeTruthy();
+  expect(screen.queryByText('Practice correct')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: /\+50 pts/ }));
   expect(screen.getByText('Practice correct')).toBeTruthy();
+  fireEvent.click(screen.getByRole('button', { name: /-100 pts/ }));
   expect(screen.getByText('Battle wager')).toBeTruthy();
   expect(screen.getByText('+50')).toBeTruthy();
   expect(screen.getByText('-100')).toBeTruthy();

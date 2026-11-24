@@ -50,7 +50,8 @@ it("continues at the next unanswered question after reloading, with no new sessi
   );
   expect(screen.getByText("Question text 2")).toBeTruthy();
   expect(screen.getByText("Exam period: Uncategorized")).toBeTruthy();
-  expect(mocks.from).not.toHaveBeenCalled();
+  expect(mocks.from).toHaveBeenCalledWith("point_settings");
+  expect(mocks.from).not.toHaveBeenCalledWith("practice_sessions");
 });
 
 it("shows the source exam year and month while answering a dated question", () => {
