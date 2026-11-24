@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowLeft, ArrowRight, CheckCircle, Coins, Flame, Lightbulb, ListChecks, Play, RefreshCw, RotateCcw, Swords, Tag, Timer, Trophy, User, Users, X, XCircle, Zap } from 'lucide-react';
 import Layout from '../components/Layout';
 import { supabase, isSupabaseEnabled } from '../lib/supabase';
@@ -33,6 +34,7 @@ interface BattlePageProps {
 
 const DEFAULT_BATTLE_QUESTIONS = 5;
 const DEFAULT_TIME_PER_QUESTION = 30;
+const BATTLE_WAGER_POINTS = 50;
 
 type BattleStage = 'lobby' | 'waiting' | 'battle' | 'left' | 'result';
 
@@ -53,6 +55,7 @@ const panel = 'rounded-3xl bg-white ring-1 ring-indigo-100 shadow-[0_2px_14px_rg
 const inner = 'rounded-2xl bg-[#f8f7ff] ring-1 ring-indigo-100 dark:bg-white/5 dark:ring-indigo-300/15';
 const strong = 'text-indigo-950 dark:text-white';
 const mute = 'text-slate-500 dark:text-slate-400';
+const noTapHighlight = '[-webkit-tap-highlight-color:transparent]';
 const primaryBtn =
   'inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-indigo-500 px-6 py-3 text-sm font-bold text-white transition hover:from-violet-500 hover:to-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:focus-visible:ring-offset-[#0f1530]';
 const secondaryBtn =
@@ -141,6 +144,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   const [stage, setStage] = useState<BattleStage>('lobby');
   const [rooms, setRooms] = useState<BattleRoom[]>([]);
   const [activeRoom, setActiveRoom] = useState<BattleRoom | null>(null);
+  const [systemBattle, setSystemBattle] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<BattleAnswerRow[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -149,7 +153,6 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   const [timeLeft, setTimeLeft] = useState(DEFAULT_TIME_PER_QUESTION);
   const [questionCount, setQuestionCount] = useState(DEFAULT_BATTLE_QUESTIONS);
   const [secondsPerQuestion, setSecondsPerQuestion] = useState(DEFAULT_TIME_PER_QUESTION);
-  const [wager, setWager] = useState(50);
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -169,6 +172,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   const completingBattle = useRef(false);
   const refreshingRoom = useRef(false);
   const creatingRoom = useRef(false);
+  const quickMatching = useRef(false);
   const cancellingRoom = useRef(false);
   const advanceTimer = useRef<number | undefined>(undefined);
   const activeRoomId = activeRoom?.id;
@@ -179,6 +183,14 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     currentRoomId.current = undefined;
     window.clearTimeout(advanceTimer.current);
   }, []);
+
+  // Lock background scroll while the setup modal is open.
+  useEffect(() => {
+    if (!setupOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previous; };
+  }, [setupOpen]);
 
   const isCreator = activeRoom?.creator_id === profile?.id;
   const activeCreatorId = activeRoom?.creator_id;
@@ -195,8 +207,8 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   const selectedCorrect = answered && choices.find(choice => choice.id === selectedChoiceId)?.is_correct;
   const roomTimeLimit = activeRoom?.time_per_question_seconds ?? DEFAULT_TIME_PER_QUESTION;
   const timePct = (timeLeft / roomTimeLimit) * 100;
-  const isValidWager = Number.isInteger(wager) && wager >= 0 && wager <= balance;
-  const hasInsufficientBalance = Number.isFinite(wager) && wager > balance;
+  const isValidWager = balance >= BATTLE_WAGER_POINTS;
+  const hasInsufficientBalance = balance < BATTLE_WAGER_POINTS;
 
   const loadBalance = useCallback(async () => {
     if (!profile) return;
@@ -417,7 +429,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   }, [activeCreatorId, activeOpponentId, loadProfileNames]);
 
   useEffect(() => {
-    if (!isSupabaseEnabled || !activeRoomId) return;
+    if (!isSupabaseEnabled || !activeRoomId || systemBattle) return;
     const refresh = () => { void refreshRoomRef.current(); };
     refresh();
     const interval = window.setInterval(refresh, 2500);
@@ -435,7 +447,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
       window.clearTimeout(advanceTimer.current);
       void supabase.removeChannel(channel);
     };
-  }, [activeRoomId]);
+  }, [activeRoomId, systemBattle]);
 
   useEffect(() => {
     const deadline = activeRoom?.abandonment_deadline_at;
@@ -504,13 +516,13 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     }
   }, [activeRoom, answers, maybeCompleteBattle, waitingForOpponent]);
 
-  async function createRoom(override?: { wager: number; count: number; seconds: number }) {
+  async function createRoom(override?: { count: number; seconds: number }) {
     if (!profile || creatingRoom.current) return;
-    const roomWager = override?.wager ?? wager;
+    const roomWager = BATTLE_WAGER_POINTS;
     const roomCount = override?.count ?? questionCount;
     const roomSeconds = override?.seconds ?? secondsPerQuestion;
-    if (override ? roomWager > balance : !isValidWager) {
-      if (override) setError(translate(language, 'ui.insufficientPoints'));
+    if (roomWager > balance) {
+      setError(translate(language, 'ui.insufficientPoints'));
       return;
     }
     if (!isSupabaseEnabled) {
@@ -523,10 +535,12 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     setError('');
     try {
       const room = await createOnlineBattleRoom(roomWager, roomCount, roomSeconds);
+      setSystemBattle(false);
       setActiveRoom(room);
       void loadProfileNames([room.creator_id]);
       setQuestions([]);
       setAnswers([]);
+      setSetupOpen(null);
       setStage('waiting');
       await loadBalance();
       await loadRooms();
@@ -538,12 +552,75 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     }
   }
 
+  async function quickMatch() {
+    if (!profile || quickMatching.current || loading) return;
+    if (hasInsufficientBalance) {
+      setError(translate(language, 'ui.insufficientPoints'));
+      return;
+    }
+    if (!isSupabaseEnabled) {
+      setError(translate(language, 'ui.onlineRequired'));
+      return;
+    }
+    quickMatching.current = true;
+    setLoading(true);
+    setError('');
+    try {
+      const { data, error: searchError } = await supabase
+        .from('battle_rooms')
+        .select('*')
+        .eq('status', 'waiting')
+        .eq('wager_points', BATTLE_WAGER_POINTS)
+        .neq('creator_id', profile.id)
+        .limit(50);
+      if (searchError) throw searchError;
+
+      const candidates = (data ?? []) as BattleRoom[];
+      if (candidates.length > 0) {
+        // Pick a random waiting player; the join RPC locks the room so simultaneous
+        // matchmaking requests cannot put multiple players into the same battle.
+        const shuffledCandidates = [...candidates].sort(() => Math.random() - 0.5);
+        for (const room of shuffledCandidates) {
+          try {
+            const joinedRoom = await joinOnlineBattleRoom(room.id);
+            setSystemBattle(false);
+            setActiveRoom(joinedRoom);
+            setSetupOpen(null);
+            setStage('waiting');
+            await loadBalance();
+            return;
+          } catch {
+            // Another player may have claimed this room after the search; try another.
+          }
+        }
+      }
+
+      await createRoom({ count: questionCount, seconds: secondsPerQuestion });
+    } catch (matchError) {
+      setError(matchError instanceof Error ? matchError.message : 'Unable to find an opponent. Please try again.');
+    } finally {
+      quickMatching.current = false;
+      setLoading(false);
+    }
+  }
+
   async function joinRoom(roomId: string) {
+    const selectedRoom = rooms.find(room => room.id === roomId);
+    if (selectedRoom && selectedRoom.wager_points !== BATTLE_WAGER_POINTS) {
+      setError(translate(language, 'ui.wagerMustBe', { count: BATTLE_WAGER_POINTS }));
+      return;
+    }
+    if (hasInsufficientBalance) {
+      setError(translate(language, 'ui.insufficientPoints'));
+      return;
+    }
     setLoading(true);
     setError('');
     try {
       const room = await joinOnlineBattleRoom(roomId);
+      setSystemBattle(false);
       setActiveRoom(room);
+      setSetupOpen(null);
       setStage('waiting');
       await loadBalance();
     } catch (joinError) {
@@ -574,6 +651,17 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
 
   async function confirmLeaveBattle() {
     if (!activeRoom) return;
+    if (systemBattle) {
+      window.clearTimeout(advanceTimer.current);
+      setLeaveConfirmationOpen(false);
+      setSystemBattle(false);
+      setActiveRoom(null);
+      setQuestions([]);
+      setAnswers([]);
+      setWaitingForOpponent(false);
+      setStage('lobby');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
@@ -636,6 +724,57 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     setAnswered(true);
     setError('');
     try {
+      if (systemBattle) {
+        const answerChoices = question.answer_choices ?? [];
+        const playerCorrect = Boolean(answerChoices.find(choice => choice.id === choiceId)?.is_correct);
+        const botAnswersCorrectly = Math.random() < 0.65;
+        const correctChoice = answerChoices.find(choice => choice.is_correct);
+        const wrongChoices = answerChoices.filter(choice => !choice.is_correct);
+        const botChoice = botAnswersCorrectly
+          ? correctChoice?.id ?? null
+          : wrongChoices[Math.floor(Math.random() * wrongChoices.length)]?.id ?? null;
+        const playerId = profile?.id ?? activeRoom.creator_id;
+        const botId = activeRoom.opponent_id ?? 'system-opponent';
+        const playerAnswer: BattleAnswerRow = {
+          user_id: playerId,
+          question_id: question.id,
+          selected_choice_id: choiceId,
+          is_correct: playerCorrect,
+        };
+        const botAnswer: BattleAnswerRow = {
+          user_id: botId,
+          question_id: question.id,
+          selected_choice_id: botChoice,
+          is_correct: Boolean(botAnswersCorrectly && correctChoice),
+        };
+        const nextCreatorScore = activeRoom.creator_score + Number(playerCorrect);
+        const nextOpponentScore = activeRoom.opponent_score + Number(botAnswer.is_correct);
+        const isLastQuestion = currentIndex + 1 >= questions.length;
+        const nextRoom: BattleRoom = {
+          ...activeRoom,
+          creator_score: nextCreatorScore,
+          opponent_score: nextOpponentScore,
+          status: isLastQuestion ? 'completed' : 'active',
+          winner_id: isLastQuestion
+            ? nextCreatorScore === nextOpponentScore ? null : nextCreatorScore > nextOpponentScore ? activeRoom.creator_id : botId
+            : null,
+        };
+        setActiveRoom(nextRoom);
+        setAnswers(current => [...current, playerAnswer, botAnswer]);
+        advanceTimer.current = window.setTimeout(() => {
+          if (currentRoomId.current !== activeRoom.id) return;
+          if (isLastQuestion) {
+            setStage('result');
+          } else {
+            setCurrentIndex(currentIndex + 1);
+            setSelectedChoiceId(null);
+            setAnswered(false);
+            setTimeLeft(roomTimeLimit);
+          }
+        }, 1000);
+        return;
+      }
+
       const room = await submitOnlineBattleAnswer(activeRoom.id, question.id, choiceId);
       persisted = true;
       notifyPracticeProgressChanged();
@@ -659,7 +798,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     } finally {
       submittingAnswer.current = false;
     }
-  }, [activeRoom, answered, currentIndex, loadRoomAnswers, question, questions.length, resetQuestionState]);
+  }, [activeRoom, answered, currentIndex, loadRoomAnswers, profile?.id, question, questions.length, resetQuestionState, roomTimeLimit, systemBattle]);
 
   useEffect(() => {
     if (stage !== 'battle' || answered || waitingForOpponent) return;
@@ -674,7 +813,6 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   const locale = languageLocales[language];
   const localText = LOCAL_TEXT[language as string] ?? LOCAL_TEXT.en;
   const lobbyText = LOBBY_TEXT[language as string] ?? LOBBY_TEXT.en;
-  const myRank = rankings.find(row => row.user_id === profile?.id);
   const canCreateRoom = !loading && isSupabaseEnabled && isValidWager
     && Number.isInteger(questionCount) && questionCount >= 1 && questionCount <= 20
     && Number.isInteger(secondsPerQuestion) && secondsPerQuestion >= 5 && secondsPerQuestion <= 300;
@@ -694,6 +832,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     }
     if (target.creator_id === profile?.id || target.opponent_id === profile?.id) {
       setActiveRoom(target);
+      setSetupOpen(null);
       setStage('waiting');
       return;
     }
@@ -709,7 +848,6 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   const settingRows = [
     { icon: ListChecks, label: translate(language, 'ui.battleCount'), value: questionCount, set: setQuestionCount, min: 1, max: 20, suffix: '' },
     { icon: Timer, label: translate(language, 'ui.battleSeconds'), value: secondsPerQuestion, set: setSecondsPerQuestion, min: 5, max: 300, suffix: '' },
-    { icon: Coins, label: translate(language, 'ui.wager'), value: wager, set: setWager, min: 0, max: undefined, suffix: '' },
   ];
 
   // ================= LOBBY =================
@@ -717,33 +855,6 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     return (
       <Layout currentPage={currentPage} onNavigate={onNavigate} title={translate(language, 'battlePage.battle')} subtitle={translate(language, 'battlePage.studyMenu')}>
         <div className="mx-auto max-w-3xl space-y-4">
-          {/* Top bar: profile / coins / rank */}
-          <div className="grid grid-cols-[1fr_auto] items-stretch gap-3">
-            <div className={`${panel} flex items-center gap-3 p-3`}>
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 ring-4 ring-violet-400/30">
-                <User className="h-6 w-6 text-white" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className={`truncate text-sm font-extrabold ${strong}`}>{profile?.name ?? translate(language, 'ui.you')}</p>
-                <p className={`mt-0.5 flex items-center gap-1 text-xs font-semibold ${mute}`}>
-                  <Flame className="h-4 w-4 fill-amber-400 text-orange-500" />
-                  {(myRank?.win_count ?? 0).toLocaleString(locale)} {translate(language, 'ui.wins')}
-                </p>
-              </div>
-              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-amber-100 py-1 pl-1 pr-3 text-sm font-extrabold tabular-nums text-amber-900 dark:bg-amber-400/15 dark:text-amber-200">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-yellow-300 to-amber-500 text-[11px] font-black text-amber-900">P</span>
-                {balance.toLocaleString(locale)}
-              </span>
-            </div>
-            <div className={`${panel} flex min-w-[84px] flex-col items-center justify-center px-4 py-2 text-center`}>
-              <p className={`text-[11px] font-medium ${mute}`}>{translate(language, 'ui.rank')}</p>
-              <p className={`mt-0.5 flex items-center gap-1.5 text-lg font-extrabold tabular-nums ${strong}`}>
-                <CrownIcon className="h-5 w-5" />
-                {myRank ? `#${myRank.ranking_position}` : '—'}
-              </p>
-            </div>
-          </div>
-
           {/* MABI logo */}
           <div className="flex justify-center">
             <img
@@ -760,7 +871,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
               type="button"
               aria-pressed={setupOpen === 'create'}
               onClick={() => openSetup('create')}
-              className={`relative flex h-44 flex-col items-center justify-between overflow-hidden rounded-3xl bg-gradient-to-b from-amber-300 to-orange-400 p-4 text-amber-950 shadow-[0_6px_0_0_rgba(194,120,3,0.55)] transition active:translate-y-0.5 active:shadow-[0_3px_0_0_rgba(194,120,3,0.55)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white ${setupOpen === 'create' ? 'ring-4 ring-white/90 dark:ring-white/70' : ''}`}
+              className={`${noTapHighlight} relative flex h-44 flex-col items-center justify-between overflow-hidden rounded-3xl bg-gradient-to-b from-amber-300 to-orange-400 p-4 text-amber-950 shadow-[0_6px_0_0_rgba(194,120,3,0.55)] transition active:translate-y-0.5 active:shadow-[0_3px_0_0_rgba(194,120,3,0.55)] focus:outline-none focus-visible:ring-4 focus-visible:ring-white ${setupOpen === 'create' ? 'ring-4 ring-white/90 dark:ring-white/70' : ''}`}
             >
               <Swords aria-hidden className="pointer-events-none absolute -right-3 -top-3 h-24 w-24 rotate-12 text-white/25" />
               <span className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-white/80 shadow">
@@ -777,7 +888,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
               type="button"
               aria-pressed={setupOpen === 'join'}
               onClick={() => openSetup('join')}
-              className={`relative flex h-44 flex-col items-center justify-between overflow-hidden rounded-3xl bg-gradient-to-b from-emerald-400 to-emerald-600 p-4 text-white shadow-[0_6px_0_0_rgba(4,120,87,0.55)] transition active:translate-y-0.5 active:shadow-[0_3px_0_0_rgba(4,120,87,0.55)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white ${setupOpen === 'join' ? 'ring-4 ring-white/90 dark:ring-white/70' : ''}`}
+              className={`${noTapHighlight} relative flex h-44 flex-col items-center justify-between overflow-hidden rounded-3xl bg-gradient-to-b from-emerald-400 to-emerald-600 p-4 text-white shadow-[0_6px_0_0_rgba(4,120,87,0.55)] transition active:translate-y-0.5 active:shadow-[0_3px_0_0_rgba(4,120,87,0.55)] focus:outline-none focus-visible:ring-4 focus-visible:ring-white ${setupOpen === 'join' ? 'ring-4 ring-white/90 dark:ring-white/70' : ''}`}
             >
               <Users aria-hidden className="pointer-events-none absolute -right-3 -top-3 h-24 w-24 rotate-12 text-white/20" />
               <span className="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-white/85 shadow">
@@ -793,11 +904,17 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
 
           <button
             type="button"
-            onClick={() => openSetup('create')}
-            className="relative flex w-full items-center justify-center gap-2 rounded-3xl bg-gradient-to-b from-yellow-200 via-amber-300 to-amber-400 py-4 text-xl font-black uppercase tracking-wide text-amber-950 shadow-[0_8px_0_0_rgba(194,120,3,0.55)] transition active:translate-y-1 active:shadow-[0_4px_0_0_rgba(194,120,3,0.55)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-white"
+            onClick={() => void quickMatch()}
+            disabled={loading || (isSupabaseEnabled && hasInsufficientBalance)}
+            className={`${noTapHighlight} relative flex w-full items-center justify-center gap-2 rounded-3xl bg-gradient-to-b from-yellow-200 via-amber-300 to-amber-400 py-4 text-xl font-black uppercase tracking-wide text-amber-950 shadow-[0_8px_0_0_rgba(194,120,3,0.55)] transition active:translate-y-1 active:shadow-[0_4px_0_0_rgba(194,120,3,0.55)] focus:outline-none focus-visible:ring-4 focus-visible:ring-white`}
           >
             <Play className="h-6 w-6 fill-amber-950" />
-            {translate(language, 'battlePage.startBattle')}
+            {loading
+              ? (language === 'vi' ? 'Đang tìm đối thủ...' : language === 'ja' ? '対戦相手を検索中...' : 'Finding opponent...')
+              : translate(language, 'battlePage.startBattle')}
+            <span className="rounded-full bg-white/60 px-2.5 py-1 text-xs font-black normal-case tracking-normal">
+              (50 {translate(language, 'ui.points')})
+            </span>
           </button>
 
           {hasInsufficientBalance && !setupOpen && (
@@ -812,9 +929,12 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
 
           {!setupOpen && errorBox}
 
-          {setupOpen && (
+          {/* Setup modal: rendered via portal so the overlay covers the whole screen
+              (including the bottom nav) and is not clipped by Layout containers.
+              Bottom sheet on mobile, centered dialog on sm+. */}
+          {setupOpen && createPortal(
             <div
-              className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-slate-950/60 p-4 backdrop-blur-sm"
+              className={`fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/50 sm:items-center sm:p-4 ${noTapHighlight}`}
               onMouseDown={event => { if (event.target === event.currentTarget) setSetupOpen(null); }}
               role="presentation"
             >
@@ -822,7 +942,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="battle-setup-title"
-                className={`relative my-auto w-full max-w-lg rounded-3xl p-5 shadow-2xl ring-1 sm:p-6 ${setupOpen === 'create'
+                className={`relative max-h-[90dvh] w-full max-w-lg overflow-y-auto overscroll-contain rounded-t-3xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl ring-1 sm:rounded-3xl sm:p-6 ${setupOpen === 'create'
                   ? 'bg-gradient-to-br from-yellow-100 via-amber-100 to-orange-200 text-amber-950 ring-amber-200 dark:from-amber-950 dark:via-amber-900 dark:to-orange-950 dark:text-amber-50 dark:ring-amber-700'
                   : 'bg-gradient-to-br from-emerald-50 via-emerald-100 to-teal-100 text-emerald-950 ring-emerald-200 dark:from-emerald-950 dark:via-emerald-900 dark:to-teal-950 dark:text-emerald-50 dark:ring-emerald-700'}`}
               >
@@ -830,7 +950,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                   type="button"
                   aria-label={localText.close}
                   onClick={() => setSetupOpen(null)}
-                  className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/5 text-current transition hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:bg-white/10 dark:hover:bg-white/15"
+                  className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/5 text-current transition hover:bg-black/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:bg-white/10 dark:hover:bg-white/15"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -849,6 +969,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                           <span className="flex-1 text-amber-950/80 dark:text-amber-50">{label}</span>
                           <input
                             type="number"
+                            inputMode="numeric"
                             aria-label={label}
                             min={min}
                             max={max}
@@ -856,7 +977,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                             value={Number.isNaN(value) ? '' : value}
                             disabled={loading}
                             onChange={event => set(event.target.valueAsNumber)}
-                            className="w-20 appearance-none rounded-lg border-0 bg-white py-1 text-right font-extrabold text-amber-950 focus:outline-none focus:ring-2 focus:ring-orange-400 dark:bg-amber-950/30 dark:text-white dark:focus:ring-amber-300"
+                            className="w-20 appearance-none rounded-lg border-0 bg-white py-1 text-right text-base font-extrabold text-amber-950 focus:outline-none focus:ring-2 focus:ring-orange-400 dark:bg-amber-950/30 dark:text-white dark:focus:ring-amber-300"
                           />
                         </label>
                       ))}
@@ -867,10 +988,11 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                     <button type="button"
                       onClick={() => void createRoom()}
                       disabled={!canCreateRoom}
-                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-amber-400 to-orange-400 py-3 text-sm font-extrabold uppercase text-amber-950 shadow-md transition hover:from-amber-300 hover:to-orange-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-amber-100 disabled:opacity-50 dark:from-amber-300 dark:to-orange-300 dark:focus-visible:ring-offset-amber-950"
+                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-amber-400 to-orange-400 py-3 text-sm font-extrabold uppercase text-amber-950 shadow-md transition hover:from-amber-300 hover:to-orange-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-amber-100 disabled:opacity-50 dark:from-amber-300 dark:to-orange-300 dark:focus-visible:ring-offset-amber-950"
                     >
                       <Zap className="h-4 w-4" />
                       {translate(language, 'ui.createRoom')}
+                      <span className="rounded-full bg-white/50 px-2 py-0.5 text-[11px] normal-case">(50 {translate(language, 'ui.points')})</span>
                       <ArrowRight className="h-4 w-4" />
                     </button>
                   </>
@@ -890,13 +1012,13 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                         onKeyDown={event => { if (event.key === 'Enter') joinByCode(); }}
                         placeholder={localText.codePlaceholder}
                         aria-label={localText.joinTitle}
-                        className="w-full appearance-none border-0 !bg-transparent p-0 text-sm font-semibold text-emerald-950 shadow-none outline-none ring-0 placeholder:text-emerald-700/50 focus:!bg-transparent focus:shadow-none focus:outline-none focus:ring-0 [-webkit-tap-highlight-color:transparent] [&:-webkit-autofill]:[transition:background-color_9999s_ease-in-out_0s] [&:-webkit-autofill]:[-webkit-text-fill-color:inherit] dark:text-emerald-50 dark:placeholder:text-emerald-200/50"
+                        className="w-full appearance-none border-0 !bg-transparent p-0 text-base font-semibold text-emerald-950 shadow-none outline-none ring-0 placeholder:text-emerald-700/50 focus:!bg-transparent focus:shadow-none focus:outline-none focus:ring-0 [-webkit-tap-highlight-color:transparent] [&:-webkit-autofill]:[transition:background-color_9999s_ease-in-out_0s] [&:-webkit-autofill]:[-webkit-text-fill-color:inherit] dark:text-emerald-50 dark:placeholder:text-emerald-200/50"
                       />
                     </label>
                     <button type="button"
                       onClick={joinByCode}
                       disabled={loading || !joinCode.trim()}
-                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 py-3 text-sm font-extrabold uppercase text-emerald-950 shadow-md transition hover:from-emerald-300 hover:to-emerald-400 dark:from-emerald-300 dark:to-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-emerald-50 disabled:opacity-50 dark:focus-visible:ring-offset-emerald-950"
+                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 py-3 text-sm font-extrabold uppercase text-emerald-950 shadow-md transition hover:from-emerald-300 hover:to-emerald-400 dark:from-emerald-300 dark:to-emerald-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-emerald-50 disabled:opacity-50 dark:focus-visible:ring-offset-emerald-950"
                     >
                       {localText.joinBtn}
                       <ArrowRight className="h-4 w-4" />
@@ -905,7 +1027,8 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                 )}
                 {errorBox && <div className="mt-4">{errorBox}</div>}
               </section>
-            </div>
+            </div>,
+            document.body,
           )}
 
           <div className={`${inner} flex items-center gap-3 px-4 py-3`}>
@@ -1003,7 +1126,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                 aria-label={translate(language, 'ui.refreshRanking')}
                 onClick={() => void loadRankings()}
                 disabled={rankingLoading || !isSupabaseEnabled}
-                className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-40 dark:hover:bg-white/10 dark:hover:text-white"
+                className={`${noTapHighlight} rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:opacity-40 dark:hover:bg-white/10 dark:hover:text-white`}
               >
                 <RefreshCw className={`h-5 w-5 ${rankingLoading ? 'animate-spin' : ''}`} />
               </button>
@@ -1090,12 +1213,12 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                 void loadRooms();
               }}
               disabled={loading}
-              className={primaryBtn}
+              className={`${primaryBtn} ${noTapHighlight}`}
             >
               {translate(language, 'ui.checkRooms')}
             </button>
             {activeRoom?.status === 'waiting' && activeRoom.creator_id === profile?.id && (
-              <button type="button" onClick={() => void cancelRoom()} disabled={loading} className={secondaryBtn}>
+              <button type="button" onClick={() => void cancelRoom()} disabled={loading} className={`${secondaryBtn} ${noTapHighlight}`}>
                 {translate(language, 'ui.cancelRefund')}
               </button>
             )}
@@ -1124,7 +1247,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
               type="button"
               onClick={() => void rejoinBattle()}
               disabled={loading || rejoinSecondsLeft <= 0}
-              className={`${primaryBtn} w-full py-3.5`}
+              className={`${primaryBtn} ${noTapHighlight} w-full py-3.5`}
             >
               <RotateCcw className="h-4 w-4" />
               {translate(language, 'ui.rejoinBattleCountdown', { time: countdown })}
@@ -1133,7 +1256,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
               type="button"
               onClick={() => setAbandonConfirmationOpen(true)}
               disabled={loading}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-bold text-rose-600 ring-2 ring-rose-200 transition hover:bg-rose-50 disabled:opacity-40 dark:text-rose-300 dark:ring-rose-400/30 dark:hover:bg-rose-500/10"
+              className={`${noTapHighlight} inline-flex w-full items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-bold text-rose-600 ring-2 ring-rose-200 transition hover:bg-rose-50 disabled:opacity-40 dark:text-rose-300 dark:ring-rose-400/30 dark:hover:bg-rose-500/10`}
             >
               <XCircle className="h-4 w-4" />
               {translate(language, 'ui.abandonBattle')}
@@ -1141,8 +1264,8 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
           </div>
         </div>
 
-        {abandonConfirmationOpen && (
-          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/60 p-4" role="presentation">
+        {abandonConfirmationOpen && createPortal(
+          <div className={`fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-4 ${noTapHighlight}`} role="presentation">
             <div role="dialog" aria-modal="true" aria-labelledby="abandon-battle-title" className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900">
               <h2 id="abandon-battle-title" className="text-lg font-extrabold text-slate-900 dark:text-white">
                 {translate(language, 'ui.abandonBattle')}
@@ -1159,7 +1282,8 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body,
         )}
       </Layout>
     );
@@ -1175,13 +1299,36 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     const totalQuestions = activeRoom?.question_ids.length ?? questions.length;
     const myCorrect = answers.filter(answer => answer.user_id === profile?.id && answer.is_correct).length;
     const title = won ? translate(language, 'ui.victory') : draw ? translate(language, 'ui.draw') : translate(language, 'ui.defeat');
-    const subtitle = draw ? translate(language, 'ui.drawRefund') : won ? translate(language, 'ui.wonWager') : translate(language, 'ui.lostWager');
+    const subtitle = systemBattle
+      ? draw
+        ? (language === 'vi' ? 'Bạn hòa với Hệ thống.' : language === 'ja' ? 'システムと引き分けました。' : 'You tied with the system.')
+        : won
+          ? (language === 'vi' ? 'Bạn đã thắng Hệ thống!' : language === 'ja' ? 'システムに勝ちました！' : 'You beat the system!')
+          : (language === 'vi' ? 'Hệ thống thắng trận này.' : language === 'ja' ? 'システムの勝ちです。' : 'The system won this round.')
+      : draw ? translate(language, 'ui.drawRefund') : won ? translate(language, 'ui.wonWager') : translate(language, 'ui.lostWager');
     const myName = profile?.name ?? translate(language, 'ui.you');
-    const backToLobby = () => { setStage('lobby'); setActiveRoom(null); void loadRooms(); void loadBalance(); };
+    const backToLobby = () => {
+      setStage('lobby');
+      setSystemBattle(false);
+      setActiveRoom(null);
+      setQuestions([]);
+      setAnswers([]);
+      setWaitingForOpponent(false);
+      void loadRooms();
+      void loadBalance();
+    };
     const replay = () => {
       if (!activeRoom) return;
+      if (systemBattle) {
+        setStage('lobby');
+        setSystemBattle(false);
+        setActiveRoom(null);
+        setQuestions([]);
+        setAnswers([]);
+        void quickMatch();
+        return;
+      }
       void createRoom({
-        wager: activeRoom.wager_points,
         count: activeRoom.question_ids.length,
         seconds: activeRoom.time_per_question_seconds ?? DEFAULT_TIME_PER_QUESTION,
       });
@@ -1208,16 +1355,21 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
             <div className={`${inner} relative mt-3 grid grid-cols-3 divide-x divide-indigo-100 py-3 dark:divide-indigo-300/15`}>
               <Stat icon={CheckCircle} tint="text-emerald-500" label={translate(language, 'ui.battleCorrect')} value={`${myCorrect}/${totalQuestions}`} />
               <Stat icon={Timer} tint="text-indigo-400" label={translate(language, 'ui.perQuestion')} value={seconds} />
-              <Stat icon={Flame} tint="text-orange-500" label={translate(language, 'ui.pointsAdded')} value={`+${pointsAdded.toLocaleString(locale)}`} />
+              <Stat
+                icon={systemBattle ? ListChecks : Flame}
+                tint={systemBattle ? 'text-sky-500' : 'text-orange-500'}
+                label={translate(language, systemBattle ? 'ui.battleCorrect' : 'ui.pointsAdded')}
+                value={systemBattle ? `${opponentScore}/${totalQuestions}` : `+${pointsAdded.toLocaleString(locale)}`}
+              />
             </div>
 
             <p className={`relative mt-4 text-xs font-medium ${mute}`}>{translate(language, 'ui.balance', { count: balance.toLocaleString(locale) })}</p>
             <div className="relative mt-4 grid grid-cols-2 gap-3">
-              <button type="button" onClick={backToLobby} className="inline-flex items-center justify-center gap-2 rounded-full bg-transparent px-4 py-3.5 text-sm font-bold text-indigo-600 ring-2 ring-indigo-300 transition hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-violet-500 dark:text-indigo-200 dark:ring-indigo-400/40 dark:hover:bg-white/5">
+              <button type="button" onClick={backToLobby} className={`${noTapHighlight} inline-flex items-center justify-center gap-2 rounded-full bg-transparent px-4 py-3.5 text-sm font-bold text-indigo-600 ring-2 ring-indigo-300 transition hover:bg-indigo-50 focus:outline-none focus-visible:ring-violet-500 dark:text-indigo-200 dark:ring-indigo-400/40 dark:hover:bg-white/5`}>
                 <ArrowLeft className="h-4 w-4" />
                 {translate(language, 'ui.backLobby')}
               </button>
-              <button type="button" onClick={replay} disabled={loading || wagerPoints > balance} className={`${primaryBtn} px-4 py-3.5`}>
+              <button type="button" onClick={replay} disabled={loading || wagerPoints > balance} className={`${primaryBtn} ${noTapHighlight} px-4 py-3.5`}>
                 <RotateCcw className="h-4 w-4" />
                 {localText.playNext}
               </button>
@@ -1252,7 +1404,12 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
           <div className={`${panel} grid grid-cols-3 divide-x divide-indigo-100 py-4 dark:divide-indigo-400/15`}>
             <Stat icon={ListChecks} tint="text-indigo-400" label={translate(language, 'ui.questions')} value={`${totalQuestions}`} />
             <Stat icon={Timer} tint="text-indigo-400" label={translate(language, 'ui.perQuestion')} value={seconds} />
-            <Stat icon={Coins} tint="text-amber-500" label={draw ? translate(language, 'ui.pointsAdded') : translate(language, 'ui.pointsDeducted')} value={draw ? `+${pointsAdded.toLocaleString(locale)}` : `-${pointsDeducted.toLocaleString(locale)}`} />
+            <Stat
+              icon={systemBattle ? ListChecks : Coins}
+              tint={systemBattle ? 'text-sky-500' : 'text-amber-500'}
+              label={translate(language, systemBattle ? 'ui.battleCorrect' : draw ? 'ui.pointsAdded' : 'ui.pointsDeducted')}
+              value={systemBattle ? `${opponentScore}/${totalQuestions}` : draw ? `+${pointsAdded.toLocaleString(locale)}` : `-${pointsDeducted.toLocaleString(locale)}`}
+            />
           </div>
 
           <div className={`${panel} flex items-center gap-4 p-4 text-left`}>
@@ -1262,11 +1419,11 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
 
           <p className={`text-xs font-medium ${mute}`}>{translate(language, 'ui.balance', { count: balance.toLocaleString(locale) })}</p>
           <div className="grid grid-cols-2 gap-3">
-            <button type="button" onClick={backToLobby} className="inline-flex items-center justify-center gap-2 rounded-full bg-transparent px-6 py-3.5 text-sm font-bold text-indigo-600 ring-2 ring-indigo-300 transition hover:bg-indigo-50 focus-visible:outline-none focus-visible:ring-violet-500 dark:text-indigo-200 dark:ring-indigo-400/40 dark:hover:bg-white/5">
+            <button type="button" onClick={backToLobby} className={`${noTapHighlight} inline-flex items-center justify-center gap-2 rounded-full bg-transparent px-6 py-3.5 text-sm font-bold text-indigo-600 ring-2 ring-indigo-300 transition hover:bg-indigo-50 focus:outline-none focus-visible:ring-violet-500 dark:text-indigo-200 dark:ring-indigo-400/40 dark:hover:bg-white/5`}>
               <ArrowLeft className="h-4 w-4" />
               {translate(language, 'ui.backLobby')}
             </button>
-            <button type="button" onClick={replay} disabled={loading || wagerPoints > balance} className={`${primaryBtn} py-3.5`}>
+            <button type="button" onClick={replay} disabled={loading || wagerPoints > balance} className={`${primaryBtn} ${noTapHighlight} py-3.5`}>
               <RotateCcw className="h-4 w-4" />
               {localText.replay}
             </button>
@@ -1297,7 +1454,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
             type="button"
             onClick={() => setLeaveConfirmationOpen(true)}
             disabled={loading || activeRoom?.abandoning_user_id === opponentId}
-            className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold text-rose-600 ring-1 ring-rose-200 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40 dark:text-rose-300 dark:ring-rose-400/30 dark:hover:bg-rose-500/10"
+            className={`${noTapHighlight} inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold text-rose-600 ring-1 ring-rose-200 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40 dark:text-rose-300 dark:ring-rose-400/30 dark:hover:bg-rose-500/10`}
           >
             <ArrowLeft className="h-4 w-4" />
             {translate(language, 'ui.leaveBattle')}
@@ -1360,7 +1517,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                     key={choice.id}
                     onClick={() => void handleAnswer(choice.id)}
                     disabled={answered}
-                    className={`flex items-start gap-3 rounded-2xl p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 disabled:cursor-default ${cls}`}
+                    className={`${noTapHighlight} flex items-start gap-3 rounded-2xl p-4 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 disabled:cursor-default ${cls}`}
                   >
                     <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-sm font-extrabold ${badge}`}>
                       {String.fromCharCode(65 + idx)}
@@ -1387,8 +1544,8 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
         )}
       </div>
 
-      {leaveConfirmationOpen && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/60 p-4" role="presentation">
+      {leaveConfirmationOpen && createPortal(
+        <div className={`fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-4 ${noTapHighlight}`} role="presentation">
           <div role="dialog" aria-modal="true" aria-labelledby="leave-battle-title" className="w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl dark:bg-slate-900">
             <h2 id="leave-battle-title" className="text-lg font-extrabold text-slate-900 dark:text-white">
               {translate(language, 'ui.leaveBattle')}
@@ -1405,7 +1562,8 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </Layout>
   );

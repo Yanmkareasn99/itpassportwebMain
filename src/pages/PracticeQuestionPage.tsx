@@ -1,4 +1,4 @@
-import { translateMessage, translate } from '../i18n';
+import { languageLocales, translateMessage, translate } from '../i18n';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { ChevronLeft, ChevronRight, CheckCircle, XCircle, Flag, ArrowLeft, Sparkles, Loader, MessageCircle } from 'lucide-react';import Layout from '../components/Layout';
 import { supabase } from '../lib/supabase';
@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getQuestionExplanation, loadAiImageInputs } from '../lib/aiChat';
 import { practiceErrorMessage, type PracticeAnswer } from '../lib/practice';
-import { awardLocalAnswerPoints } from '../lib/points';
+import { awardLocalAnswerPoints, DEFAULT_POINT_SETTINGS, fetchPointSettings } from '../lib/points';
 import { Question, AnswerChoice, Page } from '../types';
 import { AnswerChoiceContent, QuestionImage } from '../components/QuestionMedia';
 import { formatExamPeriod } from '../lib/examDate';
@@ -205,6 +205,11 @@ export default function PracticeQuestionPage({
   const [questionFlags, setQuestionFlags] = useState<Record<string, QuestionFlagLevel>>({});
   const [flagSaving, setFlagSaving] = useState(false);
   const [flagError, setFlagError] = useState('');
+  const [answerPointsAdded, setAnswerPointsAdded] = useState<number | null>(null);
+  const [practicePointValues, setPracticePointValues] = useState({
+    correct: DEFAULT_POINT_SETTINGS.practice_correct_points,
+    wrong: DEFAULT_POINT_SETTINGS.practice_wrong_points,
+  });
   const [randomizeAnswerChoices] = useState(getRandomizeAnswerChoicesPreference);
   const answerChoiceOrders = useMemo(
     () => createAnswerChoiceOrders(questions, randomizeAnswerChoices),
@@ -271,6 +276,21 @@ export default function PracticeQuestionPage({
   }, [currentIndex]);
 
   useEffect(() => {
+    let cancelled = false;
+    fetchPointSettings().then(settings => {
+      if (cancelled) return;
+      const values = new Map(settings.map(setting => [setting.key, setting.value]));
+      setPracticePointValues({
+        correct: values.get('practice_correct_points') ?? DEFAULT_POINT_SETTINGS.practice_correct_points,
+        wrong: values.get('practice_wrong_points') ?? DEFAULT_POINT_SETTINGS.practice_wrong_points,
+      });
+    }).catch(() => {
+      // Keep the default practice rewards when settings are unavailable.
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
     if (!user?.id) return;
     let cancelled = false;
     loadQuestionFlags(user.id).then(flags => {
@@ -300,7 +320,10 @@ export default function PracticeQuestionPage({
         is_correct: correct,
       });
       if (error) throw error;
-      notifyPracticeProgressChanged();
+      if (user) void awardLocalAnswerPoints(user.id, correct, "practice");
+      const pointsAdded = correct ? practicePointValues.correct : practicePointValues.wrong;
+      setAnswerPointsAdded(pointsAdded);
+      notifyPracticeProgressChanged(pointsAdded);
       setSelectedChoiceId(choiceId);
       setAnswered(true);
       setAiExplanation(null);
@@ -309,7 +332,6 @@ export default function PracticeQuestionPage({
         ...prev.filter((item) => item.questionId !== question.id),
         { questionId: question.id, choiceId, isCorrect: correct },
       ]);
-      if (user) void awardLocalAnswerPoints(user.id, correct, "practice");
     } catch (error) {
       setSaveError(
         practiceErrorMessage(
@@ -409,6 +431,7 @@ export default function PracticeQuestionPage({
     setCurrentIndex(index);
     setSelectedChoiceId(priorAnswer?.choiceId ?? null);
     setAnswered(Boolean(priorAnswer));
+    setAnswerPointsAdded(null);
     setAiExplanation(null);
     setCanContinueAIConversation(false);
   }
@@ -643,12 +666,32 @@ export default function PracticeQuestionPage({
                       displayIndex={idx}
                     />
                     {answered && choice.is_correct && (
-                      <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0" />
+                      <>
+                        <CheckCircle className="w-5 h-5 text-emerald-500 shrink-0" />
+                        {choice.id === selectedChoiceId && answerPointsAdded !== null && (
+                          <span
+                            key={`${question.id}-${selectedChoiceId}`}
+                            className="point-gain inline-flex shrink-0 items-center rounded-full bg-emerald-100 px-2 py-1 text-xs font-extrabold text-emerald-700"
+                          >
+                            +{answerPointsAdded.toLocaleString(languageLocales[language])}
+                          </span>
+                        )}
+                      </>
                     )}
                     {answered &&
                       !choice.is_correct &&
                       choice.id === selectedChoiceId && (
-                        <XCircle className="w-5 h-5 text-red-500 shrink-0" />
+                        <>
+                          <XCircle className="w-5 h-5 text-red-500 shrink-0" />
+                          {answerPointsAdded !== null && (
+                            <span
+                              key={`${question.id}-${selectedChoiceId}`}
+                              className="point-gain inline-flex shrink-0 items-center rounded-full bg-emerald-100 px-2 py-1 text-xs font-extrabold text-emerald-700"
+                            >
+                              +{answerPointsAdded.toLocaleString(languageLocales[language])}
+                            </span>
+                          )}
+                        </>
                       )}
                   </button>
                 );

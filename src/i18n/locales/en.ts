@@ -1,4 +1,5 @@
 export const en = {
+  "ui.wagerMustBe": "This battle requires a {count} point wager.",
   "ui.loadStudyActivity": "Unable to load study activity.",
   "ui.refreshPoints": "Refresh points",
   "ui.versus": "vs",
