@@ -1,4 +1,5 @@
 export const ja = {
+  "ui.wagerMustBe": "この対戦には{count}ポイントの賭けが必要です。",
   "ui.loadStudyActivity": "学習履歴を読み込めませんでした。",
   "ui.refreshPoints": "ポイントを更新",
   "ui.versus": "対",

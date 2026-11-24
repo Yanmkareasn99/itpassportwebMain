@@ -4,6 +4,7 @@ import { Bell, Coins, LogOut, UserRound } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getCachedPointBalance, getPointBalance, getPointHistory } from '../lib/points';
+import { PRACTICE_PROGRESS_CHANGED_EVENT, PRACTICE_PROGRESS_CHANGED_STORAGE_KEY } from '../lib/practiceProgressEvents';
 import type { Page, PointLedgerEntry } from '../types';
 import BrandLogo from './BrandLogo';
 
@@ -208,6 +209,27 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id]);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    const refreshPoints = () => {
+      if (isPointsOpen) void loadPointHistory();
+      else void loadPoints();
+    };
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === PRACTICE_PROGRESS_CHANGED_STORAGE_KEY) refreshPoints();
+    };
+
+    window.addEventListener(PRACTICE_PROGRESS_CHANGED_EVENT, refreshPoints);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener(PRACTICE_PROGRESS_CHANGED_EVENT, refreshPoints);
+      window.removeEventListener('storage', handleStorage);
+    };
+    // The refresh handlers intentionally use the current point dropdown state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.id, isPointsOpen]);
 
   return (
     <header className="sm:h-20 header-gradient border-b border-gray-100 dark:border-slate-700 flex flex-row items-center gap-2 sm:gap-3 py-2 sm:py-0 sticky top-0 z-10">

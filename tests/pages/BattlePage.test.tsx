@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
     status: 'active',
     question_ids: ['q1'],
     time_per_question_seconds: 30,
-    wager_points: 0,
+    wager_points: 50,
     creator_score: 0,
     opponent_score: 0,
     winner_id: null as string | null,
@@ -118,7 +118,7 @@ beforeEach(() => {
   mocks.room.status = 'waiting';
   mocks.balance = 100;
   mocks.room.time_per_question_seconds = 30;
-  mocks.room.wager_points = 0;
+  mocks.room.wager_points = 50;
   mocks.room.creator_id = 'me';
   mocks.room.opponent_id = 'them';
   mocks.room.winner_id = null;
@@ -206,23 +206,23 @@ it('shows a deduplicated online-user count above the rankings', async () => {
 describe('lobby dialogs', () => {
   it('opens the create-room dialog from the 1 vs 1 Battle tile', async () => {
     const dialog = await openCreateRoom();
-    expect(within(dialog).getByRole('button', { name: 'Create Room' })).toBeTruthy();
+    expect(within(dialog).getByRole('button', { name: /Create Room/ })).toBeTruthy();
     expect(within(dialog).getByLabelText('Question count (1-20)')).toBeTruthy();
   });
 
-  it('starts a system battle when no players are waiting', async () => {
+  it('creates a 50-point room when no players are waiting', async () => {
     await renderLobby();
-    fireEvent.click(screen.getByRole('button', { name: 'Start battle' }));
+    fireEvent.click(screen.getByRole('button', { name: /Start battle/ }));
     await settle();
-    expect(screen.getByText('Test question')).toBeTruthy();
-    expect(screen.getByText('System')).toBeTruthy();
+    expect(mocks.create).toHaveBeenCalledWith(50, 5, 30);
+    expect(screen.getByText('Wager locked: 50 pts')).toBeTruthy();
     expect(mocks.join).not.toHaveBeenCalled();
   });
 
   it('joins a randomly matched waiting player when one is available', async () => {
     mocks.matchRooms = [{ ...mocks.room, id: 'waiting-room', creator_id: 'them', opponent_id: null, status: 'waiting' }];
     await renderLobby();
-    fireEvent.click(screen.getByRole('button', { name: 'Start battle' }));
+    fireEvent.click(screen.getByRole('button', { name: /Start battle/ }));
     await settle();
     expect(mocks.join).toHaveBeenCalledWith('waiting-room');
   });
@@ -271,54 +271,32 @@ it('sends the chosen question count and time when creating a room', async () => 
   const dialog = await openCreateRoom();
   fireEvent.change(within(dialog).getByLabelText('Question count (1-20)'), { target: { value: '7' } });
   fireEvent.change(within(dialog).getByLabelText('Seconds per question (5-300)'), { target: { value: '45' } });
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Create Room' }));
+  fireEvent.click(within(dialog).getByRole('button', { name: /Create Room/ }));
   await flush();
   expect(mocks.create).toHaveBeenCalledWith(50, 7, 45);
 });
 
-it('allows the wager to be cleared before entering a new value', async () => {
+it('shows the fixed 50-point wager when creating a room', async () => {
   const dialog = await openCreateRoom();
-  const wagerInput = within(dialog).getByLabelText('Wager points') as HTMLInputElement;
-  fireEvent.change(wagerInput, { target: { value: '' } });
-  expect(wagerInput.value).toBe('');
-  expect((within(dialog).getByRole('button', { name: 'Create Room' }) as HTMLButtonElement).disabled).toBe(true);
-
-  fireEvent.change(wagerInput, { target: { value: '100' } });
-  expect(wagerInput.value).toBe('100');
-  fireEvent.click(within(dialog).getByRole('button', { name: 'Create Room' }));
-  await flush();
-  expect(mocks.create).toHaveBeenCalledWith(100, 5, 30);
-});
-
-it('accepts a zero wager', async () => {
-  const dialog = await openCreateRoom();
-  fireEvent.change(within(dialog).getByLabelText('Wager points'), { target: { value: '0' } });
-  const button = within(dialog).getByRole('button', { name: 'Create Room' }) as HTMLButtonElement;
-  expect(button.disabled).toBe(false);
+  const button = within(dialog).getByRole('button', { name: /Create Room/ });
+  expect(button.textContent).toContain('(50 Points)');
   fireEvent.click(button);
   await flush();
-  expect(mocks.create).toHaveBeenCalledWith(0, 5, 30);
+  expect(mocks.create).toHaveBeenCalledWith(50, 5, 30);
 });
 
-it.each(['-1', '1.5'])('rejects an invalid wager of %s', async value => {
-  const dialog = await openCreateRoom();
-  fireEvent.change(within(dialog).getByLabelText('Wager points'), { target: { value } });
-  expect((within(dialog).getByRole('button', { name: 'Create Room' }) as HTMLButtonElement).disabled).toBe(true);
-});
-
-it('rejects a wager above the current balance with a clear message', async () => {
+it('rejects room creation when the balance is below the fixed wager', async () => {
   mocks.balance = 25;
   const dialog = await openCreateRoom();
-  fireEvent.change(within(dialog).getByLabelText('Wager points'), { target: { value: '26' } });
   expect(within(dialog).getByText('Insufficient points')).toBeTruthy();
-  expect((within(dialog).getByRole('button', { name: 'Create Room' }) as HTMLButtonElement).disabled).toBe(true);
+  expect((within(dialog).getByRole('button', { name: /Create Room/ }) as HTMLButtonElement).disabled).toBe(true);
 });
 
 it('guards concurrent create-room submissions', async () => {
   let resolveCreate: ((room: typeof mocks.room) => void) | undefined;
   mocks.create.mockImplementationOnce(() => new Promise(resolve => { resolveCreate = resolve; }));
   const dialog = await openCreateRoom();
-  const button = within(dialog).getByRole('button', { name: 'Create Room' });
+  const button = within(dialog).getByRole('button', { name: /Create Room/ });
   fireEvent.click(button);
   fireEvent.click(button);
   expect(mocks.create).toHaveBeenCalledTimes(1);
@@ -332,7 +310,7 @@ describe('waiting room', () => {
   async function createAndWait() {
     mocks.room.status = 'waiting';
     const dialog = await openCreateRoom();
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Create Room' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: /Create Room/ }));
     await settle();
   }
 

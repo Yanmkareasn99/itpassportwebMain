@@ -453,6 +453,18 @@ html.dark .profile-avatar-gradient {
   100% { transform: scale(1); }
 }
 
+@keyframes point-gain {
+  0% { opacity: 0; transform: translateY(8px) scale(0.85); }
+  18% { opacity: 1; transform: translateY(0) scale(1.08); }
+  72% { opacity: 1; transform: translateY(-12px) scale(1); }
+  100% { opacity: 0; transform: translateY(-24px) scale(0.96); }
+}
+
+.point-gain {
+  pointer-events: none;
+  animation: point-gain 1.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 @keyframes exam-float {
   0%, 100% {
     transform: translate3d(0, 0, 0) rotate(var(--exam-rotation));

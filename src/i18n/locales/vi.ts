@@ -2,6 +2,7 @@
   "ui.loadStudyActivity": "Không tải được lịch sử học tập.",
   "ui.refreshPoints": "Cập nhật điểm",
   "ui.versus": "đấu với",
+  "ui.wagerMustBe": "Trận đấu này yêu cầu cược {count} điểm.",
   "ui.settingsUnavailable":
     "Cài đặt thi thử chưa khả dụng. Hãy nhờ quản trị viên cập nhật cơ sở dữ liệu.",
   "ui.settingsDenied": "Không lưu được cài đặt. Cần quyền quản trị viên.",
