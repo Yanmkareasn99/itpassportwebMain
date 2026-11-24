@@ -917,7 +917,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
             </span>
           </button>
 
-          {hasInsufficientBalance && (
+          {hasInsufficientBalance && !setupOpen && (
             <p className="text-center text-xs font-semibold text-rose-600 dark:text-rose-300">{translate(language, 'ui.insufficientPoints')}</p>
           )}
 
@@ -1042,6 +1042,74 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                 : translate(language, 'ui.usersOnline', { count: onlineUserCount })}
             </p>
           </div>
+
+          {/* Available rooms remain visible so players can resume an existing battle. */}
+          <section className={`${panel} p-5`}>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className={`flex items-center gap-2.5 text-base font-black uppercase ${strong}`}>
+                <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                <Users className="h-5 w-5 text-indigo-500 dark:text-indigo-300" />
+                {translate(language, 'ui.availableRooms')}
+              </h3>
+              <button
+                type="button"
+                aria-label={translate(language, 'ui.checkRooms')}
+                onClick={() => void loadRooms()}
+                className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:hover:bg-white/10 dark:hover:text-white"
+              >
+                <RefreshCw className="h-5 w-5" />
+              </button>
+            </div>
+
+            <ul className="space-y-3">
+              {rooms.map(room => {
+                const mine = room.creator_id === profile?.id || room.opponent_id === profile?.id;
+                return (
+                  <li key={room.id} className={`${inner} flex items-center gap-4 p-4`}>
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-blue-500">
+                      <Swords className="h-6 w-6 text-white" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className={`truncate text-sm font-extrabold ${strong}`}>
+                        {translate(language, 'ui.room', { id: room.id.slice(0, 8).toUpperCase() })}
+                      </p>
+                      <p className={`mt-1 truncate text-xs ${mute}`}>
+                        {profileNames[room.creator_id] ?? translate(language, 'ui.waitingPlayer')}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!mine) {
+                          void joinRoom(room.id);
+                          return;
+                        }
+                        setActiveRoom(room);
+                        if (room.status === 'completed') setStage('result');
+                        else if (room.status === 'active' && room.abandoning_user_id === profile?.id) setStage('left');
+                        else setStage('waiting');
+                      }}
+                      disabled={loading}
+                      className="inline-flex shrink-0 items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-indigo-500 px-4 py-2.5 text-sm font-extrabold uppercase text-white transition hover:from-violet-500 hover:to-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 disabled:opacity-40 dark:focus-visible:ring-offset-[#0f1530]"
+                    >
+                      <Swords className="h-4 w-4" />
+                      {mine ? translate(language, 'ui.resume') : translate(language, 'ui.join')}
+                    </button>
+                  </li>
+                );
+              })}
+
+              {rooms.length === 0 && (
+                <li className="rounded-2xl border border-dashed border-indigo-200 px-4 py-7 text-center dark:border-indigo-300/20">
+                  <p className={`text-sm font-bold ${strong}`}>{translate(language, 'ui.noRooms')}</p>
+                  <button type="button" onClick={() => openSetup('create')} className={`${primaryBtn} mt-4`}>
+                    <Zap className="h-4 w-4" />
+                    {translate(language, 'ui.gotoCreateRoom')}
+                  </button>
+                </li>
+              )}
+            </ul>
+          </section>
 
           {/* Ranking */}
           <section className={`${panel} overflow-hidden`}>

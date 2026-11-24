@@ -189,9 +189,8 @@ it('shows rankings ordered by wins with battle correct answers as the tiebreak s
   expect(screen.getByText('Ranked by wins, then by correct answers in battles only.')).toBeTruthy();
   expect(screen.getByText('Battle correct')).toBeTruthy();
   expect(screen.getByText('Alice')).toBeTruthy();
-  expect(screen.getByText('100')).toBeTruthy();
-  expect(screen.getByText('Me')).toBeTruthy();
-  expect(screen.getByText('You')).toBeTruthy();
+  expect(screen.getByRole('row', { name: /Alice 4 100/ })).toBeTruthy();
+  expect(screen.getByRole('row', { name: /Me You 3 120/ })).toBeTruthy();
   expect(mocks.rpc).toHaveBeenCalledWith('get_battle_rankings', { ranking_limit: 50 });
 });
 
