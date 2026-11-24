@@ -1,6 +1,6 @@
 import { languageLocales, translate } from '../i18n';
-import { useEffect, useRef, useState } from 'react';
-import { Bell, Coins, LogOut, UserRound } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Bell, ChevronDown, Coins, LogOut, UserRound } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getCachedPointBalance, getPointBalance, getPointHistory } from '../lib/points';
@@ -45,6 +45,7 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isPointsOpen, setIsPointsOpen] = useState(false);
   const [pointHistory, setPointHistory] = useState<PointLedgerEntry[]>([]);
+  const [expandedPointDays, setExpandedPointDays] = useState<Set<string>>(new Set());
   const [pointHistoryLoading, setPointHistoryLoading] = useState(false);
   const [pointHistoryError, setPointHistoryError] = useState('');
   const notificationStorageKey = `manabi-notifications-read:${profile?.id ?? 'guest'}`;
@@ -193,11 +194,53 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
     }
   }
 
-  function formatPointHistoryDate(value: string) {
+  function pointHistoryDayKey(value: string) {
+    const date = new Date(value);
+    return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+  }
+
+  function formatPointHistoryDay(value: string) {
     return new Intl.DateTimeFormat(languageLocales[language], {
       dateStyle: 'medium',
+    }).format(new Date(value));
+  }
+
+  function formatPointHistoryTime(value: string) {
+    return new Intl.DateTimeFormat(languageLocales[language], {
       timeStyle: 'short',
     }).format(new Date(value));
+  }
+
+  const pointHistoryDays = useMemo(() => {
+    const days: Array<{
+      key: string;
+      date: string;
+      total: number;
+      entries: PointLedgerEntry[];
+    }> = [];
+
+    pointHistory.forEach(entry => {
+      const key = pointHistoryDayKey(entry.created_at);
+      const currentDay = days[days.length - 1];
+
+      if (currentDay?.key === key) {
+        currentDay.total += entry.delta;
+        currentDay.entries.push(entry);
+      } else {
+        days.push({ key, date: entry.created_at, total: entry.delta, entries: [entry] });
+      }
+    });
+
+    return days;
+  }, [pointHistory]);
+
+  function togglePointDay(dayKey: string) {
+    setExpandedPointDays(current => {
+      const next = new Set(current);
+      if (next.has(dayKey)) next.delete(dayKey);
+      else next.add(dayKey);
+      return next;
+    });
   }
 
   useEffect(() => {
@@ -374,7 +417,10 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
                 setIsPointsOpen(willOpen);
                 setIsNotificationsOpen(false);
                 setIsProfileMenuOpen(false);
-                if (willOpen) void loadPointHistory();
+                if (willOpen) {
+                  setExpandedPointDays(new Set());
+                  void loadPointHistory();
+                }
               }}
               className="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-amber-100 bg-amber-50 px-2.5 py-1 text-amber-700 transition hover:border-amber-200 hover:bg-amber-100 sm:gap-2 sm:px-3 sm:py-1.5 dark:border-slate-700 dark:bg-slate-800 dark:text-amber-300 dark:hover:bg-slate-700"
             >
@@ -418,33 +464,53 @@ export default function Header({ title, subtitle, onNavigate }: HeaderProps) {
                       {translate(language, 'header.noPointsHistory')}
                     </p>
                   ) : (
-                    pointHistory.map(entry => (
-                      <div key={entry.id} className="flex items-center gap-3 border-b border-gray-50 px-4 py-3 last:border-0 dark:border-slate-800">
-                        <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
-                          entry.delta >= 0
-                            ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-300'
-                            : 'bg-red-50 text-red-600 dark:bg-red-400/10 dark:text-red-300'
-                        }`}>
-                          {entry.delta >= 0 ? '+' : '−'}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium capitalize text-gray-700 dark:text-slate-200">
-                            {pointReasonLabel(entry)}
-                          </p>
-                          <p className="mt-0.5 text-[11px] text-gray-400 dark:text-slate-400">
-                            {formatPointHistoryDate(entry.created_at)}
-                          </p>
+                    pointHistoryDays.map(day => {
+                      const isExpanded = expandedPointDays.has(day.key);
+
+                      return (
+                        <div key={day.key} className="border-b border-gray-100 last:border-0 dark:border-slate-800">
+                          <button
+                            type="button"
+                            aria-expanded={isExpanded}
+                            onClick={() => togglePointDay(day.key)}
+                            className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-gray-50 dark:hover:bg-slate-800/70"
+                          >
+                            <ChevronDown className={`h-4 w-4 shrink-0 text-gray-400 transition-transform dark:text-slate-400 ${isExpanded ? 'rotate-180' : ''}`} />
+                            <span className="min-w-0 flex-1 text-sm font-semibold text-gray-700 dark:text-slate-200">
+                              {formatPointHistoryDay(day.date)}
+                            </span>
+                            <span className={`text-sm font-bold ${day.total >= 0 ? 'text-emerald-600 dark:text-emerald-300' : 'text-red-600 dark:text-red-300'}`}>
+                              {day.total >= 0 ? '+' : ''}{day.total.toLocaleString(languageLocales[language])} pts
+                            </span>
+                          </button>
+
+                          {isExpanded && (
+                            <div className="bg-gray-50/70 px-4 py-1 dark:bg-slate-950/30">
+                              {day.entries.map(entry => (
+                                <div key={entry.id} className="flex items-center gap-3 border-b border-gray-100 py-2.5 pl-7 last:border-0 dark:border-slate-800">
+                                  <div className="min-w-0 flex-1">
+                                    <p className="truncate text-sm font-medium capitalize text-gray-700 dark:text-slate-200">
+                                      {pointReasonLabel(entry)}
+                                    </p>
+                                    <p className="mt-0.5 text-[11px] text-gray-400 dark:text-slate-400">
+                                      {formatPointHistoryTime(entry.created_at)}
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className={`text-sm font-bold ${entry.delta >= 0 ? 'text-emerald-600 dark:text-emerald-300' : 'text-red-600 dark:text-red-300'}`}>
+                                      {entry.delta >= 0 ? '+' : ''}{entry.delta.toLocaleString(languageLocales[language])}
+                                    </p>
+                                    <p className="mt-0.5 text-[10px] text-gray-400 dark:text-slate-400">
+                                      {entry.balance_after.toLocaleString(languageLocales[language])} pts
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                        <div className="text-right">
-                          <p className={`text-sm font-bold ${entry.delta >= 0 ? 'text-emerald-600 dark:text-emerald-300' : 'text-red-600 dark:text-red-300'}`}>
-                            {entry.delta >= 0 ? '+' : ''}{entry.delta.toLocaleString(languageLocales[language])}
-                          </p>
-                          <p className="mt-0.5 text-[10px] text-gray-400 dark:text-slate-400">
-                            {entry.balance_after.toLocaleString(languageLocales[language])} pts
-                          </p>
-                        </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>
