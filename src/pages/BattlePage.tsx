@@ -34,7 +34,7 @@ interface BattlePageProps {
 
 const DEFAULT_BATTLE_QUESTIONS = 5;
 const DEFAULT_TIME_PER_QUESTION = 30;
-const BATTLE_WAGER_POINTS = 50;
+const QUICK_MATCH_WAGER_POINTS = 50;
 
 type BattleStage = 'lobby' | 'waiting' | 'battle' | 'left' | 'result';
 
@@ -153,6 +153,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   const [timeLeft, setTimeLeft] = useState(DEFAULT_TIME_PER_QUESTION);
   const [questionCount, setQuestionCount] = useState(DEFAULT_BATTLE_QUESTIONS);
   const [secondsPerQuestion, setSecondsPerQuestion] = useState(DEFAULT_TIME_PER_QUESTION);
+  const [wagerPoints, setWagerPoints] = useState(QUICK_MATCH_WAGER_POINTS);
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -207,8 +208,9 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   const selectedCorrect = answered && choices.find(choice => choice.id === selectedChoiceId)?.is_correct;
   const roomTimeLimit = activeRoom?.time_per_question_seconds ?? DEFAULT_TIME_PER_QUESTION;
   const timePct = (timeLeft / roomTimeLimit) * 100;
-  const isValidWager = balance >= BATTLE_WAGER_POINTS;
-  const hasInsufficientBalance = balance < BATTLE_WAGER_POINTS;
+  const isValidWager = Number.isInteger(wagerPoints) && wagerPoints >= 0 && wagerPoints <= balance;
+  const hasInsufficientWagerBalance = Number.isFinite(wagerPoints) && wagerPoints > balance;
+  const hasInsufficientQuickMatchBalance = balance < QUICK_MATCH_WAGER_POINTS;
 
   const loadBalance = useCallback(async () => {
     if (!profile) return;
@@ -516,9 +518,9 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
     }
   }, [activeRoom, answers, maybeCompleteBattle, waitingForOpponent]);
 
-  async function createRoom(override?: { count: number; seconds: number }) {
+  async function createRoom(override?: { count: number; seconds: number; wager?: number }) {
     if (!profile || creatingRoom.current) return;
-    const roomWager = BATTLE_WAGER_POINTS;
+    const roomWager = override?.wager ?? wagerPoints;
     const roomCount = override?.count ?? questionCount;
     const roomSeconds = override?.seconds ?? secondsPerQuestion;
     if (roomWager > balance) {
@@ -554,7 +556,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
 
   async function quickMatch() {
     if (!profile || quickMatching.current || loading) return;
-    if (hasInsufficientBalance) {
+    if (hasInsufficientQuickMatchBalance) {
       setError(translate(language, 'ui.insufficientPoints'));
       return;
     }
@@ -570,7 +572,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
         .from('battle_rooms')
         .select('*')
         .eq('status', 'waiting')
-        .eq('wager_points', BATTLE_WAGER_POINTS)
+        .eq('wager_points', QUICK_MATCH_WAGER_POINTS)
         .neq('creator_id', profile.id)
         .limit(50);
       if (searchError) throw searchError;
@@ -595,7 +597,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
         }
       }
 
-      await createRoom({ count: questionCount, seconds: secondsPerQuestion });
+      await createRoom({ count: questionCount, seconds: secondsPerQuestion, wager: QUICK_MATCH_WAGER_POINTS });
     } catch (matchError) {
       setError(matchError instanceof Error ? matchError.message : 'Unable to find an opponent. Please try again.');
     } finally {
@@ -606,11 +608,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
 
   async function joinRoom(roomId: string) {
     const selectedRoom = rooms.find(room => room.id === roomId);
-    if (selectedRoom && selectedRoom.wager_points !== BATTLE_WAGER_POINTS) {
-      setError(translate(language, 'ui.wagerMustBe', { count: BATTLE_WAGER_POINTS }));
-      return;
-    }
-    if (hasInsufficientBalance) {
+    if (selectedRoom && selectedRoom.wager_points > balance) {
       setError(translate(language, 'ui.insufficientPoints'));
       return;
     }
@@ -848,6 +846,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
   const settingRows = [
     { icon: ListChecks, label: translate(language, 'ui.battleCount'), value: questionCount, set: setQuestionCount, min: 1, max: 20, suffix: '' },
     { icon: Timer, label: translate(language, 'ui.battleSeconds'), value: secondsPerQuestion, set: setSecondsPerQuestion, min: 5, max: 300, suffix: '' },
+    { icon: Coins, label: translate(language, 'ui.wager'), value: wagerPoints, set: setWagerPoints, min: 0, max: Math.max(balance, 0), suffix: '' },
   ];
 
   // ================= LOBBY =================
@@ -905,7 +904,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
           <button
             type="button"
             onClick={() => void quickMatch()}
-            disabled={loading || (isSupabaseEnabled && hasInsufficientBalance)}
+            disabled={loading || (isSupabaseEnabled && hasInsufficientQuickMatchBalance)}
             className={`${noTapHighlight} relative flex w-full items-center justify-center gap-2 rounded-3xl bg-gradient-to-b from-yellow-200 via-amber-300 to-amber-400 py-4 text-xl font-black uppercase tracking-wide text-amber-950 shadow-[0_8px_0_0_rgba(194,120,3,0.55)] transition active:translate-y-1 active:shadow-[0_4px_0_0_rgba(194,120,3,0.55)] focus:outline-none focus-visible:ring-4 focus-visible:ring-white`}
           >
             <Play className="h-6 w-6 fill-amber-950" />
@@ -917,7 +916,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
             </span>
           </button>
 
-          {hasInsufficientBalance && !setupOpen && (
+          {hasInsufficientQuickMatchBalance && !setupOpen && (
             <p className="text-center text-xs font-semibold text-rose-600 dark:text-rose-300">{translate(language, 'ui.insufficientPoints')}</p>
           )}
 
@@ -982,7 +981,10 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                         </label>
                       ))}
                     </div>
-                    {hasInsufficientBalance && (
+                    <p className="mt-2 text-right text-xs font-semibold text-amber-800/70 dark:text-amber-100/70">
+                      {translate(language, 'ui.balance', { count: balance.toLocaleString(locale) })}
+                    </p>
+                    {hasInsufficientWagerBalance && (
                       <p className="mt-2 text-xs font-semibold text-rose-600 dark:text-rose-200">{translate(language, 'ui.insufficientPoints')}</p>
                     )}
                     <button type="button"
@@ -992,7 +994,7 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                     >
                       <Zap className="h-4 w-4" />
                       {translate(language, 'ui.createRoom')}
-                      <span className="rounded-full bg-white/50 px-2 py-0.5 text-[11px] normal-case">(50 {translate(language, 'ui.points')})</span>
+                      <span className="rounded-full bg-white/50 px-2 py-0.5 text-[11px] normal-case">({wagerPoints.toLocaleString(locale)} {translate(language, 'ui.points')})</span>
                       <ArrowRight className="h-4 w-4" />
                     </button>
                   </>
@@ -1075,6 +1077,9 @@ export default function BattlePage({ currentPage, onNavigate }: BattlePageProps)
                       </p>
                       <p className={`mt-1 truncate text-xs ${mute}`}>
                         {profileNames[room.creator_id] ?? translate(language, 'ui.waitingPlayer')}
+                      </p>
+                      <p className="mt-1 text-xs font-bold text-amber-600 dark:text-amber-300">
+                        {translate(language, 'ui.pointAmount', { count: room.wager_points.toLocaleString(locale) })}
                       </p>
                     </div>
                     <button

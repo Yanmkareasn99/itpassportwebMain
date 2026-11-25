@@ -292,8 +292,58 @@ export default function LoginPage() {
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {mode === 'signup' && (
+              <form onSubmit={handleSubmit} className="space-y-4">                
+               
+               {(mode === 'login' || mode === 'signup') && (
+              <div className="mt-5">
+                
+
+                <div className="space-y-3">
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-7 text-xl font-medium text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50/40 hover:text-blue-700 disabled:opacity-60"
+                    onClick={() => void handleGoogleAuth()}
+                    disabled={loading}
+                  >
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-3xl font-bold bg-[conic-gradient(#4285F4_0_25%,#34A853_25%_50%,#FBBC05_50%_75%,#EA4335_75%_100%)] bg-clip-text text-transparent">G</span>
+                    {translate(language, 'loginPage.signInWithGoogle')}
+                  </button>
+                </div>
+
+                {error && (
+                  <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-600 mt-4">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                )}
+
+                <div className="relative my-5">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-slate-200" />
+                  </div>
+                  <div className="relative flex justify-center">
+                    <span className="bg-white px-3 text-[11px] font-medium uppercase tracking-[0.2em] text-slate-400">
+                      {translate(language, 'loginPage.or')}
+                    </span>
+                  </div>
+                </div> 
+                
+              </div>
+              )}
+
+              {error && mode !== 'login' && mode !== 'signup' && (
+                  <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-600">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                )}
+
+              
+
+
+
+              
+{mode === 'signup' && (
                   <>
                     <div>
                       <label htmlFor="signup-name" className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">{text.name}</label>
@@ -320,7 +370,6 @@ export default function LoginPage() {
                     </div>
                   </>
                 )}
-
                 {mode !== 'recovery' && (
                 <div>
                   <label htmlFor="login-email" className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-600">{text.email}</label>
@@ -396,12 +445,7 @@ export default function LoginPage() {
                   </div>
                 )}
 
-                {error && (
-                  <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-600">
-                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                    <span>{error}</span>
-                  </div>
-                )}
+               
 
                 <button
                   type="submit"
@@ -412,32 +456,7 @@ export default function LoginPage() {
                 </button>
               </form>
 
-              {(mode === 'login' || mode === 'signup') && (
-              <div className="mt-5">
-                <div className="relative my-5">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-slate-200" />
-                  </div>
-                  <div className="relative flex justify-center">
-                    <span className="bg-white px-3 text-[11px] font-medium uppercase tracking-[0.2em] text-slate-400">
-                      {translate(language, 'loginPage.or')}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <button
-                    type="button"
-                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50/40 hover:text-blue-700 disabled:opacity-60"
-                    onClick={() => void handleGoogleAuth()}
-                    disabled={loading}
-                  >
-                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700">G</span>
-                    {translate(language, 'loginPage.signInWithGoogle')}
-                  </button>
-                </div>
-              </div>
-              )}
+              
 
               <div className="mt-6 text-center">
                 <button

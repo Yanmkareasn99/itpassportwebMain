@@ -152,7 +152,7 @@ beforeEach(() => {
     mocks.answers.push({ user_id: 'me', question_id: question, selected_choice_id: choice, is_correct: choice === 'a1' });
     return { ...mocks.room };
   });
-  mocks.create.mockImplementation(async () => ({ ...mocks.room }));
+  mocks.create.mockImplementation(async (wager: number) => ({ ...mocks.room, wager_points: wager }));
   mocks.join.mockImplementation(async () => {
     mocks.room.opponent_id = 'me';
     mocks.room.status = 'active';
@@ -275,20 +275,31 @@ it('sends the chosen question count and time when creating a room', async () => 
   expect(mocks.create).toHaveBeenCalledWith(50, 7, 45);
 });
 
-it('shows the fixed 50-point wager when creating a room', async () => {
+it('creates a room with the custom wager', async () => {
   const dialog = await openCreateRoom();
+  fireEvent.change(within(dialog).getByLabelText('Wager points'), { target: { value: '75' } });
   const button = within(dialog).getByRole('button', { name: /Create Room/ });
-  expect(button.textContent).toContain('(50 Points)');
+  expect(button.textContent).toContain('(75 Points)');
   fireEvent.click(button);
   await flush();
-  expect(mocks.create).toHaveBeenCalledWith(50, 5, 30);
+  expect(mocks.create).toHaveBeenCalledWith(75, 5, 30);
 });
 
-it('rejects room creation when the balance is below the fixed wager', async () => {
+it('rejects room creation when the balance is below the selected wager', async () => {
   mocks.balance = 25;
   const dialog = await openCreateRoom();
+  fireEvent.change(within(dialog).getByLabelText('Wager points'), { target: { value: '75' } });
   expect(within(dialog).getByText('Insufficient points')).toBeTruthy();
   expect((within(dialog).getByRole('button', { name: /Create Room/ }) as HTMLButtonElement).disabled).toBe(true);
+});
+
+it('joins a custom-wager room by code when the user can afford it', async () => {
+  mocks.room.wager_points = 75;
+  mocks.room.creator_id = 'them';
+  mocks.room.opponent_id = null;
+  await renderLobby();
+  await openJoinByCode('room-1');
+  expect(mocks.join).toHaveBeenCalledWith('room-1');
 });
 
 it('guards concurrent create-room submissions', async () => {
